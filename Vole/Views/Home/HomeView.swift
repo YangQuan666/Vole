@@ -8,9 +8,14 @@
 import SwiftUI
 
 struct HomeView: View {
+    let topics = ModelData().topics
+
     var body: some View {
-        
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        NavigationSplitView {
+            Post(topics: topics)
+        } detail: {
+            Text("Select a Landmark")
+        }
     }
 }
 

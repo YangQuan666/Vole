@@ -12,30 +12,32 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var items: [Item]
 
+    @State private var selection: Tab = .home
+    
+    enum Tab {
+        case home
+        case node
+        case search
+    }
+    
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
+        TabView(selection: $selection) {
+            HomeView()
+                .tabItem {
+                    Label("Home", systemImage: "doc.text.image")
                 }
-                .onDelete(perform: deleteItems)
-            }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
+                .tag(Tab.home)
+            NodeView()
+                .tabItem {
+                    Label("Node", systemImage: "square.grid.2x2.fill")
+
                 }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
+                .tag(Tab.node)
+            SearchView()
+                .tabItem {
+                    Label("Search", systemImage: "magnifyingglass")
                 }
-            }
-        } detail: {
-            Text("Select an item")
+                .tag(Tab.search)
         }
     }
 

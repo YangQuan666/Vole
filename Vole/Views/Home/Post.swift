@@ -8,11 +8,45 @@
 import SwiftUI
 
 struct Post: View {
+    var topics: [Topic]
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        List {
+            ForEach(topics) { topic in
+                NavigationLink {
+                    //                    LandmarkDetail(landmark: landmark)
+                } label: {
+                    PostItem(topic: topic)
+                }
+            }
+        }
     }
 }
 
 #Preview {
-    Post()
+    let topics = ModelData().topics
+    Post(topics: topics)
+}
+
+struct PostItem: View {
+    var topic: Topic
+
+    var body: some View {
+        HStack {
+            AsyncImage(url: URL(string: topic.member?.avatarNormal ?? "")) { image in
+                image
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 50, height: 50)
+                    .clipShape(Circle())
+            } placeholder: {
+                Circle()
+                    .fill(Color("#E5E7EB"))
+                    .frame(width: 50, height: 50)
+            }
+            VStack {
+                Text(topic.member?.username ?? "Unknown")
+                Text(topic.title ?? "Unknown")
+            }
+        }
+    }
 }
