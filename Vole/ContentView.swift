@@ -17,6 +17,7 @@ struct ContentView: View {
     enum Tab {
         case home
         case node
+        case notify
         case search
     }
     
@@ -30,9 +31,13 @@ struct ContentView: View {
             NodeView()
                 .tabItem {
                     Label("Node", systemImage: "square.grid.2x2.fill")
-
                 }
                 .tag(Tab.node)
+            NodeView()
+                .tabItem {
+                    Label("Notify", systemImage: "bell.fill")
+                }
+                .tag(Tab.notify)
             SearchView()
                 .tabItem {
                     Label("Search", systemImage: "magnifyingglass")
