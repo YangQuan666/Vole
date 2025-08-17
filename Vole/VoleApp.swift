@@ -8,8 +8,10 @@
 import SwiftUI
 import SwiftData
 
+//var v2ex: V2exAPI = V2exAPI()
+
 @main
-struct VoleApp: App {
+struct VoleApp: App {    
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Item.self,

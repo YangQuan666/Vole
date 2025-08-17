@@ -9,21 +9,25 @@ import Foundation
 
 public struct V2exAPI {
 
+    private let endpointV1 = "https://v2ex.com/api/"
+    private let endpointV2 = "https://www.v2ex.com/api/v2/"
+
+    public static let shared = V2exAPI()
+
+    public var session = URLSession.shared
     /**
      个人访问令牌
     
      生成参考： https://v2ex.com/help/personal-access-token
      */
-    public var accessToken: String?
-    public var session = URLSession.shared
-
-    private let endpointV1 = "https://v2ex.com/api/"
-    private let endpointV2 = "https://www.v2ex.com/api/v2/"
-
-    public init(accessToken: String? = nil) {
-        self.accessToken = accessToken
+    public var accessToken: String? {
+        get {
+            UserDefaults.standard.string(forKey: "accessToken")
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "accessToken")
+        }
     }
-
     /**
      HTTP 请求
      */
@@ -127,7 +131,7 @@ public struct V2exAPI {
      最新主题
      */
     public func latestTopics() async throws -> [Topic]? {
-        return await request(
+        return try await request(
             url: endpointV1 + "topics/latest.json",
             decodeClass: [Topic].self
         )
