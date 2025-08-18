@@ -55,6 +55,7 @@ public struct V2exAPI {
 
         var request = URLRequest(url: requestUrl)
         request.httpMethod = httpMethod
+        request.cachePolicy = .reloadIgnoringLocalCacheData
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
         if useAuth, let accessToken = accessToken {
