@@ -1,6 +1,6 @@
 //
 //  Home.swift
-//  Vexer
+//  Vole
 //
 //  Created by 杨权 on 5/25/25.
 //
@@ -8,69 +8,62 @@
 import SwiftUI
 
 struct HomeView: View {
+    
     @State private var path = NavigationPath()
-    enum Filter: String, CaseIterable {
-        case latest = "最新"
-        case hot = "热门"
+    @State private var selection: Category = .latest
+    @State private var data: [Category: [Topic]] = [:]
 
-        // 给每个 case 绑定一个闭包
-        var action: () async throws -> [Topic]? {
-            switch self {
-            case .hot:
-                return { try await V2exAPI.shared.hotTopics() }
-            case .latest:
-                return { try await V2exAPI.shared.latestTopics() }
-            }
-        }
-    }
-    @State private var selection: Filter = .latest
-    @State private var errorMessage: String?  // 可选：错误信息
-    @State private var topics: [Topic] = []
-
-    func loadData(selection: Filter) async {
-        // 页面加载时执行异步请求
-        errorMessage = nil
+    
+    func loadTopics(for category: Category) async {
         do {
-            let response = try await selection.action()
-            topics = response ?? []
+            let result = try await category.action()
+            await MainActor.run {
+                data[category] = result ?? []
+            }
         } catch {
-            errorMessage = error.localizedDescription
+            if error is CancellationError { return }
+            print("出错了: \(error)")
         }
     }
-
+    
     var body: some View {
         NavigationStack(path: $path) {
-            List {
-                // 分类
-                Section {
-                    Picker("分类", selection: $selection) {
-                        ForEach(Filter.allCases, id: \.self) { item in
-                            Text(item.rawValue)
-                                .tag(item)
-                        }
+            VStack {
+                Picker("分类", selection: $selection) {
+                    ForEach(Category.allCases, id: \.self) { item in
+                        Text(item.rawValue).tag(item)
                     }
-                    .pickerStyle(.segmented)
-                    .padding(.all)
-                    .listRowInsets(EdgeInsets())  // 去掉默认边距
-                    .listRowSeparator(.hidden)  // 隐藏行分隔线
                 }
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
+                .frame(maxWidth: 500)
 
-                // 纵向卡片列表
-                Section {
-                    ForEach(topics) { topic in
-                        TopicRow(topic: topic) {
-                            path.append(topic)
+                TabView(selection: $selection) {
+                    ForEach(Category.allCases, id: \.self) { category in
+                        List {
+                            ForEach(data[category] ?? []) { topic in
+                                TopicRow(topic: topic) {
+                                    path.append(topic)
+                                }
+                                .listRowSeparator(.hidden)
+                            }
+
                         }
-                        .listRowSeparator(.hidden)
+                        .frame(maxWidth: 600)
+                        .listStyle(.plain)
+                        .refreshable {
+                            await loadTopics(for: category)
+                        }
                     }
+
                 }
+                .tabViewStyle(.page(indexDisplayMode: .never))
             }
-            .frame(maxWidth: 600)
+            .navigationTitle("Home")
+            .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: Topic.self) { topic in
-                TopicRow(topic: topic){}
+                TopicRow(topic: topic) {}
             }
-            .listStyle(.plain)  // 清爽列表样式
-            .navigationTitle("Home")  // 左上角标题
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {  // 右上角头像
                     Image(systemName: "person.crop.circle.fill")
@@ -78,17 +71,29 @@ struct HomeView: View {
                         .frame(width: 32, height: 32)
                         .foregroundStyle(.blue)
                 }
-            }
-            .refreshable {
-                await loadData(selection: selection)
+
             }
             .task(id: selection) {
-                await loadData(selection: selection)
+                await loadTopics(for: selection)
             }
         }
     }
 }
 
+
+enum Category: String, CaseIterable {
+    case latest = "最新"
+    case hot = "热门"
+
+    var action: () async throws -> [Topic]? {
+        switch self {
+        case .hot:
+            return { try await V2exAPI.shared.hotTopics() }
+        case .latest:
+            return { try await V2exAPI.shared.latestTopics() }
+        }
+    }
+}
 
 #Preview {
     HomeView()
