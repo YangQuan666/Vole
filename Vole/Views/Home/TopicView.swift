@@ -74,31 +74,31 @@ struct TopicRow: View {
                         .font(.subheadline)
                         .foregroundColor(.accentColor)
                         .lineLimit(1)
+                    
                     Spacer()
+                    if let created = topic.created {
+                        let date = Date(
+                            timeIntervalSince1970: TimeInterval(created)
+                        )
+                        // 创建 formatter 并设置短格式
+                        let formatter = RelativeDateTimeFormatter()
+                        Text(
+                            formatter.localizedString(
+                                for: date,
+                                relativeTo: Date(),
+                            )
+                        )
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                    }
                     if let replies = topic.replies {
                         HStack(spacing: 4) {  // 图标和文字间距
-                            Image(systemName: "bubble")
+                            Image(systemName: "ellipsis.bubble")
                                 .foregroundColor(.gray)  // 图标颜色
                             Text("\(replies)")
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
                         }
-                    }
-                    Spacer()
-                    if let created = topic.created {
-                        Image(systemName: "clock")
-                            .foregroundColor(.gray)
-                        let date = Date(
-                            timeIntervalSince1970: TimeInterval(created)
-                        )
-                        Text(
-                            formatter.localizedString(
-                                for: date,
-                                relativeTo: Date()
-                            )
-                        )
-                        .font(.caption)
-                        .foregroundColor(.gray)
                     }
                 }
 
