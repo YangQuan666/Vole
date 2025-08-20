@@ -13,7 +13,6 @@ struct HomeView: View {
     @State private var selection: Category = .latest
     @State private var data: [Category: [Topic]] = [:]
 
-    
     func loadTopics(for category: Category) async {
         do {
             let result = try await category.action()
@@ -62,7 +61,7 @@ struct HomeView: View {
             .navigationTitle("Home")
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: Topic.self) { topic in
-                TopicRow(topic: topic) {}
+                TopicDetail(topic: topic)
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {  // 右上角头像
@@ -74,12 +73,14 @@ struct HomeView: View {
 
             }
             .task(id: selection) {
-                await loadTopics(for: selection)
+                // 首次加载默认分类
+                if data[selection] == nil || data[selection]?.isEmpty == true {
+                    await loadTopics(for: selection)
+                }
             }
         }
     }
 }
-
 
 enum Category: String, CaseIterable {
     case latest = "最新"
