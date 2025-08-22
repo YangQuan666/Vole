@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct HomeView: View {
-    
+
     @State private var path = NavigationPath()
     @State private var selection: Category = .latest
     @State private var data: [Category: [Topic]] = [:]
@@ -24,7 +24,7 @@ struct HomeView: View {
             print("出错了: \(error)")
         }
     }
-    
+
     var body: some View {
         NavigationStack(path: $path) {
             VStack {
@@ -39,29 +39,43 @@ struct HomeView: View {
 
                 TabView(selection: $selection) {
                     ForEach(Category.allCases, id: \.self) { category in
-                        List {
-                            ForEach(data[category] ?? []) { topic in
-                                TopicRow(topic: topic) {
-                                    path.append(topic)
+                        Group {
+                            if let topics = data[category], !topics.isEmpty {
+                                ScrollView {
+                                    LazyVStack(spacing: 12) {
+                                        ForEach(topics) { topic in
+                                            TopicRow(
+                                                topic: topic,
+                                            ) {
+                                                path.append(topic)
+                                            }
+                                        }
+                                    }
+                                    .padding(.horizontal)
                                 }
-                                .listRowSeparator(.hidden)
+                                .frame(maxWidth: 600)
+                                .refreshable {
+                                    await loadTopics(for: category)
+                                }
+                            } else {
+                                // 数据为空时显示加载动画
+                                VStack {
+                                    Spacer()
+                                    ProgressView("加载中…")
+                                        .progressViewStyle(.circular)
+                                        .padding()
+                                    Spacer()
+                                }
                             }
-
-                        }
-                        .frame(maxWidth: 600)
-                        .listStyle(.plain)
-                        .refreshable {
-                            await loadTopics(for: category)
                         }
                     }
-
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
             }
             .navigationTitle("Home")
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: Topic.self) { topic in
-                TopicDetail(topic: topic)
+                DetailView(topic: topic)
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {  // 右上角头像
