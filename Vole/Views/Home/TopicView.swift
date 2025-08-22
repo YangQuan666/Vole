@@ -5,6 +5,7 @@
 //  Created by 杨权 on 8/17/25.
 //
 
+import Kingfisher
 import SwiftUI
 
 struct TopicView: View {
@@ -16,7 +17,7 @@ struct TopicView: View {
 let formatter: RelativeDateTimeFormatter = {
     let f = RelativeDateTimeFormatter()
     f.unitsStyle = .full  // full: 一天前, short: 1d ago
-    f.locale = Locale.current
+    f.locale = Locale.autoupdatingCurrent
     return f
 }()
 
@@ -32,13 +33,14 @@ struct TopicRow: View {
                     if let avatarURL = topic.member?.avatarNormal,
                         let url = URL(string: avatarURL)
                     {
-                        AsyncImage(url: url) { image in
-                            image.resizable()
-                        } placeholder: {
-                            Color.gray
-                        }
-                        .frame(width: 24, height: 24)
-                        .clipShape(.circle)
+                        KFImage(url)
+                            .placeholder {
+                                Color.gray
+                            }
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 24, height: 24)
+                            .clipShape(Circle())
                     } else {
                         Circle()
                             .fill(Color.gray)
@@ -74,19 +76,10 @@ struct TopicRow: View {
                         .font(.subheadline)
                         .foregroundColor(.accentColor)
                         .lineLimit(1)
-                    
                     Spacer()
                     if let created = topic.created {
-                        let date = Date(
-                            timeIntervalSince1970: TimeInterval(created)
-                        )
-                        // 创建 formatter 并设置短格式
-                        let formatter = RelativeDateTimeFormatter()
                         Text(
-                            formatter.localizedString(
-                                for: date,
-                                relativeTo: Date(),
-                            )
+                            formattedTime(created)
                         )
                         .font(.caption)
                         .foregroundColor(.gray)
@@ -103,14 +96,32 @@ struct TopicRow: View {
                 }
 
             }
+            .onTapGesture {
+                onTap()
+            }
             .padding()
             .background(Color(.secondarySystemBackground))
             .cornerRadius(16)
             .frame(maxWidth: .infinity)
+            .contextMenu {
+                Button(action: {
+                    print("复制链接")
+                }) {
+                    Label("复制链接", systemImage: "link")
+                }
+
+                Button(action: {
+                    print("分享")
+                }) {
+                    Label("分享", systemImage: "square.and.arrow.up")
+                }
+            }
         }
         .buttonStyle(.plain)
+
     }
 }
+
 #Preview {
-    HomeView()
+    TopicView()
 }
