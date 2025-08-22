@@ -18,8 +18,8 @@ struct ReplyView: View {
                 .foregroundColor(.secondary)
                 .padding(.vertical, 4)
 
-            ForEach(replies) { reply in
-                ReplyRowView(reply: reply)
+            ForEach(replies.indices, id: \.self) { index in
+                ReplyRowView(reply: replies[index],floor: index)
                 Divider()
             }
         }
@@ -37,6 +37,7 @@ func formattedTime(_ timestamp: Int) -> String {
 
 struct ReplyRowView: View {
     let reply: Reply
+    let floor: Int
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -70,7 +71,7 @@ struct ReplyRowView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Spacer()
-                    Text("1楼")
+                    Text("\(floor+1)楼")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
