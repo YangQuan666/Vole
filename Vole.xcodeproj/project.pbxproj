@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		144905932E58A8F60009F393 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 144905922E58A8F60009F393 /* MarkdownUI */; };
+		14F82C652E56106700B2321A /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 14F82C642E56106700B2321A /* Kingfisher */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		142124C52DE4494900A88EE4 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -29,9 +34,22 @@
 		142124CE2DE4494900A88EE4 /* VoleUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VoleUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		14F82C672E5757FB00B2321A /* Exceptions for "Vole" folder in "Vole" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 142124B42DE4494800A88EE4 /* Vole */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		142124B72DE4494800A88EE4 /* Vole */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				14F82C672E5757FB00B2321A /* Exceptions for "Vole" folder in "Vole" target */,
+			);
 			path = Vole;
 			sourceTree = "<group>";
 		};
@@ -52,6 +70,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				14F82C652E56106700B2321A /* Kingfisher in Frameworks */,
+				144905932E58A8F60009F393 /* MarkdownUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +98,7 @@
 				142124B72DE4494800A88EE4 /* Vole */,
 				142124C72DE4494900A88EE4 /* VoleTests */,
 				142124D12DE4494900A88EE4 /* VoleUITests */,
+				144905912E58A8F60009F393 /* Frameworks */,
 				142124B62DE4494800A88EE4 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -90,6 +111,13 @@
 				142124CE2DE4494900A88EE4 /* VoleUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		144905912E58A8F60009F393 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -112,6 +140,8 @@
 			);
 			name = Vole;
 			packageProductDependencies = (
+				14F82C642E56106700B2321A /* Kingfisher */,
+				144905922E58A8F60009F393 /* MarkdownUI */,
 			);
 			productName = Vole;
 			productReference = 142124B52DE4494800A88EE4 /* Vole.app */;
@@ -187,14 +217,19 @@
 				};
 			};
 			buildConfigurationList = 142124B02DE4494800A88EE4 /* Build configuration list for PBXProject "Vole" */;
-			developmentRegion = en;
+			developmentRegion = "zh-Hans";
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 				Base,
+				"zh-Hans",
 			);
 			mainGroup = 142124AC2DE4494800A88EE4;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				14F82C632E560F5600B2321A /* XCRemoteSwiftPackageReference "Kingfisher" */,
+				14F82C6A2E58A5EF00B2321A /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 142124B62DE4494800A88EE4 /* Products */;
 			projectDirPath = "";
@@ -400,13 +435,15 @@
 				DEVELOPMENT_TEAM = B8S34DHZ62;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Vole/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Vole;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -431,13 +468,15 @@
 				DEVELOPMENT_TEAM = B8S34DHZ62;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Vole/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Vole;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -564,6 +603,38 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		14F82C632E560F5600B2321A /* XCRemoteSwiftPackageReference "Kingfisher" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/onevcat/Kingfisher";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.5.0;
+			};
+		};
+		14F82C6A2E58A5EF00B2321A /* XCRemoteSwiftPackageReference "swift-markdown-ui" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gonzalezreal/swift-markdown-ui";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.4.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		144905922E58A8F60009F393 /* MarkdownUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 14F82C6A2E58A5EF00B2321A /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;
+			productName = MarkdownUI;
+		};
+		14F82C642E56106700B2321A /* Kingfisher */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 14F82C632E560F5600B2321A /* XCRemoteSwiftPackageReference "Kingfisher" */;
+			productName = Kingfisher;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 142124AD2DE4494800A88EE4 /* Project object */;
 }
