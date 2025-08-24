@@ -9,7 +9,9 @@ import Kingfisher
 import SwiftUI
 
 struct ReplyView: View {
-    let replies: [Reply]
+    let topicId: Int
+    @State var replies: [Reply]
+    @State private var isLoading: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -18,12 +20,54 @@ struct ReplyView: View {
                 .foregroundColor(.secondary)
                 .padding(.vertical, 4)
 
-            ForEach(replies.indices, id: \.self) { index in
-                ReplyRowView(reply: replies[index],floor: index)
+            if isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .padding()
+            } else if replies.isEmpty {
                 Divider()
+                VStack(spacing: 8) {
+                    Text("暂无评论，快来抢沙发吧~")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity, minHeight: 120)
+                .padding()
+            } else {
+                ForEach(replies.indices, id: \.self) { index in
+                    ReplyRowView(reply: replies[index], floor: index)
+                    if index < replies.count - 1 {  // 避免最后一个多余分割线
+                        Divider()
+                    }
+                }
             }
         }
         .padding()
+        // 下拉刷新
+        .refreshable {
+            await loadReplies()
+        }
+        .onAppear {
+            Task {
+                await loadReplies()
+            }
+        }
+    }
+
+    // 加载评论
+    func loadReplies() async {
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            let data = try await V2exAPI.shared.repliesAll(
+                topicId: self.topicId
+            )
+            replies = data ?? []
+        } catch {
+            //            print("出错了: \(error)")
+        }
     }
 }
 
@@ -87,5 +131,5 @@ struct ReplyRowView: View {
 }
 
 #Preview {
-    ReplyView(replies: [])
+    ReplyView(topicId: 123, replies: [])
 }

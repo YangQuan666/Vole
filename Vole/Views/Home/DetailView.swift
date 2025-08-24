@@ -11,8 +11,6 @@ import SwiftUI
 
 struct DetailView: View {
     @State var topic: Topic
-    @State var replies: [Reply] = []
-    @State private var isLoading: Bool = false
     @Environment(\.openURL) private var openURL
 
     var body: some View {
@@ -59,23 +57,9 @@ struct DetailView: View {
                 }
 
                 // 评论区
-                ReplyView(replies: replies)
-                if isLoading {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                }
+                ReplyView(topicId: topic.id, replies: [])
             }
             .padding(.horizontal)
-        }
-        // 下拉刷新
-        .refreshable {
-            await loadReplies()
-        }
-        .onAppear {
-            Task {
-                await loadReplies()
-            }
         }
         .navigationTitle("帖子详情")
         .navigationBarTitleDisplayMode(.inline)
@@ -102,20 +86,6 @@ struct DetailView: View {
         }
     }
 
-    // 加载评论
-    func loadReplies() async {
-        isLoading = true
-        defer { isLoading = false }
-
-        do {
-            let data = try await V2exAPI.shared.repliesAll(
-                topicId: self.topic.id
-            )
-            replies = data ?? []
-        } catch {
-            //            print("出错了: \(error)")
-        }
-    }
 }
 
 #Preview {
