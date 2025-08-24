@@ -8,12 +8,6 @@
 import Kingfisher
 import SwiftUI
 
-struct TopicView: View {
-    var body: some View {
-        Text( /*@START_MENU_TOKEN@*/"Hello, World!" /*@END_MENU_TOKEN@*/)
-    }
-}
-
 let formatter: RelativeDateTimeFormatter = {
     let f = RelativeDateTimeFormatter()
     f.unitsStyle = .full  // full: 一天前, short: 1d ago
@@ -105,14 +99,11 @@ struct TopicRow: View {
             .frame(maxWidth: .infinity)
             .contextMenu {
                 Button(action: {
-                    print("复制链接")
+                    UIPasteboard.general.string = topic.url
                 }) {
                     Label("复制链接", systemImage: "link")
                 }
-
-                Button(action: {
-                    print("分享")
-                }) {
+                ShareLink(item: topic.url ?? "") {
                     Label("分享", systemImage: "square.and.arrow.up")
                 }
             }
@@ -123,5 +114,5 @@ struct TopicRow: View {
 }
 
 #Preview {
-    TopicView()
+
 }
