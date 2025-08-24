@@ -38,7 +38,6 @@ struct ReplyView: View {
                 ForEach(replies.indices, id: \.self) { index in
                     Divider()
                     ReplyRowView(reply: replies[index], floor: index)
-
                 }
             }
         }
@@ -120,12 +119,28 @@ struct ReplyRowView: View {
                 }
 
                 // 评论内容
-                Text(reply.content)  // TODO 如果是 HTML，可改成 NSAttributedString
+                Text(attributedContent(reply.content))
                     .font(.body)
                     .foregroundColor(.primary)
             }
         }
         .padding(.vertical, 8)
+    }
+    
+    func attributedContent(_ content: String) -> AttributedString {
+        var attributed = AttributedString(content)
+
+        // 判断是否以 @ 开头
+        if content.first == "@",
+           let range = content.range(of: #"^@\w+"#, options: .regularExpression)
+        {
+            let nsRange = NSRange(range, in: content)
+            if let swiftRange = Range(nsRange, in: attributed) {
+                attributed[swiftRange].foregroundColor = .accentColor
+            }
+        }
+
+        return attributed
     }
 }
 
