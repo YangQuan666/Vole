@@ -26,20 +26,19 @@ struct ReplyView: View {
                     .padding()
             } else if replies.isEmpty {
                 Divider()
-                VStack(spacing: 8) {
+                VStack(spacing: 4) {
                     Text("暂无评论，快来抢沙发吧~")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                 }
-                .frame(maxWidth: .infinity, minHeight: 120)
+                .frame(maxWidth: .infinity)
                 .padding()
             } else {
                 ForEach(replies.indices, id: \.self) { index in
+                    Divider()
                     ReplyRowView(reply: replies[index], floor: index)
-                    if index < replies.count - 1 {  // 避免最后一个多余分割线
-                        Divider()
-                    }
+
                 }
             }
         }
