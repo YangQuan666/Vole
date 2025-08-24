@@ -13,6 +13,7 @@ struct DetailView: View {
     @State var topic: Topic
     @State var replies: [Reply] = []
     @State private var isLoading: Bool = false
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         ScrollView {
@@ -42,18 +43,18 @@ struct DetailView: View {
                     Spacer()
                 }
 
-                VStack {
+                VStack(alignment: .leading) {
                     // 标题
                     if let title = topic.title {
                         Text(title)
                             .font(.title2)
                             .foregroundColor(.primary)
+                            .textSelection(.enabled)
                     }
                     Divider()
                     // 内容
                     if let content = topic.content {
-                        Markdown(content)
-                            .markdownTheme(.basic)
+                        MarkdownView(content: content)
                     }
                 }
 
@@ -81,15 +82,19 @@ struct DetailView: View {
         .background(Color(.secondarySystemBackground))
         .toolbar {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
-                Button(action: {
-                    // 分享
-                }) {
+                ShareLink(item: topic.url ?? "") {
                     Image(systemName: "square.and.arrow.up")
                 }
 
                 Menu {
-                    Button("复制链接") {}
-                    Button("在浏览器中打开") {}
+                    Button("复制链接", systemImage: "link") {
+                        UIPasteboard.general.string = topic.url
+                    }
+                    Button("在浏览器中打开", systemImage: "safari") {
+                        if let url = URL(string: topic.url ?? "") {
+                            openURL(url)
+                        }
+                    }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
@@ -108,11 +113,11 @@ struct DetailView: View {
             )
             replies = data ?? []
         } catch {
-//            print("出错了: \(error)")
+            //            print("出错了: \(error)")
         }
     }
 }
 
 #Preview {
-    DetailView(topic: ModelData().topics[5])
+    DetailView(topic: ModelData().topics[0])
 }
