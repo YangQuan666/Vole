@@ -33,9 +33,9 @@ struct ContentView: View {
                     Label("Node", systemImage: "square.grid.2x2.fill")
                 }
                 .tag(Tab.node)
-            NodeView()
+            NotifyView()
                 .tabItem {
-                    Label("Notify", systemImage: "bell.fill")
+                    Label("Notify", systemImage: "tray.full.fill")
                 }
                 .tag(Tab.notify)
             SearchView()
