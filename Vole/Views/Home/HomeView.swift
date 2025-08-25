@@ -68,6 +68,7 @@ struct HomeView: View {
                                 }
                             }
                         }
+                        .tag(category)
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))

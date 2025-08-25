@@ -12,22 +12,24 @@ import SwiftUI
 struct DetailView: View {
     @State var topic: Topic
     @Environment(\.openURL) private var openURL
+    @StateObject private var replyVM = ReplyViewModel()
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 16, pinnedViews: []) {
+            VStack(alignment: .leading, spacing: 16) {
                 // 头像 + 昵称
                 HStack {
                     if let avatarURL = topic.member?.avatarNormal,
                         let url = URL(string: avatarURL)
                     {
-                        AsyncImage(url: url) { image in
-                            image.resizable()
-                        } placeholder: {
-                            Color.gray
-                        }
-                        .frame(width: 24, height: 24)
-                        .clipShape(.circle)
+                        KFImage(url)
+                            .placeholder {
+                                Color.gray
+                            }
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 24, height: 24)
+                            .clipShape(Circle())
                     } else {
                         Circle()
                             .fill(Color.gray)
@@ -39,6 +41,21 @@ struct DetailView: View {
                         .foregroundColor(.primary)
 
                     Spacer()
+                    if let node = topic.node,
+                       let url = URL(string: node.avatarNormal ?? ""),
+                       let title = node.title {
+                        KFImage(url)
+                            .placeholder {
+                                Color.gray
+                            }
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 24, height: 24)
+                            .clipShape(Circle())
+                        Text(title)
+                            .font(.subheadline)
+                            .lineLimit(1)
+                    }
                 }
 
                 VStack(alignment: .leading) {
@@ -49,21 +66,28 @@ struct DetailView: View {
                             .foregroundColor(.primary)
                             .textSelection(.enabled)
                     }
-                    Divider()
                     // 内容
-                    if let content = topic.content {
+                    if let content = topic.content, !content.isEmpty {
+                        Divider()
                         MarkdownView(content: content)
                     }
                 }
-
                 // 评论区
-                ReplyView(topicId: topic.id, replies: [])
+                ReplyView(vm: replyVM)
             }
             .padding(.horizontal)
         }
         .navigationTitle("帖子详情")
         .navigationBarTitleDisplayMode(.inline)
         .background(Color(.secondarySystemBackground))
+        .refreshable {  // ✅ 下拉刷新评论
+            await replyVM.load(topicId: topic.id)
+        }
+        .task(id: topic.id) {  // ✅ 返回时稳定触发
+            if replyVM.replies.isEmpty == true {
+                await replyVM.load(topicId: topic.id)
+            }
+        }
         .toolbar {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
                 ShareLink(item: topic.url ?? "") {

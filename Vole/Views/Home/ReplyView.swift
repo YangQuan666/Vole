@@ -8,10 +8,33 @@
 import Kingfisher
 import SwiftUI
 
+@MainActor
+class ReplyViewModel: ObservableObject {
+    @Published var replies: [Reply] = []
+    @Published var isLoading = false
+
+    func load(topicId: Int) async {
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            let data = try await V2exAPI.shared.repliesAll(topicId: topicId)
+            await MainActor.run {
+                self.replies = data ?? []
+            }
+        } catch is CancellationError {
+            // 任务被 SwiftUI 自动取消，忽略即可
+            print("任务被取消")
+        } catch {
+            print("加载失败: \(error)")
+        }
+    }
+}
+
 struct ReplyView: View {
-    let topicId: Int
-    @State var replies: [Reply]
-    @State private var isLoading: Bool = false
+    //    let topicId: Int
+    //    @State var replies: [Reply]
+    //    @State private var isLoading: Bool = false
+    @ObservedObject var vm: ReplyViewModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -20,11 +43,11 @@ struct ReplyView: View {
                 .foregroundColor(.secondary)
                 .padding(.vertical, 4)
 
-            if isLoading {
+            if vm.isLoading {
                 ProgressView()
                     .frame(maxWidth: .infinity)
                     .padding()
-            } else if replies.isEmpty {
+            } else if vm.replies.isEmpty {
                 Divider()
                 VStack(spacing: 4) {
                     Text("暂无评论，快来抢沙发吧~")
@@ -35,37 +58,22 @@ struct ReplyView: View {
                 .frame(maxWidth: .infinity)
                 .padding()
             } else {
-                ForEach(replies.indices, id: \.self) { index in
+                ForEach(vm.replies.indices, id: \.self) { index in
                     Divider()
-                    ReplyRowView(reply: replies[index], floor: index)
+                    ReplyRowView(reply: vm.replies[index], floor: index)
                 }
             }
         }
         .padding()
-        // 下拉刷新
-        .refreshable {
-            await loadReplies()
-        }
-        .onAppear {
-            Task {
-                await loadReplies()
-            }
-        }
-    }
-
-    // 加载评论
-    func loadReplies() async {
-        isLoading = true
-        defer { isLoading = false }
-
-        do {
-            let data = try await V2exAPI.shared.repliesAll(
-                topicId: self.topicId
-            )
-            replies = data ?? []
-        } catch {
-            //            print("出错了: \(error)")
-        }
+        //        // 下拉刷新
+        //        .refreshable {
+        //            await loadReplies()
+        //        }
+        //        .onAppear {
+        //            Task {
+        //                await loadReplies()
+        //            }
+        //        }
     }
 }
 
@@ -126,13 +134,16 @@ struct ReplyRowView: View {
         }
         .padding(.vertical, 8)
     }
-    
+
     func attributedContent(_ content: String) -> AttributedString {
         var attributed = AttributedString(content)
 
         // 判断是否以 @ 开头
         if content.first == "@",
-           let range = content.range(of: #"^@\w+"#, options: .regularExpression)
+            let range = content.range(
+                of: #"^@\w+"#,
+                options: .regularExpression
+            )
         {
             let nsRange = NSRange(range, in: content)
             if let swiftRange = Range(nsRange, in: attributed) {
@@ -145,5 +156,5 @@ struct ReplyRowView: View {
 }
 
 #Preview {
-    ReplyView(topicId: 123, replies: [])
+    //    ReplyView(topicId: 123)
 }
