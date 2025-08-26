@@ -125,16 +125,18 @@ struct ReplyRowView: View {
     func attributedContent(_ content: String) -> AttributedString {
         var attributed = AttributedString(content)
 
-        // 判断是否以 @ 开头
-        if content.first == "@",
-            let range = content.range(
-                of: #"^@\w+"#,
-                options: .regularExpression
+        let pattern = #"@([A-Za-z0-9]+)"#
+        if let regex = try? NSRegularExpression(pattern: pattern) {
+            let nsContent = NSString(string: content)
+            let matches = regex.matches(
+                in: content,
+                range: NSRange(location: 0, length: nsContent.length)
             )
-        {
-            let nsRange = NSRange(range, in: content)
-            if let swiftRange = Range(nsRange, in: attributed) {
-                attributed[swiftRange].foregroundColor = .accentColor
+
+            for match in matches {
+                if let range = Range(match.range, in: attributed) {
+                    attributed[range].foregroundColor = .accentColor
+                }
             }
         }
 
@@ -143,6 +145,17 @@ struct ReplyRowView: View {
 }
 
 #Preview {
+    let replies: [Reply] = [
+        Reply(
+            id: 1,
+            content: "hello @121 @123 你好ok@456 womf",
+            contentRendered: "",
+            created: 0,
+            member: Member()
+        )
+    ]
     let mv = ReplyViewModel()
-    ReplyView(vm: mv)
+    mv.replies = replies
+
+    return ReplyView(vm: mv)
 }
