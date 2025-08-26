@@ -14,6 +14,8 @@ class ReplyViewModel: ObservableObject {
     @Published var isLoading = false
 
     func load(topicId: Int) async {
+        isLoading = true
+        defer { isLoading = false }
         do {
             let replies = try await V2exAPI.shared.repliesAll(topicId: topicId)
             await MainActor.run {

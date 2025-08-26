@@ -100,6 +100,8 @@ struct TopicRow: View {
             .contextMenu {
                 Button(action: {
                     UIPasteboard.general.string = topic.url
+                    let generator = UINotificationFeedbackGenerator()
+                    generator.notificationOccurred(.success)
                 }) {
                     Label("复制链接", systemImage: "link")
                 }

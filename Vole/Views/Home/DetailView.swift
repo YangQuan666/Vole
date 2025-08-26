@@ -15,8 +15,9 @@ struct DetailView: View {
     @StateObject private var replyVM = ReplyViewModel()
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+        List {
+            // 帖子详情部分
+            Section {
                 // 头像 + 昵称
                 HStack {
                     if let avatarURL = topic.member?.avatarNormal,
@@ -42,8 +43,9 @@ struct DetailView: View {
 
                     Spacer()
                     if let node = topic.node,
-                       let url = URL(string: node.avatarNormal ?? ""),
-                       let title = node.title {
+                        let url = URL(string: node.avatarNormal ?? ""),
+                        let title = node.title
+                    {
                         KFImage(url)
                             .placeholder {
                                 Color.gray
@@ -57,6 +59,7 @@ struct DetailView: View {
                             .lineLimit(1)
                     }
                 }
+                .listRowSeparator(.hidden)
 
                 VStack(alignment: .leading) {
                     // 标题
@@ -72,14 +75,49 @@ struct DetailView: View {
                         MarkdownView(content: content)
                     }
                 }
-                // 评论区
-                ReplyView(vm: replyVM)
+                .listRowSeparator(.hidden)
             }
-            .padding(.horizontal)
+
+            // 评论区（带标题）
+            Section(header: Text("评论").font(.headline)) {
+                if replyVM.isLoading {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                } else if replyVM.replies?.isEmpty ?? true {
+                    Text("暂无评论，快来抢沙发吧~")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 20)
+                        .listRowSeparator(.hidden)
+                } else {
+                    ForEach(replyVM.replies!.indices, id: \.self) { index in
+                        ReplyRowView(
+                            reply: replyVM.replies![index],
+                            floor: index
+                        )
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button {
+                                UIPasteboard.general.string =
+                                    replyVM.replies![index].content
+
+                                let generator =
+                                    UINotificationFeedbackGenerator()
+                                generator.notificationOccurred(.success)
+                            } label: {
+                                Label("复制", systemImage: "doc.on.doc")
+                            }
+                            .tint(.accentColor)
+                        }
+                    }
+                }
+            }
         }
+        .listStyle(.plain)
         .navigationTitle("帖子详情")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Color(.secondarySystemBackground))
         .refreshable {
             await replyVM.load(topicId: topic.id)
         }
@@ -93,10 +131,11 @@ struct DetailView: View {
                 ShareLink(item: topic.url ?? "") {
                     Image(systemName: "square.and.arrow.up")
                 }
-
                 Menu {
                     Button("复制链接", systemImage: "link") {
                         UIPasteboard.general.string = topic.url
+                        let generator = UINotificationFeedbackGenerator()
+                        generator.notificationOccurred(.success)
                     }
                     Button("在浏览器中打开", systemImage: "safari") {
                         if let url = URL(string: topic.url ?? "") {
@@ -109,9 +148,7 @@ struct DetailView: View {
             }
         }
     }
-
 }
-
 #Preview {
     DetailView(topic: ModelData().topics[0])
 }
