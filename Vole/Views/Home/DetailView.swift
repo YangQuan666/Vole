@@ -78,12 +78,13 @@ struct DetailView: View {
                 .listRowSeparator(.hidden)
             }
 
-            // 评论区（带标题）
+            // 评论区
             Section(header: Text("评论").font(.headline)) {
                 if replyVM.isLoading {
                     ProgressView()
                         .frame(maxWidth: .infinity)
                         .padding()
+                        .listRowSeparator(.hidden)
                 } else if replyVM.replies?.isEmpty ?? true {
                     Text("暂无评论，快来抢沙发吧~")
                         .font(.subheadline)
