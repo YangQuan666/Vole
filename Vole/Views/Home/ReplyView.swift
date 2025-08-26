@@ -28,9 +28,6 @@ class ReplyViewModel: ObservableObject {
 }
 
 struct ReplyView: View {
-    //    let topicId: Int
-    //    @State var replies: [Reply]
-    //    @State private var isLoading: Bool = false
     @ObservedObject var vm: ReplyViewModel
 
     var body: some View {
@@ -62,15 +59,6 @@ struct ReplyView: View {
             }
         }
         .padding()
-        //        // 下拉刷新
-        //        .refreshable {
-        //            await loadReplies()
-        //        }
-        //        .onAppear {
-        //            Task {
-        //                await loadReplies()
-        //            }
-        //        }
     }
 }
 
@@ -153,5 +141,6 @@ struct ReplyRowView: View {
 }
 
 #Preview {
-    //    ReplyView(topicId: 123)
+    let mv = ReplyViewModel()
+    ReplyView(vm: mv)
 }
