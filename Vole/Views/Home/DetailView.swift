@@ -80,11 +80,11 @@ struct DetailView: View {
         .navigationTitle("帖子详情")
         .navigationBarTitleDisplayMode(.inline)
         .background(Color(.secondarySystemBackground))
-        .refreshable {  // ✅ 下拉刷新评论
+        .refreshable {
             await replyVM.load(topicId: topic.id)
         }
-        .task(id: topic.id) {  // ✅ 返回时稳定触发
-            if replyVM.replies.isEmpty == true {
+        .task(id: topic.id) {
+            if replyVM.replies == nil {
                 await replyVM.load(topicId: topic.id)
             }
         }

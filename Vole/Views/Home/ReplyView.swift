@@ -10,22 +10,19 @@ import SwiftUI
 
 @MainActor
 class ReplyViewModel: ObservableObject {
-    @Published var replies: [Reply] = []
+    @Published var replies: [Reply]? = nil
     @Published var isLoading = false
 
     func load(topicId: Int) async {
-        isLoading = true
-        defer { isLoading = false }
         do {
-            let data = try await V2exAPI.shared.repliesAll(topicId: topicId)
+            let replies = try await V2exAPI.shared.repliesAll(topicId: topicId)
             await MainActor.run {
-                self.replies = data ?? []
+                self.replies = replies
             }
-        } catch is CancellationError {
-            // 任务被 SwiftUI 自动取消，忽略即可
-            print("任务被取消")
         } catch {
-            print("加载失败: \(error)")
+            if (error as? URLError)?.code != .cancelled {
+                print("真正的错误: \(error)")
+            }
         }
     }
 }
@@ -47,7 +44,7 @@ struct ReplyView: View {
                 ProgressView()
                     .frame(maxWidth: .infinity)
                     .padding()
-            } else if vm.replies.isEmpty {
+            } else if vm.replies == nil || vm.replies?.isEmpty == true {
                 Divider()
                 VStack(spacing: 4) {
                     Text("暂无评论，快来抢沙发吧~")
@@ -58,9 +55,9 @@ struct ReplyView: View {
                 .frame(maxWidth: .infinity)
                 .padding()
             } else {
-                ForEach(vm.replies.indices, id: \.self) { index in
+                ForEach((vm.replies ?? []).indices, id: \.self) { index in
                     Divider()
-                    ReplyRowView(reply: vm.replies[index], floor: index)
+                    ReplyRowView(reply: vm.replies![index], floor: index)
                 }
             }
         }
