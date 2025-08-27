@@ -42,22 +42,6 @@ struct DetailView: View {
                         .foregroundColor(.primary)
 
                     Spacer()
-                    if let node = topic.node,
-                        let url = URL(string: node.avatarNormal ?? ""),
-                        let title = node.title
-                    {
-                        KFImage(url)
-                            .placeholder {
-                                Color.gray
-                            }
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 24, height: 24)
-                            .clipShape(Circle())
-                        Text(title)
-                            .font(.subheadline)
-                            .lineLimit(1)
-                    }
                 }
                 .listRowSeparator(.hidden)
 
@@ -117,7 +101,7 @@ struct DetailView: View {
             }
         }
         .listStyle(.plain)
-        .navigationTitle("帖子详情")
+        .navigationTitle(topic.node?.title ?? "")
         .navigationBarTitleDisplayMode(.inline)
         .refreshable {
             await replyVM.load(topicId: topic.id)
@@ -133,6 +117,9 @@ struct DetailView: View {
                     Image(systemName: "square.and.arrow.up")
                 }
                 Menu {
+                    Button("访问节点", systemImage: "scale.3d") {
+                        
+                    }
                     Button("复制链接", systemImage: "link") {
                         UIPasteboard.general.string = topic.url
                         let generator = UINotificationFeedbackGenerator()
