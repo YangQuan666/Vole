@@ -67,7 +67,7 @@ struct ReplyRowView: View {
             VStack(alignment: .leading, spacing: 4) {
                 // 用户名 + 时间 + 楼层
                 HStack {
-                    Text(reply.member.username ?? "")
+                    Text(reply.member.username)
                         .font(.subheadline)
                         .bold()
                     Text(formattedTime(reply.created))
@@ -124,7 +124,7 @@ struct ReplyRowView: View {
             content: "hello @121 @123 你好ok@456 thank you",
             contentRendered: "",
             created: 0,
-            member: Member()
+            member: Member(id:123, username: "ok")
         )
     return ReplyRowView(reply: reply, floor: 1)
 }

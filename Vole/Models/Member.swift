@@ -8,8 +8,8 @@
 import Foundation
 
 public struct Member: Identifiable, Decodable, Hashable {
-    public var id: Int?
-    public var username: String?
+    public var id: Int
+    public var username: String
     public var url: String?
     public var website: String?
     public var twitter: String?
