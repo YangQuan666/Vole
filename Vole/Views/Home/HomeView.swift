@@ -73,7 +73,7 @@ struct HomeView: View {
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
             }
-            .navigationTitle("Home")
+            .navigationTitle("首页")
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: Topic.self) { topic in
                 DetailView(topic: topic)

@@ -13,6 +13,7 @@ struct DetailView: View {
     @State var topic: Topic
     @Environment(\.openURL) private var openURL
     @StateObject private var replyVM = ReplyViewModel()
+    @State private var allMentions: [Int: [String]] = [:]
 
     var body: some View {
         List {
@@ -82,7 +83,10 @@ struct DetailView: View {
                         ReplyRowView(
                             reply: replyVM.replies![index],
                             floor: index
-                        )
+                        ){ mentions in
+                            allMentions[index] = mentions
+                            print("楼层 \(index+1) 提及用户: \(mentions)")
+                        }
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             Button {
                                 UIPasteboard.general.string =

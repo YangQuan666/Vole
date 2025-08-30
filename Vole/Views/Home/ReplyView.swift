@@ -29,41 +29,6 @@ class ReplyViewModel: ObservableObject {
     }
 }
 
-struct ReplyView: View {
-    @ObservedObject var vm: ReplyViewModel
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("评论")
-                .font(.headline)
-                .foregroundColor(.secondary)
-                .padding(.vertical, 4)
-
-            if vm.isLoading {
-                ProgressView()
-                    .frame(maxWidth: .infinity)
-                    .padding()
-            } else if vm.replies == nil || vm.replies?.isEmpty == true {
-                Divider()
-                VStack(spacing: 4) {
-                    Text("暂无评论，快来抢沙发吧~")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity)
-                .padding()
-            } else {
-                ForEach((vm.replies ?? []).indices, id: \.self) { index in
-                    Divider()
-                    ReplyRowView(reply: vm.replies![index], floor: index)
-                }
-            }
-        }
-        .padding()
-    }
-}
-
 // 时间格式化工具
 func formattedTime(_ timestamp: Int) -> String {
     let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
@@ -75,6 +40,7 @@ func formattedTime(_ timestamp: Int) -> String {
 struct ReplyRowView: View {
     let reply: Reply
     let floor: Int
+    var onMentionsChanged: (([String]) -> Void)? = nil
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -114,18 +80,20 @@ struct ReplyRowView: View {
                 }
 
                 // 评论内容
-                Text(attributedContent(reply.content))
-                    .font(.body)
-                    .foregroundColor(.primary)
+                let (attrText, mentions) = parseContent(reply.content)
+                Text(attrText).onAppear {
+                    onMentionsChanged?(mentions)
+                }
             }
         }
         .padding(.vertical, 8)
     }
 
-    func attributedContent(_ content: String) -> AttributedString {
+    func parseContent(_ content: String) -> (AttributedString, [String]) {
         var attributed = AttributedString(content)
+        var mentions: [String] = []
 
-        let pattern = #"@([A-Za-z0-9]+)"#
+        let pattern = #"@([\p{L}0-9_]+)"#
         if let regex = try? NSRegularExpression(pattern: pattern) {
             let nsContent = NSString(string: content)
             let matches = regex.matches(
@@ -134,28 +102,29 @@ struct ReplyRowView: View {
             )
 
             for match in matches {
+                if match.numberOfRanges > 1,
+                    let range = Range(match.range(at: 1), in: content)
+                {
+                    mentions.append(String(content[range]))
+                }
                 if let range = Range(match.range, in: attributed) {
                     attributed[range].foregroundColor = .accentColor
                 }
             }
         }
 
-        return attributed
+        return (attributed, mentions)
     }
 }
 
 #Preview {
-    let replies: [Reply] = [
+    let reply: Reply =
         Reply(
             id: 1,
-            content: "hello @121 @123 你好ok@456 womf",
+            content: "hello @121 @123 你好ok@456 thank you",
             contentRendered: "",
             created: 0,
             member: Member()
         )
-    ]
-    let mv = ReplyViewModel()
-    mv.replies = replies
-
-    return ReplyView(vm: mv)
+    return ReplyRowView(reply: reply, floor: 1)
 }
