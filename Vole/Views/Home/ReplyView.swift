@@ -93,7 +93,7 @@ struct ReplyRowView: View {
         var attributed = AttributedString(content)
         var mentions: [String] = []
 
-        let pattern = #"@([\p{L}0-9_]+)"#
+        let pattern = #"@([\p{L}0-9_]+)(?=\s|$)"#
         if let regex = try? NSRegularExpression(pattern: pattern) {
             let nsContent = NSString(string: content)
             let matches = regex.matches(
@@ -121,7 +121,7 @@ struct ReplyRowView: View {
     let reply: Reply =
         Reply(
             id: 1,
-            content: "hello @121 @123 你好ok@456 thank you",
+            content: "hello @121 @123 你好ok@456 thank you \r\n email yang@quan.com",
             contentRendered: "",
             created: 0,
             member: Member(id:123, username: "ok")
