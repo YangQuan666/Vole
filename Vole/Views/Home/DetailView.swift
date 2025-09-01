@@ -81,7 +81,7 @@ struct DetailView: View {
                                 .frame(width: 24, height: 24)
                         }
 
-                        Text(topic.member?.username ?? "未知用户")
+                        Text(topic.member?.username ?? "")
                             .font(.subheadline)
                             .foregroundColor(.primary)
 
@@ -219,7 +219,7 @@ struct DetailView: View {
             }
         }
 
-        return conversation.reversed() // 保持原顺序
+        return conversation.reversed()
     }
 
     // 提取 @ 用户名
