@@ -22,29 +22,38 @@ struct DetailView: View {
             // 浮层对话视图
             if let reply = selectedReply {
                 ZStack {
-                    Color.black.opacity(0.3)
+                    // 全屏背景模糊
+                    Color.clear
+                        .background(.ultraThinMaterial)
                         .ignoresSafeArea()
-                        .contentShape(Rectangle())
                         .onTapGesture {
-                            withAnimation(.spring()) {
+                            withAnimation(.spring(dampingFraction: 0.6)) {
                                 selectedReply = nil
                             }
                         }
 
-                        VStack(spacing: 12) {
-                            ForEach(conversation(for: reply), id: \.id) { r in
-                                ReplyRowView(reply: r, floor: 0)
+                    // 浮层内容
+                    ScrollView {
+                        LazyVStack(spacing: 0) {
+                            ForEach(conversation(for: reply), id: \.0.id) { r, floor in
+                                ReplyRowView(reply: r, floor: floor)
                                     .matchedGeometryEffect(
                                         id: r.id,
                                         in: ns,
-                                        isSource: false
+                                        isSource: selectedReply != nil
                                     )
+                                Divider()
+                                    .padding(.leading, 48)
                             }
                         }
                         .padding()
-                        .background(.ultraThinMaterial)
-                        .cornerRadius(12)
-                        .shadow(radius: 4)
+                    }
+                    .onTapGesture {
+                        withAnimation(.spring(dampingFraction: 0.6)) {
+                            selectedReply = nil
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .transition(.opacity)
                 .zIndex(1)
@@ -123,8 +132,10 @@ struct DetailView: View {
                                     in: ns,
                                     isSource: selectedReply == nil
                                 )
+                                .contentShape(Rectangle())
                                 .onTapGesture {
-                                    withAnimation(.spring()) {
+                                    withAnimation(.spring(dampingFraction: 0.6))
+                                    {
                                         selectedReply = reply
                                     }
                                 }
@@ -188,27 +199,27 @@ struct DetailView: View {
         }
     }
 
-    // 获取当前点击回复的对话列表（按 index 顺序）
-    private func conversation(for reply: Reply) -> [Reply] {
+    // 获取当前点击回复的对话列表，并返回实际楼层
+    private func conversation(for reply: Reply) -> [(Reply, Int)] {
         guard let replies = replyVM.replies else { return [] }
         guard let idx = replies.firstIndex(where: { $0.id == reply.id }) else {
-            return [reply]
+            return [(reply, 0)]
         }
 
         let currentUser = reply.member.username
         let mentionedUsers = extractMentionedUsers(from: reply.content)
 
-        var conversation: [Reply] = []
+        var conversation: [(Reply, Int)] = []
 
-        for r in replies[...idx].reversed() {
-            if r.member.username == currentUser
-                || mentionedUsers.contains(r.member.username)
-            {
-                conversation.append(r)
+        // 倒序遍历原始数组
+        for i in stride(from: idx, through: 0, by: -1) {
+            let r = replies[i]
+            if r.member.username == currentUser || mentionedUsers.contains(r.member.username) {
+                conversation.append((r, i)) // 保存原始索引
             }
         }
 
-        return conversation.reversed()
+        return conversation.reversed() // 保持原顺序
     }
 
     // 提取 @ 用户名
