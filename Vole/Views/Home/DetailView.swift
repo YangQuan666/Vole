@@ -35,7 +35,9 @@ struct DetailView: View {
                     // 浮层内容
                     ScrollView {
                         LazyVStack(spacing: 0) {
-                            ForEach(conversation(for: reply), id: \.0.id) { r, floor in
+                            ForEach(conversation(for: reply), id: \.0.id) {
+                                r,
+                                floor in
                                 ReplyRowView(reply: r, floor: floor)
                                     .matchedGeometryEffect(
                                         id: r.id,
@@ -211,15 +213,31 @@ struct DetailView: View {
 
         var conversation: [(Reply, Int)] = []
 
-        // 倒序遍历原始数组
-        for i in stride(from: idx, through: 0, by: -1) {
-            let r = replies[i]
-            if r.member.username == currentUser || mentionedUsers.contains(r.member.username) {
-                conversation.append((r, i)) // 保存原始索引
-            }
-        }
 
-        return conversation.reversed()
+        if !mentionedUsers.isEmpty {
+            // 倒序遍历，收集自己 + 被提及用户的回复
+            for i in stride(from: idx, through: 0, by: -1) {
+                let r = replies[i]
+                if r.member.username == currentUser
+                    || mentionedUsers.contains(r.member.username)
+                {
+                    conversation.append((r, i))
+                }
+            }
+            return conversation.reversed()
+        } else {
+            // 没有提及用户：表示是发表者自己发的
+            // 从当前楼层往后遍历，收集所有回复了当前用户的评论
+            conversation.append((reply, idx))  // 先加自己
+            for i in (idx + 1)..<replies.count {
+                let r = replies[i]
+                let rMentions = extractMentionedUsers(from: r.content)
+                if rMentions.contains(currentUser) {
+                    conversation.append((r, i))
+                }
+            }
+            return conversation
+        }
     }
 
     // 提取 @ 用户名
