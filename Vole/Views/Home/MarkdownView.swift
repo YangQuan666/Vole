@@ -12,14 +12,72 @@ import SwiftUI
 struct MarkdownView: View {
     @State var content: String
     @State private var isRendering = true
+    var onMentionsChanged: (([String]) -> Void)?
+    var onTapMention: ((String) -> Void)?   // 可选：点击 @mention 的回调
+
 
     var body: some View {
-        Markdown(content)
+        let (md, mentions) = makeMarkdownFromMentions(content)
+
+        Markdown(md)
             .markdownInlineImageProvider(KFInlineImageProvider())
             .textSelection(.enabled)  // 开启文本选中
             .markdownTheme(.basic)
-        
+            .markdownTextStyle(\.link) {
+                ForegroundColor(.accentColor)
+                FontWeight(.semibold)
+            }
+            // 把 mention 列表回调给外部（用并发保证主线程、避免构建期改状态）
+            .task(id: content) { @MainActor in
+                onMentionsChanged?(mentions)
+            }
+            // 拦截自定义 scheme：mention://<username>
+            .environment(
+                \.openURL,
+                OpenURLAction { url in
+                    if url.scheme == "mention" {
+                        let name = url.host ?? url.lastPathComponent
+                        onTapMention?(name)
+                        return .handled
+                    }
+                    return .systemAction(url)
+                }
+            )
+    }
+    
+    /// 把 @username 转成 [@username](mention://username) 并收集 mentions
+    private func makeMarkdownFromMentions(_ content: String) -> (String, [String]) {
+        // 避免匹配邮箱等：前一位不是字母数字下划线，后一位也不是
+        let pattern = #"(?<![\p{L}0-9_])@([\p{L}0-9_]+)(?![\p{L}0-9_])"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return (content, []) }
 
+        let ns = content as NSString
+        var mentions: [String] = []
+        var result = ""
+        var last = 0
+
+        let matches = regex.matches(in: content, range: NSRange(location: 0, length: ns.length))
+        for m in matches {
+            // 原文片段
+            let before = ns.substring(with: NSRange(location: last, length: m.range.location - last))
+            result += before
+
+            // 用户名
+            let name = ns.substring(with: m.range(at: 1))
+            mentions.append(name)
+
+            // 为避免非 ASCII 字符出问题，做个编码
+            let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? name
+
+            // 替换成自定义 scheme 的 Markdown 链接
+            result += "[@\(name)](mention://\(encoded))"
+
+            last = m.range.location + m.range.length
+        }
+
+        // 末尾剩余片段
+        result += ns.substring(from: last)
+        return (result, mentions)
     }
 }
 
@@ -47,24 +105,32 @@ struct KFInlineImageProvider: InlineImageProvider {
     }
 }
 #Preview {
-    
-    let str = """
-                关在厨房了   \r\n后面第三第四天  就很乖了，坚持到 7 点才开始蹦跶    \r\n我起床摸摸她 带她到厨房给她喂点吃的  把卧室门关了睡回笼觉    \r\n\r\n给你们看看我的可爱小猫  \r\n![1.jpg]( https://s2.loli.net/2025/08/22/qg3FSLce4jH1TBz.jpg)\r\n![2.jpg]( https://s2.loli.net/2025/08/22/Kp3G7Yfo5EtPnFJ.jpg)\r\n![3.jpg]( https://s2.loli.net/2025/08/22/78bDXlPiEjzM2Lp.jpg)  \r\n![4.jpg]( https://s2.loli.net/2025/08/22/3KJo6mvABph5Ltx.jpg)\r\n![5.jpg]( https://s2.loli.net/2025/08/22/duAjOwcYmSFCzr4.jpg)  \r\n![6.jpg]( https://s2.loli.net/2025/08/22/pszeAWrXfk3bOUY.jpg)  \r\n![7.jpg]( https://s2.loli.net/2025/08/22/NtLBMyXhPk5Aaoz.jpg)
-                """
-    let content = MarkdownContent(str)
-    let htmlString = content.renderHTML()
-    Text(htmlString)
+
     ScrollView {
-        MarkdownView(
-//            content: """
-//                    养猫的想法有一段时间了，想养一只美短起司         \r\n上个星期在小红书刷到一个同城猫舍发的可爱起司小猫视频      \r\n择日不如撞日，当即决定买下来  周六去接猫猫     \r\n超级可爱 超级乖    \r\n接回家的路上拉了臭臭 粘身上了   \r\n我帮她擦臭臭 可能有点害怕  只是想逃 不哈气不伸爪子也不咬人   \r\n擦干净放房间里就躲床下   \r\n我拿逗猫棒晃晃  她就出来追逗猫棒  \r\n一天 24 小时要玩逗猫棒  人累了不想玩了 把逗猫棒放在高的地方   \r\n她爬到桌子上把逗猫棒扒拉下来  自己叼着玩   \r\n晚上会爬到床上 趴在人身上或者旁边睡觉  \r\n还在我身上踩奶  老母亲的心都要化了  \r\n\r\n到家的第一天晚上 \r\n凌晨四五点跑酷  在床上蹦跶  在人身上蹦跶  蹦一下砰一声  我忍了  \r\n第二天早上五点又开始蹦跶  我把她引到厨房  关在厨房了   \r\n后面第三第四天  就很乖了，坚持到 7 点才开始蹦跶    \r\n我起床摸摸她 带她到厨房给她喂点吃的  把卧室门关了睡回笼觉    \r\n\r\n给你们看看我的可爱小猫  \r\n![1.jpg]( https://s2.loli.net/2025/08/22/qg3FSLce4jH1TBz.jpg)\r\n![2.jpg]( https://s2.loli.net/2025/08/22/Kp3G7Yfo5EtPnFJ.jpg)\r\n![3.jpg]( https://s2.loli.net/2025/08/22/78bDXlPiEjzM2Lp.jpg)  \r\n![4.jpg]( https://s2.loli.net/2025/08/22/3KJo6mvABph5Ltx.jpg)\r\n![5.jpg]( https://s2.loli.net/2025/08/22/duAjOwcYmSFCzr4.jpg)  \r\n![6.jpg]( https://s2.loli.net/2025/08/22/pszeAWrXfk3bOUY.jpg)  \r\n![7.jpg]( https://s2.loli.net/2025/08/22/NtLBMyXhPk5Aaoz.jpg)
-//                """
-            
-            content: """
-                <h1>标题</h1>
-                <strong>加粗文字</strong>
-                <img src="https://example.com/image.png" />
-                """
-        )
+        let markdownString = """
+            ## Try MarkdownUI
+
+            **MarkdownUI** is a native Markdown renderer for SwiftUI
+            compatible with the
+            [GitHub Flavored Markdown Spec](https://github.github.com/gfm/).
+
+            You can quote text with a `>`.
+
+            > Outside of a dog, a book is man's best friend. Inside of a
+            > dog it's too dark to read.
+
+
+            # Markdown + 链接预览 Demo
+
+            普通文字内容测试。
+
+            这是一个普通链接：[Apple 官网](https://www.apple.com)
+
+            这是一个裸链接：https://developer.apple.com
+
+            这是一个图片：![](https://developer.apple.com/assets/elements/icons/swift/swift-64x64_2x.png)
+            """
+
+        MarkdownView(content: markdownString)
     }
 }

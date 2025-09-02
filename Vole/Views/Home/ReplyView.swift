@@ -80,40 +80,12 @@ struct ReplyRowView: View {
                 }
 
                 // 评论内容
-                let (attrText, mentions) = parseContent(reply.content)
-                Text(attrText).onAppear {
+                MarkdownView(content: reply.content){ mentions in
                     onMentionsChanged?(mentions)
                 }
             }
         }
         .padding(.vertical, 8)
-    }
-
-    func parseContent(_ content: String) -> (AttributedString, [String]) {
-        var attributed = AttributedString(content)
-        var mentions: [String] = []
-
-        let pattern = #"@([\p{L}0-9_]+)(?=\s|$)"#
-        if let regex = try? NSRegularExpression(pattern: pattern) {
-            let nsContent = NSString(string: content)
-            let matches = regex.matches(
-                in: content,
-                range: NSRange(location: 0, length: nsContent.length)
-            )
-
-            for match in matches {
-                if match.numberOfRanges > 1,
-                    let range = Range(match.range(at: 1), in: content)
-                {
-                    mentions.append(String(content[range]))
-                }
-                if let range = Range(match.range, in: attributed) {
-                    attributed[range].foregroundColor = .accentColor
-                }
-            }
-        }
-
-        return (attributed, mentions)
     }
 }
 
