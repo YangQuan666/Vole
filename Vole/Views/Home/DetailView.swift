@@ -38,7 +38,7 @@ struct DetailView: View {
                             ForEach(conversation(for: reply), id: \.0.id) {
                                 r,
                                 floor in
-                                ReplyRowView(reply: r, floor: floor)
+                                ReplyRowView(topic: topic, reply: r, floor: floor)
                                     .matchedGeometryEffect(
                                         id: r.id,
                                         in: ns,
@@ -128,7 +128,7 @@ struct DetailView: View {
                             Array((replyVM.replies ?? []).enumerated()),
                             id: \.1.id
                         ) { index, reply in
-                            ReplyRowView(reply: reply, floor: index)
+                            ReplyRowView(topic: topic, reply: reply, floor: index)
                                 .matchedGeometryEffect(
                                     id: reply.id,
                                     in: ns,

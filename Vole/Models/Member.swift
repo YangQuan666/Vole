@@ -24,10 +24,11 @@ public struct Member: Identifiable, Decodable, Hashable {
     public var avatarLarge: String?
     public var created: Int?
     public var lastModified: Int?
+    public var pro: Int?
 
     enum CodingKeys: String, CodingKey {
         case id, username, url, website, twitter, psn, github, btc, location,
-            tagline, bio, created
+            tagline, bio, created, pro
         case avatarMini = "avatar_mini"
         case avatarNormal = "avatar_normal"
         case avatarLarge = "avatar_large"

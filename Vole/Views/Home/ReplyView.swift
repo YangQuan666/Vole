@@ -38,6 +38,7 @@ func formattedTime(_ timestamp: Int) -> String {
 }
 
 struct ReplyRowView: View {
+    let topic: Topic
     let reply: Reply
     let floor: Int
     var onMentionsChanged: (([String]) -> Void)? = nil
@@ -67,9 +68,20 @@ struct ReplyRowView: View {
             VStack(alignment: .leading, spacing: 4) {
                 // 用户名 + 时间 + 楼层
                 HStack {
-                    Text(reply.member.username)
+                    let username = reply.member.username
+                    Text(username)
                         .font(.subheadline)
                         .bold()
+                    if topic.member?.username == username {
+                        Image(systemName: "star.circle.fill")
+                            .foregroundColor(.yellow)
+                            .imageScale(.small)
+                    }
+                    if let pro = reply.member.pro, pro > 0 {
+                        Image(systemName: "crown.fill")
+                            .foregroundColor(.yellow)
+                            .imageScale(.small)
+                    }
                     Text(formattedTime(reply.created))
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -80,7 +92,7 @@ struct ReplyRowView: View {
                 }
 
                 // 评论内容
-                MarkdownView(content: reply.content){ mentions in
+                MarkdownView(content: reply.content) { mentions in
                     onMentionsChanged?(mentions)
                 }
             }
@@ -93,10 +105,12 @@ struct ReplyRowView: View {
     let reply: Reply =
         Reply(
             id: 1,
-            content: "hello @121 @123 你好ok@456 thank you \r\n email yang@quan.com",
+            content:
+                "hello @121 @123 你好ok@456 thank you \r\n email yang@quan.com",
             contentRendered: "",
-            created: 0,
-            member: Member(id:123, username: "ok")
+            created: 1_756_907_441,
+            member: Member(id: 123, username: "user_a")
         )
-    return ReplyRowView(reply: reply, floor: 1)
+    
+//    ReplyRowView(topic: nil, reply: reply, floor: 1)
 }
