@@ -9,73 +9,105 @@ import Kingfisher
 import MarkdownUI
 import SwiftUI
 
+enum LinkAction {
+    case mention(username: String)
+    case topic(id: Int)
+    case node(id: Int)
+}
+
 struct MarkdownView: View {
     @State var content: String
     @State private var isRendering = true
-    var onMentionsChanged: (([String]) -> Void)?
-    var onTapMention: ((String) -> Void)?   // 可选：点击 @mention 的回调
 
+    var onMentionsChanged: (([String]) -> Void)?
+    var onLinkAction: ((LinkAction) -> Void)?  // 统一处理链接事件
 
     var body: some View {
-        let (md, mentions) = makeMarkdownFromMentions(content)
+        let (md, mentions) = makeMarkdown(content)
 
         Markdown(md)
             .markdownInlineImageProvider(KFInlineImageProvider())
-            .textSelection(.enabled)  // 开启文本选中
+            .textSelection(.enabled)
             .markdownTheme(.basic)
             .markdownTextStyle(\.link) {
                 ForegroundColor(.accentColor)
                 FontWeight(.semibold)
             }
-            // 把 mention 列表回调给外部（用并发保证主线程、避免构建期改状态）
+            // 把 mention 列表回调给外部
             .task(id: content) { @MainActor in
                 onMentionsChanged?(mentions)
             }
-            // 拦截自定义 scheme：mention://<username>
+            // 统一拦截链接事件
             .environment(
                 \.openURL,
                 OpenURLAction { url in
                     if url.scheme == "mention" {
                         let name = url.host ?? url.lastPathComponent
-                        onTapMention?(name)
+                        onLinkAction?(.mention(username: name))
                         return .handled
                     }
+
+                    // 匹配 V2EX 帖子链接
+                    let host = url.host?.lowercased()
+                    if host == "v2ex.com" || host == "www.v2ex.com" {
+                        let components = url.pathComponents
+                        if components.count >= 3, components[1] == "t",
+                            let topicId = Int(components[2])
+                        {
+                            onLinkAction?(.topic(id: topicId))
+                            return .handled
+                        }
+                    }
+
+                    // 其他链接
                     return .systemAction(url)
                 }
             )
     }
     
-    /// 把 @username 转成 [@username](mention://username) 并收集 mentions
-    private func makeMarkdownFromMentions(_ content: String) -> (String, [String]) {
-        // 避免匹配邮箱等：前一位不是字母数字下划线，后一位也不是
-        let pattern = #"(?<![\p{L}0-9_])@([\p{L}0-9_]+)(?![\p{L}0-9_])"#
-        guard let regex = try? NSRegularExpression(pattern: pattern) else { return (content, []) }
-
+    private func makeMarkdown(_ content: String) -> (String, [String]) {
+        /// 正则匹配 @username
+        let mentionPattern = #"(?<![\p{L}0-9_])@([\p{L}0-9_]+)(?![\p{L}0-9_])"#
+        let imagePattern = #"https?://\S+\.(png|jpg|jpeg|gif|webp|bmp|tiff)"#
+        
+        guard let mentionRegex = try? NSRegularExpression(pattern: mentionPattern),
+              let imageRegex = try? NSRegularExpression(pattern: imagePattern) else {
+            return (content, [])
+        }
+        
         let ns = content as NSString
         var mentions: [String] = []
         var result = ""
         var last = 0
-
-        let matches = regex.matches(in: content, range: NSRange(location: 0, length: ns.length))
-        for m in matches {
+        
+        /// 找出所有 @mention 和图片链接，按起始位置排序
+        let mentionMatches = mentionRegex.matches(in: content, range: NSRange(location: 0, length: ns.length))
+        let imageMatches = imageRegex.matches(in: content, range: NSRange(location: 0, length: ns.length))
+        let allMatches = (mentionMatches.map { ($0.range.location, $0, true) } +
+                          imageMatches.map { ($0.range.location, $0, false) })
+            .sorted { $0.0 < $1.0 } // 按位置排序
+        
+        for (_, match, isMention) in allMatches {
             // 原文片段
-            let before = ns.substring(with: NSRange(location: last, length: m.range.location - last))
+            let before = ns.substring(with: NSRange(location: last, length: match.range.location - last))
             result += before
-
-            // 用户名
-            let name = ns.substring(with: m.range(at: 1))
-            mentions.append(name)
-
-            // 为避免非 ASCII 字符出问题，做个编码
-            let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? name
-
-            // 替换成自定义 scheme 的 Markdown 链接
-            result += "[@\(name)](mention://\(encoded))"
-
-            last = m.range.location + m.range.length
+            
+            let substring = ns.substring(with: match.range)
+            if isMention {
+                // mention
+                let name = ns.substring(with: match.range(at: 1))
+                mentions.append(name)
+                let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? name
+                result += "[@\(name)](mention://\(encoded))"
+            } else {
+                // 图片链接
+                result += "![image](\(substring))"
+            }
+            
+            last = match.range.location + match.range.length
         }
-
-        // 末尾剩余片段
+        
+        // 尾部剩余
         result += ns.substring(from: last)
         return (result, mentions)
     }

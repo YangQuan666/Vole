@@ -92,9 +92,22 @@ struct ReplyRowView: View {
                 }
 
                 // 评论内容
-                MarkdownView(content: reply.content) { mentions in
-                    onMentionsChanged?(mentions)
-                }
+                MarkdownView(
+                    content: reply.content,
+                    onMentionsChanged: { mentions in
+                        onMentionsChanged?(mentions)
+                    },
+                    onLinkAction: { action in
+                        switch action {
+                        case .mention(let username):
+                            print("@\(username)")
+                        case .topic(let id):
+                            print("topicId:", id)
+                        default:
+                            break
+                        }
+                    }
+                )
             }
         }
         .padding(.vertical, 8)
@@ -111,6 +124,6 @@ struct ReplyRowView: View {
             created: 1_756_907_441,
             member: Member(id: 123, username: "user_a")
         )
-    
-//    ReplyRowView(topic: nil, reply: reply, floor: 1)
+
+    //    ReplyRowView(topic: nil, reply: reply, floor: 1)
 }

@@ -38,12 +38,16 @@ struct DetailView: View {
                             ForEach(conversation(for: reply), id: \.0.id) {
                                 r,
                                 floor in
-                                ReplyRowView(topic: topic, reply: r, floor: floor)
-                                    .matchedGeometryEffect(
-                                        id: r.id,
-                                        in: ns,
-                                        isSource: selectedReply != nil
-                                    )
+                                ReplyRowView(
+                                    topic: topic,
+                                    reply: r,
+                                    floor: floor
+                                )
+                                .matchedGeometryEffect(
+                                    id: r.id,
+                                    in: ns,
+                                    isSource: selectedReply != nil
+                                )
                                 Divider()
                                     .padding(.leading, 48)
                             }
@@ -102,7 +106,20 @@ struct DetailView: View {
                         // 内容
                         if let content = topic.content, !content.isEmpty {
                             Divider()
-                            MarkdownView(content: content)
+                            MarkdownView(
+                                content: content,
+                                onMentionsChanged: nil,
+                                onLinkAction: { action in
+                                    switch action {
+                                    case .mention(let username):
+                                        print("@\(username)")
+                                    case .topic(let id):
+                                        print("topicId:", id)
+                                    default:
+                                        break
+                                    }
+                                }
+                            )
                         }
                     }
                     .listRowSeparator(.hidden)
@@ -128,35 +145,38 @@ struct DetailView: View {
                             Array((replyVM.replies ?? []).enumerated()),
                             id: \.1.id
                         ) { index, reply in
-                            ReplyRowView(topic: topic, reply: reply, floor: index)
-                                .matchedGeometryEffect(
-                                    id: reply.id,
-                                    in: ns,
-                                    isSource: selectedReply == nil
-                                )
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    withAnimation(.spring(dampingFraction: 0.6))
-                                    {
-                                        selectedReply = reply
-                                    }
+                            ReplyRowView(
+                                topic: topic,
+                                reply: reply,
+                                floor: index
+                            )
+                            .matchedGeometryEffect(
+                                id: reply.id,
+                                in: ns,
+                                isSource: selectedReply == nil
+                            )
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                withAnimation(.spring(dampingFraction: 0.6)) {
+                                    selectedReply = reply
                                 }
-                                .swipeActions(
-                                    edge: .trailing,
-                                    allowsFullSwipe: true
-                                ) {
-                                    Button {
-                                        UIPasteboard.general.string =
-                                            replyVM.replies![index].content
+                            }
+                            .swipeActions(
+                                edge: .trailing,
+                                allowsFullSwipe: true
+                            ) {
+                                Button {
+                                    UIPasteboard.general.string =
+                                        replyVM.replies![index].content
 
-                                        let generator =
-                                            UINotificationFeedbackGenerator()
-                                        generator.notificationOccurred(.success)
-                                    } label: {
-                                        Label("复制", systemImage: "doc.on.doc")
-                                    }
-                                    .tint(.accentColor)
+                                    let generator =
+                                        UINotificationFeedbackGenerator()
+                                    generator.notificationOccurred(.success)
+                                } label: {
+                                    Label("复制", systemImage: "doc.on.doc")
                                 }
+                                .tint(.accentColor)
+                            }
                         }
                     }
                 }
@@ -212,7 +232,6 @@ struct DetailView: View {
         let mentionedUsers = extractMentionedUsers(from: reply.content)
 
         var conversation: [(Reply, Int)] = []
-
 
         if !mentionedUsers.isEmpty {
             // 倒序遍历，收集自己 + 被提及用户的回复
