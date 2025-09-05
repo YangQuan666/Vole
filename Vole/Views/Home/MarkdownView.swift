@@ -24,7 +24,7 @@ struct MarkdownView: View {
 
     var body: some View {
         let (md, mentions) = makeMarkdown(content)
-
+        
         Markdown(md)
             .markdownInlineImageProvider(KFInlineImageProvider())
             .textSelection(.enabled)
@@ -66,50 +66,74 @@ struct MarkdownView: View {
     }
     
     private func makeMarkdown(_ content: String) -> (String, [String]) {
-        /// 正则匹配 @username
-        let mentionPattern = #"(?<![\p{L}0-9_])@([\p{L}0-9_]+)(?![\p{L}0-9_])"#
-        let imagePattern = #"https?://\S+\.(png|jpg|jpeg|gif|webp|bmp|tiff)"#
-        
-        guard let mentionRegex = try? NSRegularExpression(pattern: mentionPattern),
-              let imageRegex = try? NSRegularExpression(pattern: imagePattern) else {
-            return (content, [])
-        }
-        
-        let ns = content as NSString
         var mentions: [String] = []
         var result = ""
+
+        // 用正则拆分原始内容，保留 Markdown 图片/链接
+        let pattern = #"(!\[.*?\]\(.*?\)|\[.*?\]\(.*?\))"#
+        let regex = try! NSRegularExpression(pattern: pattern)
+        let ns = content as NSString
         var last = 0
         
-        /// 找出所有 @mention 和图片链接，按起始位置排序
-        let mentionMatches = mentionRegex.matches(in: content, range: NSRange(location: 0, length: ns.length))
-        let imageMatches = imageRegex.matches(in: content, range: NSRange(location: 0, length: ns.length))
-        let allMatches = (mentionMatches.map { ($0.range.location, $0, true) } +
-                          imageMatches.map { ($0.range.location, $0, false) })
-            .sorted { $0.0 < $1.0 } // 按位置排序
+        let matches = regex.matches(in: content, range: NSRange(location: 0, length: ns.length))
         
-        for (_, match, isMention) in allMatches {
-            // 原文片段
-            let before = ns.substring(with: NSRange(location: last, length: match.range.location - last))
-            result += before
+        for match in matches {
+            // 普通文本片段
+            let rangeBefore = NSRange(location: last, length: match.range.location - last)
+            let textBefore = ns.substring(with: rangeBefore)
+            result += processTextFragment(textBefore, &mentions)
             
-            let substring = ns.substring(with: match.range)
-            if isMention {
-                // mention
-                let name = ns.substring(with: match.range(at: 1))
-                mentions.append(name)
-                let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? name
-                result += "[@\(name)](mention://\(encoded))"
-            } else {
-                // 图片链接
-                result += "![image](\(substring))"
-            }
+            // 已有 Markdown 图片或链接，直接保留
+            let markdownFragment = ns.substring(with: match.range)
+            result += markdownFragment
             
             last = match.range.location + match.range.length
         }
         
-        // 尾部剩余
-        result += ns.substring(from: last)
+        // 尾部普通文本
+        if last < ns.length {
+            let tail = ns.substring(from: last)
+            result += processTextFragment(tail, &mentions)
+        }
+        
         return (result, mentions)
+    }
+
+    // 处理普通文本片段：@mention + 图片 URL
+    private func processTextFragment(_ text: String, _ mentions: inout [String]) -> String {
+        var result = text
+        let mentionPattern = #"(?<![\p{L}0-9_])@([\p{L}0-9_]+)(?![\p{L}0-9_])"#
+        let imagePattern = #"https?://\S+\.(png|jpg|jpeg|gif|webp|bmp|tiff)"#
+        
+        // @mention
+        if let mentionRegex = try? NSRegularExpression(pattern: mentionPattern) {
+            let nsText = result as NSString
+            let matches = mentionRegex.matches(in: result, range: NSRange(location: 0, length: nsText.length))
+            for match in matches.reversed() {
+                if let range = Range(match.range(at: 1), in: result) {
+                    let name = String(result[range])
+                    mentions.append(name)
+                    let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? name
+                    if let fullRange = Range(match.range, in: result) {
+                        result.replaceSubrange(fullRange, with: "[@\(name)](mention://\(encoded))")
+                    }
+                }
+            }
+        }
+        
+        // 图片 URL
+        if let imageRegex = try? NSRegularExpression(pattern: imagePattern) {
+            let nsText = result as NSString
+            let matches = imageRegex.matches(in: result, range: NSRange(location: 0, length: nsText.length))
+            for match in matches.reversed() {
+                if let range = Range(match.range, in: result) {
+                    let url = String(result[range])
+                    result.replaceSubrange(range, with: "![image](\(url))")
+                }
+            }
+        }
+        
+        return result
     }
 }
 
@@ -140,27 +164,10 @@ struct KFInlineImageProvider: InlineImageProvider {
 
     ScrollView {
         let markdownString = """
-            ## Try MarkdownUI
-
-            **MarkdownUI** is a native Markdown renderer for SwiftUI
-            compatible with the
-            [GitHub Flavored Markdown Spec](https://github.github.com/gfm/).
-
-            You can quote text with a `>`.
-
-            > Outside of a dog, a book is man's best friend. Inside of a
-            > dog it's too dark to read.
-
-
-            # Markdown + 链接预览 Demo
-
-            普通文字内容测试。
-
-            这是一个普通链接：[Apple 官网](https://www.apple.com)
-
-            这是一个裸链接：https://developer.apple.com
 
             这是一个图片：![](https://developer.apple.com/assets/elements/icons/swift/swift-64x64_2x.png)
+            
+            问题如题。\r\n\r\n![image.png]( https://s2.loli.net/2025/09/03/zTV5PdNWXnbKF4w.png)\r\n\r\n网络上找到了一些方法，比如打开 [设置-隐私与安全性-本地网络] 中的权限，但是我发现这里面我的[几十个 Chrome](/t/1144946) 的权限都是打开状态。我试过关闭之后重新打开，但是无法解决问题。\r\n\r\nPS：感觉 Mac 越来越难用了，有点想换回 Windows 了……
             """
 
         MarkdownView(content: markdownString)
