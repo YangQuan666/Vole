@@ -10,214 +10,263 @@ import MarkdownUI
 import SwiftUI
 
 struct DetailView: View {
-    @State var topic: Topic
-    @Environment(\.openURL) private var openURL
+    @Namespace private var ns
+
+    let topicId: Int?
+    @State var topic: Topic?
+
     @StateObject private var replyVM = ReplyViewModel()
     @State private var allMentions: [Int: [String]] = [:]
-    @Namespace private var ns
+
     @State private var selectedReply: Reply? = nil
+
+    @Environment(\.openURL) private var openURL
+    @Binding var path: NavigationPath
 
     var body: some View {
         ZStack {
-            // 浮层对话视图
-            if let reply = selectedReply {
-                ZStack {
-                    // 全屏背景模糊
-                    Color.clear
-                        .background(.ultraThinMaterial)
-                        .ignoresSafeArea()
+            if let topic = topic {
+                // 浮层对话视图
+                if let reply = selectedReply {
+                    ZStack {
+                        // 全屏背景模糊
+                        Color.clear
+                            .background(.ultraThinMaterial)
+                            .ignoresSafeArea()
+                            .onTapGesture {
+                                withAnimation(.spring(dampingFraction: 0.6)) {
+                                    selectedReply = nil
+                                }
+                            }
+
+                        // 浮层内容
+                        ScrollView {
+                            LazyVStack(spacing: 0) {
+                                ForEach(
+                                    conversation(for: reply),
+                                    id: \.0.id
+                                ) {
+                                    r,
+                                    floor in
+                                    ReplyRowView(
+                                        topic: topic,
+                                        reply: r,
+                                        floor: floor
+                                    )
+                                    .matchedGeometryEffect(
+                                        id: r.id,
+                                        in: ns,
+                                        isSource: selectedReply != nil
+                                    )
+                                    Divider()
+                                        .padding(.leading, 48)
+                                }
+                            }
+                            .padding()
+                        }
                         .onTapGesture {
                             withAnimation(.spring(dampingFraction: 0.6)) {
                                 selectedReply = nil
                             }
                         }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                    .transition(.opacity)
+                    .zIndex(1)
+                }
 
-                    // 浮层内容
-                    ScrollView {
-                        LazyVStack(spacing: 0) {
-                            ForEach(conversation(for: reply), id: \.0.id) {
-                                r,
-                                floor in
+                List {
+                    // 帖子详情部分
+                    Section {
+                        // 头像 + 昵称
+                        HStack {
+                            if let avatarURL = topic.member?.avatarNormal,
+                                let url = URL(string: avatarURL)
+                            {
+                                KFImage(url)
+                                    .placeholder {
+                                        Color.gray
+                                    }
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 24, height: 24)
+                                    .clipShape(Circle())
+                            } else {
+                                Circle()
+                                    .fill(Color.gray)
+                                    .frame(width: 24, height: 24)
+                            }
+
+                            Text(topic.member?.username ?? "")
+                                .font(.subheadline)
+                                .foregroundColor(.primary)
+
+                            Spacer()
+                        }
+                        .listRowSeparator(.hidden)
+
+                        VStack(alignment: .leading) {
+                            // 标题
+                            if let title = topic.title {
+                                Text(title)
+                                    .font(.title2)
+                                    .foregroundColor(.primary)
+                                    .textSelection(.enabled)
+                                    .lineLimit(nil)
+                                        .truncationMode(.tail)
+                                        .textCase(.none)
+                                        .multilineTextAlignment(.leading)
+                                        .minimumScaleFactor(1) // 不压缩字体
+                            }
+                            // 内容
+                            if let content = topic.content, !content.isEmpty {
+                                Divider()
+                                MarkdownView(
+                                    content: content,
+                                    onMentionsChanged: nil,
+                                    onLinkAction: { action in
+                                        switch action {
+                                        case .mention(let username):
+                                            print("@\(username)")
+                                        case .topic(let id):
+                                            print("topicId:", id)
+                                            path.append(
+                                                TopicRoute(
+                                                    id: topic.id,
+                                                    topic: nil
+                                                )
+                                            )
+                                        default:
+                                            break
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                        .listRowSeparator(.hidden)
+                    }
+
+                    // 评论区
+                    Section(header: Text("评论").font(.headline)) {
+                        if replyVM.isLoading {
+                            ProgressView()
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .listRowSeparator(.hidden)
+                        } else if replyVM.replies?.isEmpty ?? true {
+                            Text("暂无评论，快来抢沙发吧~")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 20)
+                                .listRowSeparator(.hidden)
+                        } else {
+                            ForEach(
+                                Array((replyVM.replies ?? []).enumerated()),
+                                id: \.1.id
+                            ) { index, reply in
                                 ReplyRowView(
                                     topic: topic,
-                                    reply: r,
-                                    floor: floor
+                                    reply: reply,
+                                    floor: index
                                 )
                                 .matchedGeometryEffect(
-                                    id: r.id,
+                                    id: reply.id,
                                     in: ns,
-                                    isSource: selectedReply != nil
+                                    isSource: selectedReply == nil
                                 )
-                                Divider()
-                                    .padding(.leading, 48)
-                            }
-                        }
-                        .padding()
-                    }
-                    .onTapGesture {
-                        withAnimation(.spring(dampingFraction: 0.6)) {
-                            selectedReply = nil
-                        }
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-                .transition(.opacity)
-                .zIndex(1)
-            }
-
-            List {
-                // 帖子详情部分
-                Section {
-                    // 头像 + 昵称
-                    HStack {
-                        if let avatarURL = topic.member?.avatarNormal,
-                            let url = URL(string: avatarURL)
-                        {
-                            KFImage(url)
-                                .placeholder {
-                                    Color.gray
-                                }
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 24, height: 24)
-                                .clipShape(Circle())
-                        } else {
-                            Circle()
-                                .fill(Color.gray)
-                                .frame(width: 24, height: 24)
-                        }
-
-                        Text(topic.member?.username ?? "")
-                            .font(.subheadline)
-                            .foregroundColor(.primary)
-
-                        Spacer()
-                    }
-                    .listRowSeparator(.hidden)
-
-                    VStack(alignment: .leading) {
-                        // 标题
-                        if let title = topic.title {
-                            Text(title)
-                                .font(.title2)
-                                .foregroundColor(.primary)
-                                .textSelection(.enabled)
-                        }
-                        // 内容
-                        if let content = topic.content, !content.isEmpty {
-                            Divider()
-                            MarkdownView(
-                                content: content,
-                                onMentionsChanged: nil,
-                                onLinkAction: { action in
-                                    switch action {
-                                    case .mention(let username):
-                                        print("@\(username)")
-                                    case .topic(let id):
-                                        print("topicId:", id)
-                                    default:
-                                        break
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    withAnimation(
+                                        .spring(dampingFraction: 0.6)
+                                    ) {
+                                        selectedReply = reply
                                     }
                                 }
-                            )
-                        }
-                    }
-                    .listRowSeparator(.hidden)
-                }
+                                .swipeActions(
+                                    edge: .trailing,
+                                    allowsFullSwipe: true
+                                ) {
+                                    Button {
+                                        UIPasteboard.general.string =
+                                            replyVM.replies![index].content
 
-                // 评论区
-                Section(header: Text("评论").font(.headline)) {
-                    if replyVM.isLoading {
-                        ProgressView()
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .listRowSeparator(.hidden)
-                    } else if replyVM.replies?.isEmpty ?? true {
-                        Text("暂无评论，快来抢沙发吧~")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 20)
-                            .listRowSeparator(.hidden)
-                    } else {
-                        ForEach(
-                            Array((replyVM.replies ?? []).enumerated()),
-                            id: \.1.id
-                        ) { index, reply in
-                            ReplyRowView(
-                                topic: topic,
-                                reply: reply,
-                                floor: index
-                            )
-                            .matchedGeometryEffect(
-                                id: reply.id,
-                                in: ns,
-                                isSource: selectedReply == nil
-                            )
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                withAnimation(.spring(dampingFraction: 0.6)) {
-                                    selectedReply = reply
+                                        let generator =
+                                            UINotificationFeedbackGenerator()
+                                        generator.notificationOccurred(
+                                            .success
+                                        )
+                                    } label: {
+                                        Label(
+                                            "复制",
+                                            systemImage: "doc.on.doc"
+                                        )
+                                    }
+                                    .tint(.accentColor)
                                 }
-                            }
-                            .swipeActions(
-                                edge: .trailing,
-                                allowsFullSwipe: true
-                            ) {
-                                Button {
-                                    UIPasteboard.general.string =
-                                        replyVM.replies![index].content
-
-                                    let generator =
-                                        UINotificationFeedbackGenerator()
-                                    generator.notificationOccurred(.success)
-                                } label: {
-                                    Label("复制", systemImage: "doc.on.doc")
-                                }
-                                .tint(.accentColor)
                             }
                         }
                     }
                 }
-            }
-            .disabled(selectedReply != nil)
-            .listStyle(.plain)
-            .navigationTitle(topic.node?.title ?? "")
-            .navigationBarTitleDisplayMode(.inline)
-            .refreshable {
-                await replyVM.load(topicId: topic.id)
-            }
-            .task(id: topic.id) {
-                if replyVM.replies == nil {
+                .disabled(selectedReply != nil)
+                .listStyle(.plain)
+                .navigationTitle(topic.node?.title ?? "")
+                .navigationBarTitleDisplayMode(.inline)
+                .refreshable {
                     await replyVM.load(topicId: topic.id)
                 }
-            }
-            .toolbar {
-                ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    ShareLink(item: topic.url ?? "") {
-                        Image(systemName: "square.and.arrow.up")
-                    }
-                    Menu {
-                        Button("访问节点", systemImage: "scale.3d") {
-
-                        }
-                        Button("复制链接", systemImage: "link") {
-                            UIPasteboard.general.string = topic.url
-                            let generator = UINotificationFeedbackGenerator()
-                            generator.notificationOccurred(.success)
-                        }
-                        Button("在浏览器中打开", systemImage: "safari") {
-                            if let url = URL(string: topic.url ?? "") {
-                                openURL(url)
-                            }
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
+                .task(id: topic.id) {
+                    if replyVM.replies == nil {
+                        await replyVM.load(topicId: topic.id)
                     }
                 }
-            }
+                .toolbar {
+                    ToolbarItemGroup(placement: .navigationBarTrailing) {
+                        ShareLink(item: topic.url ?? "") {
+                            Image(systemName: "square.and.arrow.up")
+                        }
+                        Menu {
+                            Button("访问节点", systemImage: "scale.3d") {
 
+                            }
+                            Button("复制链接", systemImage: "link") {
+                                UIPasteboard.general.string = topic.url
+                                let generator =
+                                    UINotificationFeedbackGenerator()
+                                generator.notificationOccurred(.success)
+                            }
+                            Button("在浏览器中打开", systemImage: "safari") {
+                                if let url = URL(string: topic.url ?? "") {
+                                    openURL(url)
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                        }
+                    }
+                }
+
+            } else if topicId != nil {
+                // 还没有加载到 topic
+                ProgressView("加载中...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .task {
+                        await loadTopicIfNeeded()
+                    }
+            }
+        }
+    }
+
+    private func loadTopicIfNeeded() async {
+        guard topic == nil, let topicId else { return }
+        do {
+            let response = try await V2exAPI.shared.topic(topicId: topicId)
+            if let r = response, r.success {
+                topic = r.result
+            }
+        } catch {
+            print("❌ 获取 Topic 失败: \(error)")
         }
     }
 
@@ -272,5 +321,7 @@ struct DetailView: View {
     }
 }
 #Preview {
-    DetailView(topic: ModelData().topics[0])
+    @State var path = NavigationPath()
+    let topic: Topic = ModelData().topics[0]
+    DetailView(topicId: nil, topic: topic, path: $path)
 }

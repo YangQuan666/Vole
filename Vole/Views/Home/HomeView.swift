@@ -47,7 +47,7 @@ struct HomeView: View {
                                             TopicRow(
                                                 topic: topic,
                                             ) {
-                                                path.append(topic)
+                                                path.append(TopicRoute(id: topic.id, topic: topic))
                                             }
                                         }
                                     }
@@ -75,8 +75,8 @@ struct HomeView: View {
             }
             .navigationTitle("首页")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(for: Topic.self) { topic in
-                DetailView(topic: topic)
+            .navigationDestination(for: TopicRoute.self) { route in
+                DetailView(topicId: route.id, topic: route.topic, path: $path)
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {  // 右上角头像
@@ -109,6 +109,11 @@ enum Category: String, CaseIterable {
             return { try await V2exAPI.shared.latestTopics() }
         }
     }
+}
+
+struct TopicRoute: Hashable {
+    let id: Int
+    let topic: Topic?
 }
 
 #Preview {
