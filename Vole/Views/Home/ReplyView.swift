@@ -38,6 +38,7 @@ func formattedTime(_ timestamp: Int) -> String {
 }
 
 struct ReplyRowView: View {
+    @Binding var path: NavigationPath
     let topic: Topic
     let reply: Reply
     let floor: Int
@@ -103,6 +104,12 @@ struct ReplyRowView: View {
                             print("@\(username)")
                         case .topic(let id):
                             print("topicId:", id)
+                            path.append(
+                                TopicRoute(
+                                    id: id,
+                                    topic: nil
+                                )
+                            )
                         default:
                             break
                         }
@@ -115,15 +122,6 @@ struct ReplyRowView: View {
 }
 
 #Preview {
-    let reply: Reply =
-        Reply(
-            id: 1,
-            content:
-                "hello @121 @123 你好ok@456 thank you \r\n email yang@quan.com",
-            contentRendered: "",
-            created: 1_756_907_441,
-            member: Member(id: 123, username: "user_a")
-        )
 
     //    ReplyRowView(topic: nil, reply: reply, floor: 1)
 }

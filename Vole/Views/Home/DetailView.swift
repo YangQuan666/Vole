@@ -49,6 +49,7 @@ struct DetailView: View {
                                     r,
                                     floor in
                                     ReplyRowView(
+                                        path: $path,
                                         topic: topic,
                                         reply: r,
                                         floor: floor
@@ -129,10 +130,9 @@ struct DetailView: View {
                                         case .mention(let username):
                                             print("@\(username)")
                                         case .topic(let id):
-                                            print("topicId:", id)
                                             path.append(
                                                 TopicRoute(
-                                                    id: topic.id,
+                                                    id: id,
                                                     topic: nil
                                                 )
                                             )
@@ -167,6 +167,7 @@ struct DetailView: View {
                                 id: \.1.id
                             ) { index, reply in
                                 ReplyRowView(
+                                    path: $path,
                                     topic: topic,
                                     reply: reply,
                                     floor: index
