@@ -81,7 +81,7 @@ struct DetailView: View {
                     Section {
                         // 头像 + 昵称
                         HStack {
-                            if let avatarURL = topic.member?.avatarNormal,
+                            if let avatarURL = topic.member?.avatarNormal ?? topic.member?.avatar,
                                 let url = URL(string: avatarURL)
                             {
                                 KFImage(url)
@@ -322,7 +322,7 @@ struct DetailView: View {
     }
 }
 #Preview {
-    @State var path = NavigationPath()
+    @Previewable @State var path = NavigationPath()
     let topic: Topic = ModelData().topics[0]
     DetailView(topicId: nil, topic: topic, path: $path)
 }
