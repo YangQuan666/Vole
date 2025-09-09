@@ -7,11 +7,11 @@
 
 import Foundation
 
-public struct Token: Decodable, Equatable, Hashable {
+public struct Token: Decodable, Encodable, Equatable, Hashable {
     public let token, scope: String?
     public let expiration, goodForDays, totalUsed, lastUsed: Int?
     public let created: Int?
-    
+
     enum CodingKeys: String, CodingKey {
         case token, scope, expiration
         case goodForDays = "good_for_days"
