@@ -12,6 +12,7 @@ struct HomeView: View {
     @State private var path = NavigationPath()
     @State private var selection: Category = .latest
     @State private var data: [Category: [Topic]] = [:]
+    @State private var showProfile = false
 
     func loadTopics(for category: Category) async {
         do {
@@ -47,7 +48,12 @@ struct HomeView: View {
                                             TopicRow(
                                                 topic: topic,
                                             ) {
-                                                path.append(TopicRoute(id: topic.id, topic: topic))
+                                                path.append(
+                                                    TopicRoute(
+                                                        id: topic.id,
+                                                        topic: topic
+                                                    )
+                                                )
                                             }
                                         }
                                     }
@@ -80,12 +86,20 @@ struct HomeView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {  // 右上角头像
-                    Image(systemName: "person.crop.circle.fill")
-                        .resizable()
-                        .frame(width: 32, height: 32)
-                        .foregroundStyle(.blue)
+                    Button {
+                        showProfile = true
+                    } label: {
+                        Image(systemName: "person.crop.circle.fill")
+                            .resizable()
+                            .frame(width: 32, height: 32)
+                            .foregroundStyle(.blue)
+                    }
+
                 }
 
+            }
+            .sheet(isPresented: $showProfile) {
+                ProfileView()
             }
             .task(id: selection) {
                 // 首次加载默认分类
