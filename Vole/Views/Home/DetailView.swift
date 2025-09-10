@@ -125,31 +125,25 @@ struct DetailView: View {
                             // 内容
                             if let content = topic.content, !content.isEmpty {
                                 Divider()
-                                if let syntax = topic.syntax, syntax == 1 {
-                                    MarkdownView(
-                                        content: content,
-                                        onMentionsChanged: nil,
-                                        onLinkAction: { action in
-                                            switch action {
-                                            case .mention(let username):
-                                                print("@\(username)")
-                                            case .topic(let id):
-                                                path.append(
-                                                    TopicRoute(
-                                                        id: id,
-                                                        topic: nil
-                                                    )
+                                MarkdownView(
+                                    content: content,
+                                    onMentionsChanged: nil,
+                                    onLinkAction: { action in
+                                        switch action {
+                                        case .mention(let username):
+                                            print("@\(username)")
+                                        case .topic(let id):
+                                            path.append(
+                                                TopicRoute(
+                                                    id: id,
+                                                    topic: nil
                                                 )
-                                            default:
-                                                break
-                                            }
+                                            )
+                                        default:
+                                            break
                                         }
-                                    )
-                                } else {
-                                    Text(content)
-                                        .textSelection(.enabled)
-                                }
-
+                                    }
+                                )
                             }
                         }
                         .listRowSeparator(.hidden)

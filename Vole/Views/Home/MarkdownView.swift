@@ -102,6 +102,10 @@ struct MarkdownView: View {
             result += processTextFragment(tail, &mentions)
         }
 
+        // 把 \n / \r\n 统一转换为 Markdown 硬换行
+        result = result
+            .replacingOccurrences(of: "\r\n", with: "  \n")
+            .replacingOccurrences(of: "\n", with: "  \n")
         return (result, mentions)
     }
 
@@ -198,10 +202,7 @@ struct KFInlineImageProvider: InlineImageProvider {
 
     ScrollView {
         let markdownString = """
-
-            这是一个图片：![](https://developer.apple.com/assets/elements/icons/swift/swift-64x64_2x.png)
-
-            问题如题。\r\n\r\n![image.png]( https://s2.loli.net/2025/09/03/zTV5PdNWXnbKF4w.png)\r\n\r\n网络上找到了一些方法，比如打开 [设置-隐私与安全性-本地网络] 中的权限，但是我发现这里面我的[几十个 Chrome](/t/1144946) 的权限都是打开状态。我试过关闭之后重新打开，但是无法解决问题。\r\n\r\nPS：感觉 Mac 越来越难用了，有点想换回 Windows 了……
+            标准版高刷加 256G 还是原来的标准价啊，性价比很高啊，Air 看后续手感续航什么的 应该很多女孩子会喜欢，Pro 感觉外观还是挺骚的 应该也会不少人喜欢😁\n\niPhone 17 标准版：5999 元起\n256GB：5999 元\n512GB：7999 元\niPhone Air：7999 元起\n256GB：7999 元\n512GB：9999 元\n1TB：11999 元\niPhone 17 Pro：8999 元起\n256GB：8999 元\n512GB：10999 元\n1TB：12999 元\niPhone 17 Pro Max 9999 元起\n256GB：9999 \n512GB：11999 \n1TB：13999 \n2TB：17999 \n#iPhone17 全系价格曝光# \n#iPhoneAir 定价 7999 元起# \n#苹果发布会#
             """
 
         MarkdownView(content: markdownString)
