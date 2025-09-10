@@ -81,7 +81,8 @@ struct DetailView: View {
                     Section {
                         // 头像 + 昵称
                         HStack {
-                            if let avatarURL = topic.member?.avatarNormal ?? topic.member?.avatar,
+                            if let avatarURL = topic.member?.avatarNormal
+                                ?? topic.member?.avatar,
                                 let url = URL(string: avatarURL)
                             {
                                 KFImage(url)
@@ -101,8 +102,15 @@ struct DetailView: View {
                             Text(topic.member?.username ?? "")
                                 .font(.subheadline)
                                 .foregroundColor(.primary)
-
+                            if let created = topic.created {
+                                Text(formattedTime(created))
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
                             Spacer()
+                            Text(topic.node?.title ?? "")
+                                .font(.subheadline)
+
                         }
                         .listRowSeparator(.hidden)
 
@@ -110,37 +118,38 @@ struct DetailView: View {
                             // 标题
                             if let title = topic.title {
                                 Text(title)
-                                    .font(.title2)
+                                    .font(.headline)
                                     .foregroundColor(.primary)
                                     .textSelection(.enabled)
-                                    .lineLimit(nil)
-                                        .truncationMode(.tail)
-                                        .textCase(.none)
-                                        .multilineTextAlignment(.leading)
-                                        .minimumScaleFactor(1) // 不压缩字体
                             }
                             // 内容
                             if let content = topic.content, !content.isEmpty {
                                 Divider()
-                                MarkdownView(
-                                    content: content,
-                                    onMentionsChanged: nil,
-                                    onLinkAction: { action in
-                                        switch action {
-                                        case .mention(let username):
-                                            print("@\(username)")
-                                        case .topic(let id):
-                                            path.append(
-                                                TopicRoute(
-                                                    id: id,
-                                                    topic: nil
+                                if let syntax = topic.syntax, syntax == 1 {
+                                    MarkdownView(
+                                        content: content,
+                                        onMentionsChanged: nil,
+                                        onLinkAction: { action in
+                                            switch action {
+                                            case .mention(let username):
+                                                print("@\(username)")
+                                            case .topic(let id):
+                                                path.append(
+                                                    TopicRoute(
+                                                        id: id,
+                                                        topic: nil
+                                                    )
                                                 )
-                                            )
-                                        default:
-                                            break
+                                            default:
+                                                break
+                                            }
                                         }
-                                    }
-                                )
+                                    )
+                                } else {
+                                    Text(content)
+                                        .textSelection(.enabled)
+                                }
+
                             }
                         }
                         .listRowSeparator(.hidden)
@@ -212,7 +221,7 @@ struct DetailView: View {
                 }
                 .disabled(selectedReply != nil)
                 .listStyle(.plain)
-                .navigationTitle(topic.node?.title ?? "")
+                .navigationTitle("帖子")
                 .navigationBarTitleDisplayMode(.inline)
                 .refreshable {
                     await replyVM.load(topicId: topic.id)
