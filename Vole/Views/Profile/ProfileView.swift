@@ -32,11 +32,14 @@ struct ProfileView: View {
                     }
                 }
             } else if step == 2 {
-                TokenInputPage(token: $inputToken) {
-                    Task {
-                        await login()
+                TokenInputPage(
+                    token: $inputToken,
+                    onValidate: validateToken,
+                    onLogin: { token in
+                        try await loginWithToken(token)
+
                     }
-                }
+                )
             } else if step == 3 {
                 UserInfoPage(onLogout: {
                     logout()
@@ -45,6 +48,40 @@ struct ProfileView: View {
         }
         .padding()
         .animation(.easeInOut, value: step)
+    }
+
+    // 第一步：校验 Token 有效性
+    func validateToken(_ token: String) async throws {
+        print("token:\(token)")
+        // 模拟校验
+        let response = try await V2exAPI.shared.token()
+        if let r = response, r.success {
+            let token = r.result
+            userManager.saveToken(token)
+        } else {
+            throw NSError(
+                domain: "TokenError",
+                code: 1,
+                userInfo: [
+                    NSLocalizedDescriptionKey: response?.message ?? "Token校验失败"
+                ]
+            )
+        }
+    }
+
+    // 第二步：登录
+    func loginWithToken(_ token: String) async throws {
+        // 模拟登录
+        try await Task.sleep(nanoseconds: 500_000_000)
+        if token != "validtoken123" {
+            throw NSError(
+                domain: "LoginError",
+                code: 2,
+                userInfo: [
+                    NSLocalizedDescriptionKey: "登录失败，请检查 Token 是否有效"
+                ]
+            )
+        }
     }
 
     private func login() async {
@@ -89,8 +126,8 @@ struct WelcomePage: View {
 
                 // 标题区
                 Text("欢迎使用 Vole")
-                    .font(.system(size: 34, weight: .bold))
-                    .foregroundColor(.primary)
+                    .font(.largeTitle)
+                    .bold()
                     .padding(.bottom, 32)
 
                 // Feature 列表
@@ -180,28 +217,113 @@ struct FeatureRow: View {
         }
     }
 }
-// MARK: - 输入 Token 页
+
 struct TokenInputPage: View {
     @Binding var token: String
-    var onLogin: () -> Void
+    var onValidate: (String) async throws -> Void  // 校验 Token
+    var onLogin: (String) async throws -> Void  // 登录
+
+    @State private var errorMessage: String?
+    @State private var isLoading = false
 
     var body: some View {
-        VStack(spacing: 20) {
-            Text("请输入 Token")
-                .font(.title2)
-                .bold()
+        VStack(spacing: 0) {
+            // 顶部标题区域
+            VStack(spacing: 12) {
+                Text("使用 Token 登录")
+                    .font(.largeTitle)
+                    .bold()
 
-            TextField("输入你的 token", text: $token)
-                .textFieldStyle(.roundedBorder)
-
-            Text("你可以在 https://example.com 获取 token")
-                .font(.footnote)
-                .foregroundColor(.gray)
-
-            Button("登录") {
-                onLogin()
+                Text("以更加安全的方式访问你的账户数据")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
             }
-            .buttonStyle(.borderedProminent)
+            .padding(.top, 60)
+
+            Spacer() // 顶部和中间输入区的间隔
+
+            // 中间输入区域，垂直居中
+            VStack(spacing: 16) {
+                VStack(spacing: 8) {
+                    TextField("请输入 Token", text: $token)
+                        .padding()
+                        .background(Color(.secondarySystemBackground))
+                        .cornerRadius(12)
+                        .textInputAutocapitalization(.never)
+                        .disableAutocorrection(true)
+                        .padding(.horizontal, 30)
+
+                    if let errorMessage = errorMessage {
+                        Text(errorMessage)
+                            .font(.footnote)
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.leading)
+                            .padding(.horizontal, 34)
+                    }
+                }
+
+                // 获取 token 提示
+                Label {
+                    Text("了解如何获取 [Personal Access Token](https://www.v2ex.com/help/personal-access-token)")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                } icon: {
+                    Image(systemName: "info.circle") // 你想要的 SF Symbol
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                }
+                .multilineTextAlignment(.center)
+            }
+
+            Spacer() // 中间输入区和底部按钮的间隔
+
+            // 底部按钮
+            Button(action: handleLogin) {
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(
+                            CircularProgressViewStyle(tint: .white)
+                        )
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                } else {
+                    Text("继续")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                }
+            }
+            .background(
+                token.isEmpty ? Color.gray.opacity(0.3) : Color.accentColor
+            )
+            .foregroundColor(.white)
+            .cornerRadius(14)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 24)
+            .disabled(token.isEmpty || isLoading)
+        }
+        .background(Color(.systemBackground))
+        .ignoresSafeArea(edges: .bottom)
+    }
+
+    private func handleLogin() {
+        errorMessage = nil
+        isLoading = true
+
+        Task {
+            do {
+                try await onValidate(token)
+                try await onLogin(token)
+            } catch {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                }
+            }
+            await MainActor.run {
+                isLoading = false
+            }
         }
     }
 }
