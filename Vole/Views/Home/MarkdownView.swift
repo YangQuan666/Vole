@@ -22,6 +22,8 @@ struct MarkdownView: View {
     var onMentionsChanged: (([String]) -> Void)?
     var onLinkAction: ((LinkAction) -> Void)?  // 统一处理链接事件
 
+    @Environment(\.appOpenURL) private var appOpenURL
+
     var body: some View {
         let (md, mentions) = makeMarkdown(content)
 
@@ -59,8 +61,9 @@ struct MarkdownView: View {
                         }
                     }
 
-                    // 其他链接
-                    return .systemAction(url)
+                    // 统一用全局打开逻辑
+                    appOpenURL(url)
+                    return .handled
                 }
             )
     }
@@ -103,7 +106,8 @@ struct MarkdownView: View {
         }
 
         // 把 \n / \r\n 统一转换为 Markdown 硬换行
-        result = result
+        result =
+            result
             .replacingOccurrences(of: "\r\n", with: "  \n")
             .replacingOccurrences(of: "\n", with: "  \n")
         return (result, mentions)

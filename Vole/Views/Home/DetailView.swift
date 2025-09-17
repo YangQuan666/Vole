@@ -6,8 +6,6 @@
 //
 
 import Kingfisher
-import MarkdownUI
-import SafariServices
 import SwiftUI
 
 struct DetailView: View {
@@ -24,6 +22,7 @@ struct DetailView: View {
     @State private var safariURL: URL? = nil
 
     @Environment(\.openURL) private var openURL
+    @Environment(\.appOpenURL) private var appOpenURL
     @Binding var path: NavigationPath
 
     var body: some View {
@@ -121,9 +120,8 @@ struct DetailView: View {
                             // 标题
                             if let title = topic.title {
                                 Button {
-                                    if let url = topic.url {
-                                        safariURL = URL(string: url)
-                                        showSafari = true
+                                    if let url = URL(string: topic.url ?? "") {
+                                        appOpenURL(url)
                                     }
                                 } label: {
                                     Text(title)
@@ -150,6 +148,8 @@ struct DetailView: View {
                                                     topic: nil
                                                 )
                                             )
+                                        //                                        case .external(let url):
+                                        //                                            openInApp(url)
                                         default:
                                             break
                                         }
@@ -278,6 +278,10 @@ struct DetailView: View {
                     .interactiveDismissDisabled(true)
             }
         }
+        .environment(\.appOpenURL) { url in
+            safariURL = url
+            showSafari = true
+        }
     }
     private func loadTopicIfNeeded() async {
         guard topic == nil, let topicId else { return }
@@ -340,19 +344,6 @@ struct DetailView: View {
             Range($0.range(at: 1), in: content).map { String(content[$0]) }
         }
     }
-}
-
-struct SafariView: UIViewControllerRepresentable {
-    let url: URL
-
-    func makeUIViewController(context: Context) -> SFSafariViewController {
-        SFSafariViewController(url: url)
-    }
-
-    func updateUIViewController(
-        _ uiViewController: SFSafariViewController,
-        context: Context
-    ) {}
 }
 
 #Preview {
