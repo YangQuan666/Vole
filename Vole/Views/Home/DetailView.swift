@@ -7,6 +7,7 @@
 
 import Kingfisher
 import MarkdownUI
+import SafariServices
 import SwiftUI
 
 struct DetailView: View {
@@ -19,6 +20,8 @@ struct DetailView: View {
     @State private var allMentions: [Int: [String]] = [:]
 
     @State private var selectedReply: Reply? = nil
+    @State private var showSafari = false
+    @State private var safariURL: URL? = nil
 
     @Environment(\.openURL) private var openURL
     @Binding var path: NavigationPath
@@ -117,10 +120,18 @@ struct DetailView: View {
                         VStack(alignment: .leading) {
                             // 标题
                             if let title = topic.title {
-                                Text(title)
-                                    .font(.headline)
-                                    .foregroundColor(.primary)
-                                    .textSelection(.enabled)
+                                Button {
+                                    if let url = topic.url {
+                                        safariURL = URL(string: url)
+                                        showSafari = true
+                                    }
+                                } label: {
+                                    Text(title)
+                                        .font(.title)
+                                        .bold()
+                                        .textSelection(.enabled)
+                                }
+                                .buttonStyle(.plain)  // 避免整行高亮
                             }
                             // 内容
                             if let content = topic.content, !content.isEmpty {
@@ -260,8 +271,14 @@ struct DetailView: View {
                     }
             }
         }
+        .sheet(isPresented: $showSafari) {
+            if let safariURL {
+                SafariView(url: safariURL)
+                    .ignoresSafeArea()
+                    .interactiveDismissDisabled(true)
+            }
+        }
     }
-
     private func loadTopicIfNeeded() async {
         guard topic == nil, let topicId else { return }
         do {
@@ -324,6 +341,20 @@ struct DetailView: View {
         }
     }
 }
+
+struct SafariView: UIViewControllerRepresentable {
+    let url: URL
+
+    func makeUIViewController(context: Context) -> SFSafariViewController {
+        SFSafariViewController(url: url)
+    }
+
+    func updateUIViewController(
+        _ uiViewController: SFSafariViewController,
+        context: Context
+    ) {}
+}
+
 #Preview {
     @Previewable @State var path = NavigationPath()
     let topic: Topic = ModelData().topics[0]
