@@ -111,7 +111,10 @@ struct DetailView: View {
                             }
                             Spacer()
                             Text(topic.node?.title ?? "")
-                                .font(.subheadline)
+                                .font(.callout)
+                                .bold()
+                                .foregroundColor(.accentColor)
+                                .lineLimit(1)
 
                         }
                         .listRowSeparator(.hidden)
@@ -121,7 +124,8 @@ struct DetailView: View {
                             if let title = topic.title {
                                 Button {
                                     if let url = URL(string: topic.url ?? "") {
-                                        appOpenURL(url)
+                                        safariURL = url
+                                        showSafari = true
                                     }
                                 } label: {
                                     Text(title)
@@ -148,8 +152,6 @@ struct DetailView: View {
                                                     topic: nil
                                                 )
                                             )
-                                        //                                        case .external(let url):
-                                        //                                            openInApp(url)
                                         default:
                                             break
                                         }
