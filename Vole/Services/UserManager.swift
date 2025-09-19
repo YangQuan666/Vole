@@ -41,7 +41,7 @@ class UserManager: ObservableObject {
     }
 
     func clear() {
-        KeychainHelper.shared.delete()
+        _ = KeychainHelper.shared.delete()
         UserDefaults.standard.removeObject(forKey: memberKey)
         self.token = nil
         self.currentMember = nil

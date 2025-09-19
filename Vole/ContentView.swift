@@ -5,61 +5,70 @@
 //  Created by 杨权 on 5/26/25.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+    @State private var selection: TabID = .home
 
-    @State private var selection: Tab = .home
-    
-    enum Tab {
-        case home
-        case node
-        case notify
-        case search
-    }
-    
     var body: some View {
-        TabView(selection: $selection) {
-            HomeView()
-                .tabItem {
-                    Label("Home", systemImage: "doc.text.image")
-                }
-                .tag(Tab.home)
-            NodeView()
-                .tabItem {
-                    Label("Node", systemImage: "square.grid.2x2.fill")
-                }
-                .tag(Tab.node)
-            NotifyView()
-                .tabItem {
-                    Label("Notify", systemImage: "tray.full.fill")
-                }
-                .tag(Tab.notify)
-            SearchView()
-                .tabItem {
-                    Label("Search", systemImage: "magnifyingglass")
-                }
-                .tag(Tab.search)
-        }
-    }
 
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
+        if #available(iOS 26, *) {
+            TabView(selection: $selection) {
+                Tab("Home", systemImage: "doc.text.image", value: .home) {
+                    HomeView()
+                }
+                Tab("Node", systemImage: "square.grid.2x2.fill", value: .node) {
+                    NodeView()
+                }
+                Tab(
+                    "Notify",
+                    systemImage: "tray.full.fill",
+                    value: .notify
+                ) {
+                    NotifyView()
+                }
+                Tab(
+                    "Search",
+                    systemImage: "magnifyingglass",
+                    value: .search,
+                    role: .search
+                ) {
+                    SearchView()
+                }
+            }
+            .tabBarMinimizeBehavior(.onScrollDown)
+        } else {
+            TabView(selection: $selection) {
+                Tab("Home", systemImage: "doc.text.image", value: .home) {
+                    HomeView()
+                }
+                Tab("Node", systemImage: "square.grid.2x2.fill", value: .node) {
+                    NodeView()
+                }
+                Tab(
+                    "Notify",
+                    systemImage: "tray.full.fill",
+                    value: .notify
+                ) {
+                    NotifyView()
+                }
+                Tab(
+                    "Search",
+                    systemImage: "magnifyingglass",
+                    value: .search,
+                    role: .search
+                ) {
+                    SearchView()
+                }
             }
         }
+
     }
+}
+
+enum TabID: Hashable {
+    case home, node, notify, search
 }
 
 #Preview {
