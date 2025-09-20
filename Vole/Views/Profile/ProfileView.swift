@@ -48,7 +48,6 @@ struct ProfileView: View {
                 })
             }
         }
-        .padding()
         .animation(.easeInOut, value: step)
     }
 
@@ -98,7 +97,6 @@ struct WelcomePage: View {
     var onContinue: () -> Void
     var body: some View {
         ZStack {
-
             VStack(spacing: 20) {
                 Spacer(minLength: 32)
 
@@ -163,6 +161,7 @@ struct WelcomePage: View {
 
                 Spacer()
             }
+            .padding()
         }
     }
 
@@ -203,7 +202,7 @@ struct TokenInputPage: View {
 
     @State private var errorMessage: String?
     @State private var isLoading = false
-    @State private var tokenExpiry: Int? // 校验通过后保存过期时间
+    @State private var tokenExpiry: Int?  // 校验通过后保存过期时间
     @State private var loginFailed = false
 
     var body: some View {
@@ -233,7 +232,7 @@ struct TokenInputPage: View {
                         .textInputAutocapitalization(.never)
                         .disableAutocorrection(true)
                         .padding(.horizontal, 30)
-                    
+
                     if let errorMessage = errorMessage {
                         Text(errorMessage)
                             .font(.footnote)
@@ -253,9 +252,11 @@ struct TokenInputPage: View {
 
                 // 获取 token 提示
                 Label {
-                    Text("了解如何获取 [Personal Access Token](https://www.v2ex.com/help/personal-access-token)")
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
+                    Text(
+                        "了解如何获取 [Personal Access Token](https://www.v2ex.com/help/personal-access-token)"
+                    )
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
                 } icon: {
                     Image(systemName: "info.circle")
                         .font(.footnote)
@@ -270,7 +271,9 @@ struct TokenInputPage: View {
             Button(action: handleAction) {
                 if isLoading {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .progressViewStyle(
+                            CircularProgressViewStyle(tint: .white)
+                        )
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
                 } else {
@@ -280,12 +283,17 @@ struct TokenInputPage: View {
                         .frame(height: 52)
                 }
             }
-            .background((token.isEmpty || isLoading) ? Color.gray.opacity(0.3) : Color.accentColor)
+            .background(
+                (token.isEmpty || isLoading)
+                    ? Color.gray.opacity(0.3) : Color.accentColor
+            )
             .foregroundColor(.white)
             .cornerRadius(14)
             .padding(.horizontal, 20)
             .padding(.bottom, 24)
             .disabled(token.isEmpty || isLoading)
+
+            Spacer()
         }
         .background(Color(.systemBackground))
         .ignoresSafeArea(edges: .bottom)
@@ -344,35 +352,237 @@ struct TokenInputPage: View {
 // MARK: - 用户信息页
 struct UserInfoPage: View {
     @ObservedObject private var userManager = UserManager.shared
+    // 1. 获取 dismiss 环境值
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     var onLogout: () -> Void
 
     var body: some View {
-        VStack(spacing: 16) {
-            if let member = userManager.currentMember {
-                Text("欢迎，\(member.username)")
-                    .font(.title2)
-                    .bold()
+        NavigationView {
+            List {
+                if let member = userManager.currentMember {
+                    // 顶部用户信息
+                    Section {
+                        HStack(spacing: 8) {
+                            if let avatarURL = member.avatarLarge,
+                                let url = URL(string: avatarURL)
+                            {
+                                KFImage(url)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 80, height: 80)
+                                    .clipShape(Circle())
+                                    .padding(.top, 8)
+                            } else {
+                                Circle()
+                                    .fill(Color.gray.opacity(0.4))
+                                    .frame(width: 80, height: 80)
+                                    .padding(.top, 8)
+                            }
+                            VStack(spacing: 8) {
+                                Text(member.username)
+                                    .font(.title3)
+                                    .fontWeight(.semibold)
 
-                if let email = member.website {
-                    Text("网站: \(email)")
+                                Text("第 \(member.id) 位会员")
+                                    .foregroundColor(.secondary)
+                                    .font(.subheadline)
+
+                                if let bio = member.bio {
+                                    Text(bio)
+                                        .foregroundColor(.secondary)
+                                        .font(.subheadline)
+                                }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.vertical, 8)
+                        }
+                    }
+
+                    // 账户信息
+                    Section {
+                        if let created = member.created {
+                            HStack {
+                                Label("创建日期", systemImage: "calendar")
+                                Spacer()
+                                Text(formatDate(created))
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.trailing)
+                            }
+                        }
+
+                        if let website = member.website, !website.isEmpty {
+                            HStack {
+                                Label("个人网站", systemImage: "house")
+                                Spacer()
+                                Text(website)
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.trailing)
+                                    .contextMenu {
+                                        Button("在浏览器中打开", systemImage: "safari")
+                                        {
+                                            if let url = URL(string: website) {
+                                                openURL(url)
+                                            }
+                                        }
+                                    }
+                            }
+                        }
+
+                        if let btc = member.btc, !btc.isEmpty {
+                            HStack {
+                                Label(
+                                    "BTC",
+                                    systemImage: "bitcoinsign.ring.dashed"
+                                )
+                                Spacer()
+                                Text(btc)
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.trailing)
+                                    .contextMenu {
+                                        Button("在浏览器中打开", systemImage: "safari")
+                                        {
+                                            if let url = URL(string: btc) {
+                                                openURL(url)
+                                            }
+                                        }
+                                    }
+                            }
+                        }
+
+                        if let github = member.github, !github.isEmpty {
+                            HStack {
+                                Label("GitHub", systemImage: "network")
+                                Spacer()
+                                Text(github)
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.trailing)
+                                    .contextMenu {
+                                        Button("在浏览器中打开", systemImage: "safari")
+                                        {
+                                            if let url = URL(
+                                                string:
+                                                    "https://github.com/\(github)"
+                                            ) {
+                                                openURL(url)
+                                            }
+                                        }
+                                    }
+                            }
+                        }
+
+                        if let twitter = member.twitter, !twitter.isEmpty {
+                            HStack {
+                                Label("Twitter", systemImage: "network")
+                                Spacer()
+                                Text(twitter)
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.trailing)
+                                    .contextMenu {
+                                        Button("在浏览器中打开", systemImage: "safari")
+                                        {
+                                            if let url = URL(string: twitter) {
+                                                openURL(url)
+                                            }
+                                        }
+                                    }
+                            }
+                        }
+                        
+                        if let psn = member.psn, !psn.isEmpty {
+                            HStack {
+                                Label("Twitter", systemImage: "network")
+                                Spacer()
+                                Text(psn)
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.trailing)
+                                    .contextMenu {
+                                        Button("在浏览器中打开", systemImage: "safari")
+                                        {
+                                            if let url = URL(string: psn) {
+                                                openURL(url)
+                                            }
+                                        }
+                                    }
+                            }
+                        }
+
+                        if let token = userManager.token?.token {
+                            HStack {
+                                Label("Token", systemImage: "key.viewfinder")
+                                Spacer()
+                                Text(maskedToken(token))
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.trailing)
+                                    .contextMenu {
+                                        Button(
+                                            "复制原始 Token",
+                                            systemImage: "document.on.document"
+                                        ) {
+                                            UIPasteboard.general.string = token
+                                        }
+                                    }
+                            }
+                        }
+                    }
+
+                    // 退出登录
+                    Section {
+                        Button(role: .destructive) {
+                            onLogout()
+                        } label: {
+                            HStack {
+                                Spacer()
+                                Text("退出登录")
+                                    .fontWeight(.semibold)
+                                Spacer()
+                            }
+                        }
+                    }
+                } else {
+                    Section {
+                        VStack(spacing: 8) {
+                            Image(systemName: "person.crop.circle.badge.exclam")
+                                .font(.system(size: 50))
+                                .foregroundColor(.gray)
+                            Text("未找到用户信息")
+                                .foregroundColor(.red)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding()
+                    }
                 }
-            } else {
-                Text("未找到用户信息")
-                    .foregroundColor(.red)
             }
-            if let token = userManager.token {
-                Text("token: \(token.expiration)")
+            .listStyle(.insetGrouped)
+            .background(Color(.blue))
+            .navigationTitle("用户信息")
+            .navigationBarTitleDisplayMode(.inline)
+            // 2. 添加完成按钮
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("完成") {
+                        dismiss()
+                    }
+                    .buttonStyle(.borderless)
+                }
             }
-
-            Spacer()
-
-            Button("退出登录") {
-                onLogout()
-            }
-            .buttonStyle(.bordered)
-            .tint(.red)
         }
     }
+
+    func maskedToken(_ token: String) -> String {
+        guard token.count > 8 else { return token }  // 不足8位直接返回原始token
+        let start = token.prefix(4)
+        let end = token.suffix(4)
+        return "\(start)****\(end)"
+    }
+
+    func formatDate(_ timestamp: Int) -> String {
+        let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"  // 年-月-日
+        return formatter.string(from: date)
+    }
+
 }
 
 #Preview {
