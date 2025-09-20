@@ -37,7 +37,9 @@ struct ProfileView: View {
                     onValidate: validateToken,
                     onLogin: { token in
                         try await loginWithToken(token)
-
+                        withAnimation {
+                            step = 3
+                        }
                     }
                 )
             } else if step == 3 {
@@ -51,13 +53,11 @@ struct ProfileView: View {
     }
 
     // 第一步：校验 Token 有效性
-    func validateToken(_ token: String) async throws {
-        print("token:\(token)")
-        // 模拟校验
-        let response = try await V2exAPI.shared.token()
-        if let r = response, r.success {
-            let token = r.result
+    func validateToken(_ token: String) async throws -> Token {
+        let response = try await V2exAPI.shared.token(token: token)
+        if let r = response, let token = r.result, r.success {
             userManager.saveToken(token)
+            return token
         } else {
             throw NSError(
                 domain: "TokenError",
@@ -71,41 +71,19 @@ struct ProfileView: View {
 
     // 第二步：登录
     func loginWithToken(_ token: String) async throws {
-        // 模拟登录
-        try await Task.sleep(nanoseconds: 500_000_000)
-        if token != "validtoken123" {
+        let response = try await V2exAPI.shared.member()
+        if let r = response, let memeber = r.result, r.success {
+            userManager.saveMember(memeber)
+            print(memeber)
+        } else {
             throw NSError(
                 domain: "LoginError",
-                code: 2,
+                code: 1,
                 userInfo: [
-                    NSLocalizedDescriptionKey: "登录失败，请检查 Token 是否有效"
+                    NSLocalizedDescriptionKey: "登录失败，请稍后重试"
                 ]
             )
         }
-    }
-
-    private func login() async {
-        guard !inputToken.isEmpty else { return }
-        do {
-            let response = try await V2exAPI.shared.token()
-            if let r = response, r.success {
-                let token = r.result
-                userManager.saveToken(token)
-
-                let response = try await V2exAPI.shared.member()
-                if let r = response, r.success {
-                    let member = r.result
-                    userManager.saveMember(member)
-                    withAnimation {
-                        step = 3
-                    }
-                }
-            }
-
-        } catch {
-            print("❌ 获取 Member 失败: \(error)")
-        }
-
     }
 
     private func logout() {
@@ -220,21 +198,22 @@ struct FeatureRow: View {
 
 struct TokenInputPage: View {
     @Binding var token: String
-    var onValidate: (String) async throws -> Void  // 校验 Token
+    var onValidate: (String) async throws -> Token  // 校验 Token，返回过期时间
     var onLogin: (String) async throws -> Void  // 登录
 
     @State private var errorMessage: String?
     @State private var isLoading = false
+    @State private var tokenExpiry: Int? // 校验通过后保存过期时间
+    @State private var loginFailed = false
 
     var body: some View {
         VStack(spacing: 0) {
-            // 顶部标题区域
+            // 顶部标题
             VStack(spacing: 12) {
                 Text("使用 Token 登录")
                     .font(.largeTitle)
                     .bold()
-
-                Text("以更加安全的方式访问你的账户数据")
+                Text("以更加安全的方式访问你账户中的数据")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -242,9 +221,9 @@ struct TokenInputPage: View {
             }
             .padding(.top, 60)
 
-            Spacer() // 顶部和中间输入区的间隔
+            Spacer()
 
-            // 中间输入区域，垂直居中
+            // 输入区域
             VStack(spacing: 16) {
                 VStack(spacing: 8) {
                     TextField("请输入 Token", text: $token)
@@ -254,12 +233,20 @@ struct TokenInputPage: View {
                         .textInputAutocapitalization(.never)
                         .disableAutocorrection(true)
                         .padding(.horizontal, 30)
-
+                    
                     if let errorMessage = errorMessage {
                         Text(errorMessage)
                             .font(.footnote)
                             .foregroundColor(.red)
                             .multilineTextAlignment(.leading)
+                            .padding(.horizontal, 34)
+                    }
+
+                    // 校验通过显示过期时间
+                    if let expiry = tokenExpiry {
+                        Text("你的 Token 有效期剩余 \(expiry) 天")
+                            .font(.footnote)
+                            .foregroundColor(.green)
                             .padding(.horizontal, 34)
                     }
                 }
@@ -270,34 +257,30 @@ struct TokenInputPage: View {
                         .font(.footnote)
                         .foregroundColor(.secondary)
                 } icon: {
-                    Image(systemName: "info.circle") // 你想要的 SF Symbol
+                    Image(systemName: "info.circle")
                         .font(.footnote)
                         .foregroundColor(.secondary)
                 }
                 .multilineTextAlignment(.center)
             }
 
-            Spacer() // 中间输入区和底部按钮的间隔
+            Spacer()
 
             // 底部按钮
-            Button(action: handleLogin) {
+            Button(action: handleAction) {
                 if isLoading {
                     ProgressView()
-                        .progressViewStyle(
-                            CircularProgressViewStyle(tint: .white)
-                        )
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
                 } else {
-                    Text("继续")
+                    Text(buttonTitle)
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
                 }
             }
-            .background(
-                token.isEmpty ? Color.gray.opacity(0.3) : Color.accentColor
-            )
+            .background((token.isEmpty || isLoading) ? Color.gray.opacity(0.3) : Color.accentColor)
             .foregroundColor(.white)
             .cornerRadius(14)
             .padding(.horizontal, 20)
@@ -308,23 +291,53 @@ struct TokenInputPage: View {
         .ignoresSafeArea(edges: .bottom)
     }
 
-    private func handleLogin() {
+    // 按钮文字根据状态变化
+    private var buttonTitle: String {
+        if loginFailed {
+            return "重试"
+        } else if tokenExpiry != nil {
+            return "下一步"
+        } else {
+            return "校验 Token"
+        }
+    }
+
+    private func handleAction() {
         errorMessage = nil
         isLoading = true
+        loginFailed = false
 
         Task {
             do {
-                try await onValidate(token)
-                try await onLogin(token)
+                if tokenExpiry == nil {
+                    // 第一步：校验 Token
+                    let t = try await onValidate(token)
+                    await MainActor.run {
+                        tokenExpiry = t.goodForDays
+                        isLoading = false
+                    }
+                } else {
+                    // 第二步：登录
+                    try await onLogin(token)
+                    await MainActor.run {
+                        isLoading = false
+                    }
+                }
             } catch {
                 await MainActor.run {
                     errorMessage = error.localizedDescription
+                    isLoading = false
+                    loginFailed = true
                 }
             }
-            await MainActor.run {
-                isLoading = false
-            }
         }
+    }
+
+    private func formattedExpiry(_ timestamp: Int) -> String {
+        let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return formatter.localizedString(for: date, relativeTo: Date())
     }
 }
 

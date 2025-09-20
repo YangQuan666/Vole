@@ -16,19 +16,6 @@ public struct V2exAPI {
 
     public var session = URLSession.shared
     /**
-     个人访问令牌
-    
-     生成参考： https://v2ex.com/help/personal-access-token
-     */
-    public var accessToken: String? {
-        get {
-            UserDefaults.standard.string(forKey: "accessToken")
-        }
-        set {
-            UserDefaults.standard.set(newValue, forKey: "accessToken")
-        }
-    }
-    /**
      HTTP 请求
      */
     private func request<T>(
@@ -36,7 +23,7 @@ public struct V2exAPI {
         url: String,
         args: [String: Any]? = nil,
         decodeClass: T.Type,
-        useAuth: Bool = false
+        token: String? = nil
     ) async throws -> (
         T?
     ) where T: Decodable {
@@ -58,9 +45,14 @@ public struct V2exAPI {
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        if useAuth, let accessToken = accessToken {
+        if let t = token {
             request.setValue(
-                "Bearer " + accessToken,
+                "Bearer " + t,
+                forHTTPHeaderField: "Authorization"
+            )
+        } else if let accessToken = UserManager.shared.token, let t = accessToken.token {
+            request.setValue(
+                "Bearer " + t,
                 forHTTPHeaderField: "Authorization"
             )
         }
@@ -267,7 +259,8 @@ public struct V2exAPI {
         let path = "topics/\(topicId)"
         return try await request(
             url: endpointV2 + path,
-            decodeClass: Response<Topic?>.self
+            decodeClass: Response<Topic?>.self,
+            //            token: accessToken
         )
     }
 
@@ -332,11 +325,12 @@ public struct V2exAPI {
     /**
      查看当前使用的令牌
      */
-    public func token() async throws -> Response<Token>? {
+    public func token(token: String) async throws -> Response<Token>? {
         let path = "token"
         return try await request(
             url: endpointV2 + path,
-            decodeClass: Response<Token>.self
+            decodeClass: Response<Token>.self,
+            token: token
         )
     }
 
