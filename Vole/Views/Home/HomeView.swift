@@ -5,6 +5,7 @@
 //  Created by 杨权 on 5/25/25.
 //
 
+import Kingfisher
 import SwiftUI
 
 struct HomeView: View {
@@ -57,25 +58,68 @@ struct HomeView: View {
                 DetailView(topicId: route.id, topic: route.topic, path: $path)
             }
             .toolbar {
-                ToolbarItem(placement: .automatic) {
-                    Picker("", selection: $selection) {
-                        ForEach(Category.allCases, id: \.self) { item in
-                            Text(item.rawValue).tag(item)
+                if #available(iOS 26, *) {
+                    ToolbarItem(placement: .automatic) {
+                        Picker("", selection: $selection) {
+                            ForEach(Category.allCases, id: \.self) { item in
+                                Text(item.rawValue).tag(item)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                    }
+                    .sharedBackgroundVisibility(.hidden)
+                    ToolbarSpacer(.flexible)
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button {
+                            showProfile = true
+                        } label: {
+                            if let memeber = UserManager.shared.currentMember,
+                               let avatarURL = memeber.avatarNormal,
+                               let url = URL(string: avatarURL)
+                            {
+                                KFImage(url)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 32, height: 32)
+                                    .clipShape(Circle())
+                            } else {
+                                Image(systemName: "person.crop.circle.fill")
+                                    .resizable()
+                                    .frame(width: 32, height: 32)
+                                    .foregroundStyle(.blue)
+                            }
                         }
                     }
-                    .pickerStyle(.segmented)
-                }
-                if #available(iOS 26, *) {
-                    ToolbarSpacer(.flexible)
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        showProfile = true
-                    } label: {
-                        Image(systemName: "person.crop.circle.fill")
-                            .resizable()
-                            .frame(width: 32, height: 32)
-                            .foregroundStyle(.blue)
+                    .sharedBackgroundVisibility(.hidden)
+                } else {
+                    ToolbarItem(placement: .automatic) {
+                        Picker("", selection: $selection) {
+                            ForEach(Category.allCases, id: \.self) { item in
+                                Text(item.rawValue).tag(item)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                    }
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button {
+                            showProfile = true
+                        } label: {
+                            if let memeber = UserManager.shared.currentMember,
+                               let avatarURL = memeber.avatarNormal,
+                               let url = URL(string: avatarURL)
+                            {
+                                KFImage(url)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 32, height: 32)
+                                    .clipShape(Circle())
+                            } else {
+                                Image(systemName: "person.crop.circle.fill")
+                                    .resizable()
+                                    .frame(width: 32, height: 32)
+                                    .foregroundStyle(.blue)
+                            }
+                        }
                     }
                 }
             }
