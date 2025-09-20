@@ -57,7 +57,7 @@ struct HomeView: View {
                 DetailView(topicId: route.id, topic: route.topic, path: $path)
             }
             .toolbar {
-                ToolbarItem(placement: .principal) {
+                ToolbarItem(placement: .automatic) {
                     Picker("", selection: $selection) {
                         ForEach(Category.allCases, id: \.self) { item in
                             Text(item.rawValue).tag(item)
