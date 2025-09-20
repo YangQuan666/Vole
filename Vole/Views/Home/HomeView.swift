@@ -29,15 +29,6 @@ struct HomeView: View {
     var body: some View {
         NavigationStack(path: $path) {
             VStack {
-                Picker("分类", selection: $selection) {
-                    ForEach(Category.allCases, id: \.self) { item in
-                        Text(item.rawValue).tag(item)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal)
-                .frame(maxWidth: 500)
-
                 TabView(selection: $selection) {
                     ForEach(Category.allCases, id: \.self) { category in
                         Group {
@@ -77,7 +68,7 @@ struct HomeView: View {
                         .tag(category)
                     }
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
+                .tabViewStyle(.page(indexDisplayMode: .never)) 
             }
             .navigationTitle("首页")
             .navigationBarTitleDisplayMode(.inline)
@@ -85,6 +76,14 @@ struct HomeView: View {
                 DetailView(topicId: route.id, topic: route.topic, path: $path)
             }
             .toolbar {
+                ToolbarItem(placement: .automatic) {
+                    Picker("分类", selection: $selection) {
+                        ForEach(Category.allCases, id: \.self) { item in
+                            Text(item.rawValue).tag(item)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {  // 右上角头像
                     Button {
                         showProfile = true
