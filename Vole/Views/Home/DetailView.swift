@@ -289,8 +289,8 @@ struct DetailView: View {
         guard topic == nil, let topicId else { return }
         do {
             let response = try await V2exAPI.shared.topic(topicId: topicId)
-            if let r = response, r.success {
-                topic = r.result
+            if let r = response, let t = r.result, r.success {
+                topic = t
             }
         } catch {
             print("❌ 获取 Topic 失败: \(error)")
