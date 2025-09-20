@@ -28,63 +28,47 @@ struct HomeView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            VStack {
-                TabView(selection: $selection) {
-                    ForEach(Category.allCases, id: \.self) { category in
-                        Group {
-                            if let topics = data[category], !topics.isEmpty {
-                                ScrollView {
-                                    LazyVStack(spacing: 12) {
-                                        ForEach(topics) { topic in
-                                            TopicRow(
-                                                topic: topic,
-                                            ) {
-                                                path.append(
-                                                    TopicRoute(
-                                                        id: topic.id,
-                                                        topic: topic
-                                                    )
-                                                )
-                                            }
-                                        }
-                                    }
-                                    .padding(.horizontal)
-                                }
-                                .frame(maxWidth: 600)
-                                .refreshable {
-                                    await loadTopics(for: category)
-                                }
-                            } else {
-                                // 数据为空时显示加载动画
-                                VStack {
-                                    Spacer()
-                                    ProgressView("加载中…")
-                                        .progressViewStyle(.circular)
-                                        .padding()
-                                    Spacer()
-                                }
+            Group {
+                if let topics = data[selection], !topics.isEmpty {
+                    List {
+                        ForEach(topics) { topic in
+                            TopicRow(topic: topic) {
+                                path.append(
+                                    TopicRoute(id: topic.id, topic: topic)
+                                )
                             }
                         }
-                        .tag(category)
+                    }
+                    .refreshable {
+                        await loadTopics(for: selection)
+                    }
+                } else {
+                    VStack {
+                        Spacer()
+                        ProgressView("加载中…")
+                            .progressViewStyle(.circular)
+                            .padding()
+                        Spacer()
                     }
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never)) 
             }
             .navigationTitle("首页")
-            .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: TopicRoute.self) { route in
                 DetailView(topicId: route.id, topic: route.topic, path: $path)
             }
             .toolbar {
-                ToolbarItem(placement: .automatic) {
-                    Picker("分类", selection: $selection) {
+                ToolbarItem(placement: .principal) {
+                    Picker("", selection: $selection) {
                         ForEach(Category.allCases, id: \.self) { item in
                             Text(item.rawValue).tag(item)
                         }
                     }
                     .pickerStyle(.segmented)
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {  // 右上角头像
+                if #available(iOS 26, *) {
+                    ToolbarSpacer(.flexible)
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         showProfile = true
                     } label: {
@@ -93,15 +77,12 @@ struct HomeView: View {
                             .frame(width: 32, height: 32)
                             .foregroundStyle(.blue)
                     }
-
                 }
-
             }
             .sheet(isPresented: $showProfile) {
                 ProfileView()
             }
             .task(id: selection) {
-                // 首次加载默认分类
                 if data[selection] == nil || data[selection]?.isEmpty == true {
                     await loadTopics(for: selection)
                 }
