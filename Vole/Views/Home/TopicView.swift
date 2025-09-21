@@ -92,9 +92,6 @@ struct TopicRow: View {
         .onTapGesture {
             onTap()
         }
-        .padding()
-        .cornerRadius(16)
-        .frame(maxWidth: .infinity)
         .contextMenu {
             Button(action: {
                 UIPasteboard.general.string = topic.url
