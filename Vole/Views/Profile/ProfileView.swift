@@ -43,7 +43,9 @@ struct ProfileView: View {
                     }
                 )
             } else if step == 3 {
-                UserInfoPage(onLogout: {
+                UserInfoView(
+                    member: userManager.currentMember,
+                    onLogout: {
                     logout()
                 })
             }
@@ -349,268 +351,104 @@ struct TokenInputPage: View {
     }
 }
 
-// MARK: - 用户信息页
-struct UserInfoPage: View {
-    @ObservedObject private var userManager = UserManager.shared
-    // 1. 获取 dismiss 环境值
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.openURL) private var openURL
-    var onLogout: () -> Void
+
+struct TokenRenewPage: View {
+    let currentToken: Token
+    @State private var newToken: String?
 
     var body: some View {
-        NavigationView {
-            List {
-                if let member = userManager.currentMember {
-                    // 顶部用户信息
-                    Section {
-                        HStack(spacing: 8) {
-                            if let avatarURL = member.avatarLarge,
-                                let url = URL(string: avatarURL)
-                            {
-                                KFImage(url)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 80, height: 80)
-                                    .clipShape(Circle())
-                                    .padding(.top, 8)
-                            } else {
-                                Circle()
-                                    .fill(Color.gray.opacity(0.4))
-                                    .frame(width: 80, height: 80)
-                                    .padding(.top, 8)
-                            }
-                            VStack(spacing: 8) {
-                                Text(member.username)
-                                    .font(.title3)
-                                    .fontWeight(.semibold)
-
-                                Text("第 \(member.id) 位会员")
-                                    .foregroundColor(.secondary)
-                                    .font(.subheadline)
-
-                                if let bio = member.bio {
-                                    Text(bio)
-                                        .foregroundColor(.secondary)
-                                        .font(.subheadline)
+        List {
+            Section {
+                if let token = currentToken.token {
+                    HStack {
+                        Text("Token")
+                        Spacer()
+                        Text(token)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.trailing)
+                            .contextMenu {
+                                Button(
+                                    "复制原始 Token",
+                                    systemImage:
+                                        "document.on.document"
+                                ) {
+                                    UIPasteboard.general
+                                        .string = token
                                 }
                             }
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.vertical, 8)
-                        }
-                    }
-
-                    // 账户信息
-                    Section {
-                        if let created = member.created {
-                            HStack {
-                                Label("创建日期", systemImage: "calendar")
-                                Spacer()
-                                Text(formatDate(created))
-                                    .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.trailing)
-                            }
-                        }
-
-                        if let website = member.website, !website.isEmpty {
-                            HStack {
-                                Label("个人网站", systemImage: "house")
-                                Spacer()
-                                Text(website)
-                                    .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.trailing)
-                                    .contextMenu {
-                                        Button("在浏览器中打开", systemImage: "safari")
-                                        {
-                                            if let url = URL(string: website) {
-                                                openURL(url)
-                                            }
-                                        }
-                                    }
-                            }
-                        }
-
-                        if let btc = member.btc, !btc.isEmpty {
-                            HStack {
-                                Label(
-                                    "BTC",
-                                    systemImage: "bitcoinsign.ring.dashed"
-                                )
-                                Spacer()
-                                Text(btc)
-                                    .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.trailing)
-                                    .contextMenu {
-                                        Button("在浏览器中打开", systemImage: "safari")
-                                        {
-                                            if let url = URL(string: btc) {
-                                                openURL(url)
-                                            }
-                                        }
-                                    }
-                            }
-                        }
-
-                        if let github = member.github, !github.isEmpty {
-                            HStack {
-                                Label("GitHub", systemImage: "network")
-                                Spacer()
-                                Text(github)
-                                    .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.trailing)
-                                    .contextMenu {
-                                        Button("在浏览器中打开", systemImage: "safari")
-                                        {
-                                            if let url = URL(
-                                                string:
-                                                    "https://github.com/\(github)"
-                                            ) {
-                                                openURL(url)
-                                            }
-                                        }
-                                    }
-                            }
-                        }
-
-                        if let twitter = member.twitter, !twitter.isEmpty {
-                            HStack {
-                                Label("Twitter", systemImage: "network")
-                                Spacer()
-                                Text(twitter)
-                                    .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.trailing)
-                                    .contextMenu {
-                                        Button("在浏览器中打开", systemImage: "safari")
-                                        {
-                                            if let url = URL(string: twitter) {
-                                                openURL(url)
-                                            }
-                                        }
-                                    }
-                            }
-                        }
-                        
-                        if let psn = member.psn, !psn.isEmpty {
-                            HStack {
-                                Label("Twitter", systemImage: "network")
-                                Spacer()
-                                Text(psn)
-                                    .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.trailing)
-                                    .contextMenu {
-                                        Button("在浏览器中打开", systemImage: "safari")
-                                        {
-                                            if let url = URL(string: psn) {
-                                                openURL(url)
-                                            }
-                                        }
-                                    }
-                            }
-                        }
-
-                        if let token = userManager.token?.token {
-                            HStack {
-                                Label("Token", systemImage: "key.viewfinder")
-                                Spacer()
-                                Text(maskedToken(token))
-                                    .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.trailing)
-                                    .contextMenu {
-                                        Button(
-                                            "复制原始 Token",
-                                            systemImage: "document.on.document"
-                                        ) {
-                                            UIPasteboard.general.string = token
-                                        }
-                                    }
-                            }
-                        }
-                    }
-
-                    // 退出登录
-                    Section {
-                        Button(role: .destructive) {
-                            onLogout()
-                        } label: {
-                            HStack {
-                                Spacer()
-                                Text("退出登录")
-                                    .fontWeight(.semibold)
-                                Spacer()
-                            }
-                        }
-                    }
-                } else {
-                    Section {
-                        VStack(spacing: 8) {
-                            Image(systemName: "person.crop.circle.badge.exclam")
-                                .font(.system(size: 50))
-                                .foregroundColor(.gray)
-                            Text("未找到用户信息")
-                                .foregroundColor(.red)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding()
                     }
                 }
-            }
-            .listStyle(.insetGrouped)
-            .background(Color(.blue))
-            .navigationTitle("用户信息")
-            .navigationBarTitleDisplayMode(.inline)
-            // 2. 添加完成按钮
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("完成") {
-                        dismiss()
+                if let created = currentToken.created {
+                    HStack {
+                        Text("创建时间")
+                        Spacer()
+                        Text("\(formatDate(created))")
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.trailing)
                     }
-                    .buttonStyle(.borderless)
+                }
+                if let lastUsed = currentToken.lastUsed {
+                    HStack {
+                        Text("上次使用时间")
+                        Spacer()
+                        Text("\(formatDate(lastUsed))")
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.trailing)
+                    }
+                }
+                if let expiration = currentToken.expiration {
+                    HStack {
+                        Text("有效期")
+                        Spacer()
+                        Text("\(expiration/86400) 天")
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.trailing)
+                    }
+                }
+                if let goodForDays = currentToken.goodForDays {
+                    HStack {
+                        Text("剩余天数")
+                        Spacer()
+                        Text("\(goodForDays) 天")
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.trailing)
+                    }
                 }
             }
         }
+        .navigationTitle("Token 详情")
+        .navigationBarTitleDisplayMode(.inline)
     }
+    //
+    //    func renewToken() {
+    //        // 模拟续期逻辑，这里实际应该调用你的接口
+    //        newToken = currentToken + "_NEW"
+    //    }
+}
 
-    func maskedToken(_ token: String) -> String {
-        guard token.count > 8 else { return token }  // 不足8位直接返回原始token
-        let start = token.prefix(4)
-        let end = token.suffix(4)
-        return "\(start)****\(end)"
-    }
+func maskedToken(_ token: String) -> String {
+    guard token.count > 8 else { return token }  // 不足8位直接返回原始token
+    let start = token.prefix(4)
+    let end = token.suffix(4)
+    return "\(start)****\(end)"
+}
 
-    func formatDate(_ timestamp: Int) -> String {
-        let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"  // 年-月-日
-        return formatter.string(from: date)
-    }
-
+func formatDate(_ timestamp: Int) -> String {
+    let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy-MM-dd"  // 年-月-日
+    return formatter.string(from: date)
 }
 
 #Preview {
-    var member2 = Member(id: 492604, username: "oligi")
-    let jsonString = """
-        {
-            "id": 492604,
-            "username": "oligi",
-            "url": "https://www.v2ex.com/u/oligi",
-            "website": "https://yangquan.netlify.app",
-            "twitter": "",
-            "psn": "",
-            "github": "YangQuan666",
-            "btc": "",
-            "location": "",
-            "tagline": "",
-            "bio": "",
-            "avatar_mini": "https://cdn.v2ex.com/avatar/44a2/beec/492604_mini.png?m=1756123037",
-            "avatar_normal": "https://cdn.v2ex.com/avatar/44a2/beec/492604_normal.png?m=1756123037",
-            "avatar_large": "https://cdn.v2ex.com/avatar/44a2/beec/492604_large.png?m=1756123037",
-            "avatar_xlarge": "https://cdn.v2ex.com/avatar/44a2/beec/492604_xlarge.png?m=1756123037",
-            "avatar_xxlarge": "https://cdn.v2ex.com/avatar/44a2/beec/492604_xxlarge.png?m=1756123037",
-            "created": 1590995584,
-            "last_modified": 1756123037,
-            "pro": 0
-        }
-        """
-    WelcomePage {
-
-    }
+    let token = Token(
+        token: "1298312381209381290381029",
+        scope: "",
+        expiration: 2_592_000,
+        goodForDays: 3,
+        totalUsed: 1,
+        lastUsed: 1,
+        created: 1
+    )
+    TokenRenewPage(currentToken: token)
 }
