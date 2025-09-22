@@ -15,6 +15,8 @@ struct HomeView: View {
     @State private var data: [Category: [Topic]] = [:]
     @State private var showProfile = false
 
+    @ObservedObject private var userManager = UserManager.shared
+
     func loadTopics(for category: Category) async {
         do {
             let result = try await category.action()
@@ -73,9 +75,9 @@ struct HomeView: View {
                         Button {
                             showProfile = true
                         } label: {
-                            if let memeber = UserManager.shared.currentMember,
-                               let avatarURL = memeber.avatarNormal,
-                               let url = URL(string: avatarURL)
+                            if let memeber = userManager.currentMember,
+                                let avatarURL = memeber.avatarNormal,
+                                let url = URL(string: avatarURL)
                             {
                                 KFImage(url)
                                     .resizable()
@@ -105,8 +107,8 @@ struct HomeView: View {
                             showProfile = true
                         } label: {
                             if let memeber = UserManager.shared.currentMember,
-                               let avatarURL = memeber.avatarNormal,
-                               let url = URL(string: avatarURL)
+                                let avatarURL = memeber.avatarNormal,
+                                let url = URL(string: avatarURL)
                             {
                                 KFImage(url)
                                     .resizable()

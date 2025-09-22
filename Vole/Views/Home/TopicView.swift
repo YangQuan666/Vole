@@ -20,7 +20,7 @@ struct TopicRow: View {
     let onTap: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading) {
+        VStack(alignment: .leading, spacing: 8) {
             // 头像 + 昵称
             HStack {
                 if let avatarURL = topic.member?.avatarNormal,
