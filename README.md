@@ -17,7 +17,6 @@ todo
 ## 下载
 
 todo
-- [App Store](https://apps.apple.com/cn/app/id6445736341)
 
 ## License
 
@@ -27,4 +26,6 @@ GPL-3.0 License, see the [LICENSE](./LICENSE) file for details.
 
 如果你觉得这个项目对你有帮助，欢迎捐赠支持我继续开发和维护这个项目。
 - 微信支付：扫描下方二维码
+![](./wechatpay.jpeg)
 - 支付宝支付：扫描下方二维码
+![](./alipay.jpeg)
