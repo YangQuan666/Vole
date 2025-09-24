@@ -61,7 +61,7 @@ struct HomeView: View {
             }
             .toolbar {
                 if #available(iOS 26, *) {
-                    ToolbarItem(placement: .principal) {
+                    ToolbarItem(placement: .automatic) {
                         Picker("category", selection: $selection) {
                             ForEach(Category.allCases, id: \.self) { item in
                                 Text(item.rawValue).tag(item)
@@ -70,7 +70,7 @@ struct HomeView: View {
                         .pickerStyle(.segmented)
                     }
                     .sharedBackgroundVisibility(.hidden)
-                    ToolbarSpacer(.flexible)
+                    ToolbarSpacer(.fixed)
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button {
                             showProfile = true
@@ -94,7 +94,7 @@ struct HomeView: View {
                     }
                     .sharedBackgroundVisibility(.hidden)
                 } else {
-                    ToolbarItem(placement: .automatic) {
+                    ToolbarItem(placement: .title) {
                         Picker("", selection: $selection) {
                             ForEach(Category.allCases, id: \.self) { item in
                                 Text(item.rawValue).tag(item)
