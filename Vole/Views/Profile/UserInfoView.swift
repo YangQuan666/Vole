@@ -22,19 +22,19 @@ struct UserInfoView: View {
                     // 顶部用户信息
                     Section {
                         HStack(spacing: 8) {
-                            if let avatarURL = member.avatarLarge,
+                            if let avatarURL = member.getHighestQualityAvatar(),
                                 let url = URL(string: avatarURL)
                             {
                                 KFImage(url)
                                     .resizable()
                                     .scaledToFill()
-                                    .frame(width: 80, height: 80)
+                                    .frame(width: 128, height: 128)
                                     .clipShape(Circle())
                                     .padding(.top, 8)
                             } else {
                                 Circle()
                                     .fill(Color.gray.opacity(0.4))
-                                    .frame(width: 80, height: 80)
+                                    .frame(width: 128, height: 128)
                                     .padding(.top, 8)
                             }
                             VStack(spacing: 8) {
