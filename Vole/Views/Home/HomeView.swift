@@ -61,7 +61,7 @@ struct HomeView: View {
             }
             .toolbar {
                 if #available(iOS 26, *) {
-                    ToolbarItem(placement: .automatic) {
+                    ToolbarItem(placement: .principal) {
                         Picker("category", selection: $selection) {
                             ForEach(Category.allCases, id: \.self) { item in
                                 Text(item.rawValue).tag(item)
@@ -76,7 +76,8 @@ struct HomeView: View {
                             showProfile = true
                         } label: {
                             if let memeber = userManager.currentMember,
-                                let avatarURL = memeber.getHighestQualityAvatar(),
+                                let avatarURL =
+                                    memeber.getHighestQualityAvatar(),
                                 let url = URL(string: avatarURL)
                             {
                                 KFImage(url)

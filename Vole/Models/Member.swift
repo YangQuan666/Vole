@@ -46,7 +46,6 @@ public struct Member: Identifiable, Decodable, Encodable, Hashable {
     public func getHighestQualityAvatar() -> String? {
         // 返回第一个有效的头像 URL，从 mini 到 XXXLarge
         if let avatarXXXLarge = avatarXXXLarge, !avatarXXXLarge.isEmpty {
-            print(avatarXXXLarge)
             return avatarXXXLarge
         }
         if let avatarXXLarge = avatarXXLarge, !avatarXXLarge.isEmpty {
