@@ -110,12 +110,22 @@ struct DetailView: View {
                                     .foregroundColor(.secondary)
                             }
                             Spacer()
-                            Text(topic.node?.title ?? "")
-                                .font(.callout)
-                                .bold()
-                                .foregroundColor(.accentColor)
-                                .lineLimit(1)
-
+                            Button {
+                                // 点击事件
+                                print("点击了标签：\(topic.node?.title ?? "")")
+                            } label: {
+                                Text(topic.node?.title ?? "")
+                                    .font(.callout)
+                                    .lineLimit(1)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                            .fill(Color.accentColor.opacity(0.15))
+                                    )
+                                    .foregroundColor(.accentColor)
+                            }
+                            .buttonStyle(.plain) // 防止系统默认的蓝色高亮覆盖你的样式
                         }
                         .listRowSeparator(.hidden)
 
