@@ -45,6 +45,7 @@ struct ProfileView: View {
             } else if step == 3 {
                 UserInfoView(
                     member: userManager.currentMember,
+                    admin: true,
                     onLogout: {
                     logout()
                 })

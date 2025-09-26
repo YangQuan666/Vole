@@ -9,10 +9,11 @@ import Kingfisher
 import SwiftUI
 
 struct UserInfoView: View {
-    var member: Member?
     @ObservedObject private var userManager = UserManager.shared
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
+    var member: Member?
+    var admin: Bool = false
     var onLogout: (() -> Void)?
 
     var body: some View {
@@ -172,9 +173,7 @@ struct UserInfoView: View {
                     }
 
                     // 是当前登录用户
-                    if let m = UserManager.shared.currentMember,
-                        member.id == m.id
-                    {
+                    if admin {
                         if let token = userManager.token,
                             let tokenStr = token.token
                         {
