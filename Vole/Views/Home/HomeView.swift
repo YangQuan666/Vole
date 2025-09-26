@@ -95,8 +95,8 @@ struct HomeView: View {
                     }
                     .sharedBackgroundVisibility(.hidden)
                 } else {
-                    ToolbarItem(placement: .title) {
-                        Picker("", selection: $selection) {
+                    ToolbarItem(placement: .automatic) {
+                        Picker("category", selection: $selection) {
                             ForEach(Category.allCases, id: \.self) { item in
                                 Text(item.rawValue).tag(item)
                             }
