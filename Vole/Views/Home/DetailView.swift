@@ -16,7 +16,7 @@ struct DetailView: View {
 
     @StateObject private var replyVM = ReplyViewModel()
     @State private var allMentions: [Int: [String]] = [:]
-
+    @State private var navTitle: String = "帖子"
     @State private var selectedReply: Reply? = nil
     @State private var showSafari = false
     @State private var safariURL: URL? = nil
@@ -37,11 +37,12 @@ struct DetailView: View {
                         Color.clear
                             .background(.ultraThinMaterial)
                             .ignoresSafeArea()
-                            .onTapGesture {
-                                withAnimation(.spring(dampingFraction: 0.6)) {
-                                    selectedReply = nil
-                                }
-                            }
+//                            .onTapGesture {
+//                                withAnimation(.spring(dampingFraction: 0.6)) {
+//                                    selectedReply = nil
+//                                    navTitle = "帖子"
+//                                }
+//                            }
 
                         // 浮层内容
                         ScrollView {
@@ -72,6 +73,7 @@ struct DetailView: View {
                         .onTapGesture {
                             withAnimation(.spring(dampingFraction: 0.6)) {
                                 selectedReply = nil
+                                navTitle = "帖子"
                             }
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -225,6 +227,7 @@ struct DetailView: View {
                                         .spring(dampingFraction: 0.6)
                                     ) {
                                         selectedReply = reply
+                                        navTitle = "对话"
                                     }
                                 }
                                 .swipeActions(
@@ -254,7 +257,7 @@ struct DetailView: View {
                 }
                 .disabled(selectedReply != nil)
                 .listStyle(.plain)
-                .navigationTitle("帖子")
+                .navigationTitle(navTitle)
                 .navigationBarTitleDisplayMode(.inline)
                 .refreshable {
                     await replyVM.load(topicId: topic.id)
