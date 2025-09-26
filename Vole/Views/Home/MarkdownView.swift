@@ -62,7 +62,9 @@ struct MarkdownView: View {
                     }
 
                     // 统一用全局打开逻辑
-                    appOpenURL(url)
+                    if UIApplication.shared.canOpenURL(url) {
+                        UIApplication.shared.open(url)
+                    }
                     return .handled
                 }
             )
