@@ -38,6 +38,8 @@ func formattedTime(_ timestamp: Int) -> String {
 }
 
 struct ReplyRowView: View {
+    @State private var showUserInfo = false
+    @State private var selectedUser: Member?
     @Binding var path: NavigationPath
     let topic: Topic
     let reply: Reply
@@ -50,14 +52,20 @@ struct ReplyRowView: View {
             if let avatarURL = reply.member.avatarNormal,
                 let url = URL(string: avatarURL)
             {
-                KFImage(url)
-                    .placeholder {
-                        Color.gray
-                    }
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 36, height: 36)
-                    .clipShape(Circle())
+                Button {
+                    selectedUser = reply.member
+                    showUserInfo = true
+                } label: {
+                    KFImage(url)
+                        .placeholder {
+                            Color.gray
+                        }
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 36, height: 36)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.borderless)
             } else {
                 // 头像占位
                 Image(systemName: "person.circle.fill")
@@ -116,6 +124,11 @@ struct ReplyRowView: View {
                     }
                 )
             }
+        }
+        .sheet(item: $selectedUser) { member in
+            UserInfoView(member: member)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
         .padding(.vertical, 8)
     }

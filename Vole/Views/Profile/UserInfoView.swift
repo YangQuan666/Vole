@@ -13,7 +13,7 @@ struct UserInfoView: View {
     @ObservedObject private var userManager = UserManager.shared
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
-    var onLogout: () -> Void
+    var onLogout: (() -> Void)?
 
     var body: some View {
         NavigationView {
@@ -230,18 +230,18 @@ struct UserInfoView: View {
                                 .buttonStyle(.borderless)
                             }
                         }
-                    }
 
-                    // 退出登录
-                    Section {
-                        Button(role: .destructive) {
-                            onLogout()
-                        } label: {
-                            HStack {
-                                Spacer()
-                                Text("退出登录")
-                                    .fontWeight(.semibold)
-                                Spacer()
+                        // 退出登录
+                        Section {
+                            Button(role: .destructive) {
+                                onLogout?()
+                            } label: {
+                                HStack {
+                                    Spacer()
+                                    Text("退出登录")
+                                        .fontWeight(.semibold)
+                                    Spacer()
+                                }
                             }
                         }
                     }

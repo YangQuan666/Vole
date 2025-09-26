@@ -20,6 +20,8 @@ struct DetailView: View {
     @State private var selectedReply: Reply? = nil
     @State private var showSafari = false
     @State private var safariURL: URL? = nil
+    @State private var showUserInfo = false
+    @State private var selectedUser: Member?
 
     @Environment(\.openURL) private var openURL
     @Environment(\.appOpenURL) private var appOpenURL
@@ -83,32 +85,41 @@ struct DetailView: View {
                     Section {
                         // 头像 + 昵称
                         HStack {
-                            if let avatarURL = topic.member?.avatarNormal
-                                ?? topic.member?.avatar,
-                                let url = URL(string: avatarURL)
-                            {
-                                KFImage(url)
-                                    .placeholder {
-                                        Color.gray
+                            Button {
+                                selectedUser = topic.member
+                                showUserInfo = true
+                            } label: {
+                                HStack {
+                                    if let avatarURL = topic.member?
+                                        .avatarNormal
+                                        ?? topic.member?.avatar,
+                                        let url = URL(string: avatarURL)
+                                    {
+                                        KFImage(url)
+                                            .placeholder {
+                                                Color.gray
+                                            }
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: 24, height: 24)
+                                            .clipShape(Circle())
+                                    } else {
+                                        Circle()
+                                            .fill(Color.gray)
+                                            .frame(width: 24, height: 24)
                                     }
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 24, height: 24)
-                                    .clipShape(Circle())
-                            } else {
-                                Circle()
-                                    .fill(Color.gray)
-                                    .frame(width: 24, height: 24)
-                            }
 
-                            Text(topic.member?.username ?? "")
-                                .font(.subheadline)
-                                .foregroundColor(.primary)
-                            if let created = topic.created {
-                                Text(formattedTime(created))
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    Text(topic.member?.username ?? "")
+                                        .font(.subheadline)
+                                        .foregroundColor(.primary)
+                                    if let created = topic.created {
+                                        Text(formattedTime(created))
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
                             }
+                            .buttonStyle(.borderless)
                             Spacer()
                             Button {
                                 // 点击事件
@@ -120,12 +131,17 @@ struct DetailView: View {
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
                                     .background(
-                                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                            .fill(Color.accentColor.opacity(0.15))
+                                        RoundedRectangle(
+                                            cornerRadius: 8,
+                                            style: .continuous
+                                        )
+                                        .fill(
+                                            Color.accentColor.opacity(0.15)
+                                        )
                                     )
                                     .foregroundColor(.accentColor)
                             }
-                            .buttonStyle(.plain) // 防止系统默认的蓝色高亮覆盖你的样式
+                            .buttonStyle(.plain)
                         }
                         .listRowSeparator(.hidden)
 
@@ -289,6 +305,11 @@ struct DetailView: View {
                     .ignoresSafeArea()
                     .interactiveDismissDisabled(true)
             }
+        }
+        .sheet(isPresented: $showUserInfo) {
+            UserInfoView(member: selectedUser)
+                .presentationDetents([.medium, .large])  // 半屏 & 全屏
+                .presentationDragIndicator(.visible)  // 上拉手柄
         }
         .environment(\.appOpenURL) { url in
             safariURL = url
