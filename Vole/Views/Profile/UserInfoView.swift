@@ -46,8 +46,10 @@ struct UserInfoView: View {
                                 Text("第 \(member.id) 位会员")
                                     .foregroundColor(.secondary)
                                     .font(.subheadline)
-                                
-                                if let tagline = member.tagline, !tagline.isEmpty {
+
+                                if let tagline = member.tagline,
+                                    !tagline.isEmpty
+                                {
                                     Text("\"\(tagline)\"")
                                         .foregroundColor(.secondary)
                                         .font(.subheadline)
@@ -65,7 +67,7 @@ struct UserInfoView: View {
 
                     // 账户信息
                     Section {
-                        
+
                         if let created = member.created {
                             HStack {
                                 Label("创建日期", systemImage: "calendar")
@@ -75,8 +77,8 @@ struct UserInfoView: View {
                                     .multilineTextAlignment(.trailing)
                             }
                         }
-                        
-                        if let location = member.location {
+
+                        if let location = member.location, !location.isEmpty {
                             HStack {
                                 Label("所在地区", systemImage: "mappin.and.ellipse")
                                 Spacer()
@@ -292,6 +294,13 @@ struct UserInfoView: View {
 }
 
 #Preview {
-    let member = Member(id: 1111, username: "yangquan", location: "陕西",tagline: "NS 巫师3 真好玩",bio: "我是一名爱打游戏，爱编程、喜欢打羽毛球的INTP人格", created: 1)
+    let member = Member(
+        id: 1111,
+        username: "yangquan",
+        location: "陕西",
+        tagline: "NS 巫师3 真好玩",
+        bio: "我是一名爱打游戏，爱编程、喜欢打羽毛球的INTP人格",
+        created: 1
+    )
     UserInfoView(member: member, admin: false)
 }
