@@ -108,10 +108,11 @@ struct MarkdownView: View {
         }
 
         // 把 \n / \r\n 统一转换为 Markdown 硬换行
-        result =
-            result
-            .replacingOccurrences(of: "\r\n", with: "  \n")
-            .replacingOccurrences(of: "\n", with: "  \n")
+//        result =
+//            result
+//            .replacingOccurrences(of: "\r\n", with: "  \n")
+//            .replacingOccurrences(of: "\n", with: "  \n")
+        print("处理后的md文档: \(result)")
         return (result, mentions)
     }
 
@@ -170,7 +171,7 @@ struct MarkdownView: View {
 
 struct KFInlineImageProvider: InlineImageProvider {
     func image(with url: URL, label: String) async throws -> Image {
-        let targetPointHeight: CGFloat = 100
+        let targetPointHeight: CGFloat = 2
         let scale = await UIScreen.main.scale
 
         // 先加载原图（或缓存中的）
@@ -182,25 +183,30 @@ struct KFInlineImageProvider: InlineImageProvider {
         let uiImage = result.image
         let originalSize = uiImage.size
 
-        // 如果图像高度大于目标高度，则下采样，否则用原图
+        // 高度大于限制，按比例缩放
         if originalSize.height > targetPointHeight {
-            let targetPixelSize = CGSize(
-                width: targetPointHeight * scale,
+            let aspectRatio = originalSize.width / originalSize.height
+            let targetSize = CGSize(
+                width: targetPointHeight * aspectRatio * scale,
                 height: targetPointHeight * scale
             )
-            let processor = DownsamplingImageProcessor(size: targetPixelSize)
+
+            let processor = DownsamplingImageProcessor(size: targetSize)
 
             let resized = try await KingfisherManager.shared.retrieveImage(
                 with: url,
                 options: [
                     .processor(processor),
                     .scaleFactor(scale),
-                    .cacheOriginalImage,
+                    .cacheOriginalImage
                 ]
             )
-            return Image(uiImage: resized.image).renderingMode(.original)
+
+            return Image(uiImage: resized.image)
+                .renderingMode(.original)
         } else {
-            return Image(uiImage: uiImage).renderingMode(.original)
+            return Image(uiImage: uiImage)
+                .renderingMode(.original)
         }
     }
 }
@@ -208,7 +214,18 @@ struct KFInlineImageProvider: InlineImageProvider {
 
     ScrollView {
         let markdownString = """
-            标准版高刷加 256G 还是原来的标准价啊，性价比很高啊，Air 看后续手感续航什么的 应该很多女孩子会喜欢，Pro 感觉外观还是挺骚的 应该也会不少人喜欢😁\n\niPhone 17 标准版：5999 元起\n256GB：5999 元\n512GB：7999 元\niPhone Air：7999 元起\n256GB：7999 元\n512GB：9999 元\n1TB：11999 元\niPhone 17 Pro：8999 元起\n256GB：8999 元\n512GB：10999 元\n1TB：12999 元\niPhone 17 Pro Max 9999 元起\n256GB：9999 \n512GB：11999 \n1TB：13999 \n2TB：17999 \n#iPhone17 全系价格曝光# \n#iPhoneAir 定价 7999 元起# \n#苹果发布会#
+            帮 OP 重发图片。    
+                
+            ![image](https://i.imgur.com/61pfQZT.png)    
+            ![image](https://i.imgur.com/4WJyF6w.png)    
+            ![image](https://i.imgur.com/KEBNsVW.png)    
+            ![image](https://i.imgur.com/yVTQO66.png)    
+            ![image](https://i.imgur.com/Moyp0xD.png)    
+            ![image](https://i.imgur.com/qY9MksK.png)    
+            ![image](https://i.imgur.com/v0XnJTS.png)    
+            ![image](https://i.imgur.com/zy09Dt6.png)    
+            ![image](https://i.imgur.com/lDFqr3j.png)    
+            ![image](https://i.imgur.com/0uptnWx.png)
             """
 
         MarkdownView(content: markdownString)
