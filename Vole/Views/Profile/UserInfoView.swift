@@ -54,14 +54,15 @@ struct UserInfoView: View {
                                         .foregroundColor(.secondary)
                                         .font(.subheadline)
                                 }
-                                if let bio = member.bio, !bio.isEmpty {
-                                    Text(bio)
-                                        .foregroundColor(.secondary)
-                                        .font(.footnote)
-                                }
                             }
                             .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.vertical, 8)
+                        }
+                        .listRowSeparator(.hidden)
+
+                        if let bio = member.bio, !bio.isEmpty {
+                            Text(bio)
+                                .font(.subheadline)
+                                .frame(maxWidth: .infinity, alignment: .center)
                         }
                     }
 
