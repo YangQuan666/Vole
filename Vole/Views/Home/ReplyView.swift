@@ -126,7 +126,7 @@ struct ReplyRowView: View {
             }
         }
         .sheet(item: $selectedUser) { member in
-            UserInfoView(member: member)
+            MemberView(member: member)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
@@ -135,6 +135,10 @@ struct ReplyRowView: View {
 }
 
 #Preview {
-
-    //    ReplyRowView(topic: nil, reply: reply, floor: 1)
+//    @Previewable @State var path = NavigationPath()
+//    let topic: Topic = ModelData().topics[0]
+//    let member = Member(id: 123, username: "hello")
+//    let reply = Reply(id: 110, content: "帮 OP 重发图片。    ![image](https://i.imgur.com/61pfQZT.png) ![image](https://i.imgur.com/4WJyF6w.png) ![image](https://i.imgur.com/KEBNsVW.png)", contentRendered: "", created: 1, member: member)
+//    ReplyRowView(path: $path,topic: topic, reply: reply, floor: 1)
+//    
 }
