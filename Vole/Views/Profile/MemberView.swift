@@ -8,7 +8,7 @@
 import Kingfisher
 import SwiftUI
 
-struct UserInfoView: View {
+struct MemberView: View {
     @ObservedObject private var userManager = UserManager.shared
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -163,7 +163,7 @@ struct UserInfoView: View {
                                     .contextMenu {
                                         Button("在浏览器中打开", systemImage: "safari")
                                         {
-                                            if let url = URL(string: twitter) {
+                                            if let url = URL(string: "https://x.com/\(twitter)") {
                                                 openURL(url)
                                             }
                                         }
@@ -182,7 +182,7 @@ struct UserInfoView: View {
                                     .contextMenu {
                                         Button("在浏览器中打开", systemImage: "safari")
                                         {
-                                            if let url = URL(string: psn) {
+                                            if let url = URL(string: "https://psnprofiles.com/\(psn)") {
                                                 openURL(url)
                                             }
                                         }
@@ -303,5 +303,5 @@ struct UserInfoView: View {
         bio: "我是一名爱打游戏，爱编程、喜欢打羽毛球的INTP人格",
         created: 1
     )
-    UserInfoView(member: member, admin: false)
+    MemberView(member: member, admin: false)
 }

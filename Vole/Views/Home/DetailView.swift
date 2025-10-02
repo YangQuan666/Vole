@@ -310,7 +310,7 @@ struct DetailView: View {
             }
         }
         .sheet(isPresented: $showUserInfo) {
-            UserInfoView(member: selectedUser)
+            MemberView(member: selectedUser)
                 .presentationDetents([.medium, .large])  // 半屏 & 全屏
                 .presentationDragIndicator(.visible)  // 上拉手柄
         }
