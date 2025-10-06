@@ -112,7 +112,7 @@ struct MarkdownView: View {
 //            result
 //            .replacingOccurrences(of: "\r\n", with: "  \n")
 //            .replacingOccurrences(of: "\n", with: "  \n")
-        print("处理后的md文档: \(result)")
+//        print("处理后的md文档: \(result)")
         return (result, mentions)
     }
 
