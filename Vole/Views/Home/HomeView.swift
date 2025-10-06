@@ -42,6 +42,7 @@ struct HomeView: View {
                             }
                         }
                     }
+                    .id(selection)
                     .refreshable {
                         await loadTopics(for: selection)
                     }
