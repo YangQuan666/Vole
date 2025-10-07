@@ -95,7 +95,7 @@ public struct V2exAPI {
         sortBy: String = "topics",
         reverse: String = "1"
     ) async throws -> [Node]? {
-        var fieldsList = ["id", "name", "title", "topics", "aliases"]
+        var fieldsList = ["id", "name", "title", "url", "topics", "stars", "aliases", "parent_node_name", "avatar_large", "header"]
         if let fields {
             fieldsList = fields
         }
