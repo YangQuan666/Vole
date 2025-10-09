@@ -106,13 +106,6 @@ struct MarkdownView: View {
             let tail = ns.substring(from: last)
             result += processTextFragment(tail, &mentions)
         }
-
-        // 把 \n / \r\n 统一转换为 Markdown 硬换行
-//        result =
-//            result
-//            .replacingOccurrences(of: "\r\n", with: "  \n")
-//            .replacingOccurrences(of: "\n", with: "  \n")
-//        print("处理后的md文档: \(result)")
         return (result, mentions)
     }
 
@@ -171,8 +164,6 @@ struct MarkdownView: View {
 
 struct KFInlineImageProvider: InlineImageProvider {
     func image(with url: URL, label: String) async throws -> Image {
-        let targetPointHeight: CGFloat = 2
-        let scale = await UIScreen.main.scale
 
         // 先加载原图（或缓存中的）
         let result = try await KingfisherManager.shared.retrieveImage(
@@ -181,33 +172,7 @@ struct KFInlineImageProvider: InlineImageProvider {
         )
 
         let uiImage = result.image
-        let originalSize = uiImage.size
-
-        // 高度大于限制，按比例缩放
-        if originalSize.height > targetPointHeight {
-            let aspectRatio = originalSize.width / originalSize.height
-            let targetSize = CGSize(
-                width: targetPointHeight * aspectRatio * scale,
-                height: targetPointHeight * scale
-            )
-
-            let processor = DownsamplingImageProcessor(size: targetSize)
-
-            let resized = try await KingfisherManager.shared.retrieveImage(
-                with: url,
-                options: [
-                    .processor(processor),
-                    .scaleFactor(scale),
-                    .cacheOriginalImage
-                ]
-            )
-
-            return Image(uiImage: resized.image)
-                .renderingMode(.original)
-        } else {
-            return Image(uiImage: uiImage)
-                .renderingMode(.original)
-        }
+        return Image(uiImage: uiImage).renderingMode(.original)
     }
 }
 #Preview {
