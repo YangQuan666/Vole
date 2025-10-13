@@ -29,6 +29,7 @@ struct MarkdownView: View {
 
         Markdown(md)
             .markdownInlineImageProvider(KFInlineImageProvider())
+            .markdownImageProvider(.lazyImage(aspectRatio: 4 / 3))
             .textSelection(.enabled)
             .markdownTheme(.basic)
             .markdownTextStyle(\.link) {
@@ -106,7 +107,9 @@ struct MarkdownView: View {
             let tail = ns.substring(from: last)
             result += processTextFragment(tail, &mentions)
         }
-        return (result, mentions)
+        
+        let fix = result.replacingOccurrences(of: "\r\n", with: "\r\n\n")
+        return (fix, mentions)
     }
 
     // 处理普通文本片段：@mention + 图片 URL
@@ -175,6 +178,31 @@ struct KFInlineImageProvider: InlineImageProvider {
         return Image(uiImage: uiImage).renderingMode(.original)
     }
 }
+struct LazyImageProvider: ImageProvider {
+    let aspectRatio: CGFloat
+
+    func makeImage(url: URL?) -> some View {
+        AsyncImage(url: url) { phase in
+            switch phase {
+            case .empty, .failure:
+                    Color(.secondarySystemBackground)
+            case .success(let image):
+                image.resizable().scaledToFit()
+            @unknown default:
+                Image(systemName: "photo.badge.exclamationmark")
+                Color.clear
+            }
+        }
+        .aspectRatio(self.aspectRatio, contentMode: .fill)
+    }
+}
+
+extension ImageProvider where Self == LazyImageProvider {
+    static func lazyImage(aspectRatio: CGFloat) -> Self {
+        LazyImageProvider(aspectRatio: aspectRatio)
+    }
+}
+
 #Preview {
 
     ScrollView {
