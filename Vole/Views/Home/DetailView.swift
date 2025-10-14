@@ -186,6 +186,34 @@ struct DetailView: View {
                                     }
                                 )
                             }
+                            if let supplements = topic.supplements, !supplements.isEmpty {
+                                ForEach(supplements.indices, id: \.self) { idx in
+                                    let supplement = supplements[idx]
+
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Divider()
+                                        Text("附言 \(idx + 1)")
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+
+                                        MarkdownView(
+                                            content: supplement.content ?? "",
+                                            onMentionsChanged: nil,
+                                            onLinkAction: { action in
+                                                switch action {
+                                                case .mention(let username):
+                                                    print("@\(username)")
+                                                case .topic(let id):
+                                                    path.append(TopicRoute(id: id, topic: nil))
+                                                default:
+                                                    break
+                                                }
+                                            }
+                                        )
+                                    }
+                                    .padding(.top, 4)
+                                }
+                            }
                         }
                         .listRowSeparator(.hidden)
                     }
@@ -263,9 +291,9 @@ struct DetailView: View {
                     await replyVM.load(topicId: topic.id)
                 }
                 .task(id: topic.id) {
-                    if replyVM.replies == nil {
-                        await replyVM.load(topicId: topic.id)
-                    }
+                    async let topicData: () = loadTopic()
+                    async let replies: () = replyVM.load(topicId: topic.id)
+                    _ = await (replies, topicData)
                 }
                 .toolbar {
                     ToolbarItemGroup(placement: .navigationBarTrailing) {
@@ -298,7 +326,7 @@ struct DetailView: View {
                 ProgressView("加载中...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .task {
-                        await loadTopicIfNeeded()
+                        await loadTopic()
                     }
             }
         }
@@ -319,7 +347,7 @@ struct DetailView: View {
             showSafari = true
         }
     }
-    private func loadTopicIfNeeded() async {
+    private func loadTopic() async {
         guard topic == nil, let topicId else { return }
         do {
             let response = try await V2exAPI.shared.topic(topicId: topicId)
