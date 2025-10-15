@@ -36,9 +36,7 @@ struct HomeView: View {
                     List {
                         ForEach(topics) { topic in
                             TopicRow(topic: topic) {
-                                path.append(
-                                    TopicRoute(id: topic.id, topic: topic)
-                                )
+                                path.append(topic.id)
                             }
                         }
                     }
@@ -57,8 +55,8 @@ struct HomeView: View {
                 }
             }
             .navigationTitle("首页")
-            .navigationDestination(for: TopicRoute.self) { route in
-                DetailView(topicId: route.id, topic: route.topic, path: $path)
+            .navigationDestination(for: Int.self) { topicId in
+                DetailView(topicId: topicId, path: $path)
             }
             .toolbar {
                 if #available(iOS 26, *) {
@@ -151,11 +149,6 @@ enum Category: String, CaseIterable {
             return { try await V2exAPI.shared.latestTopics() }
         }
     }
-}
-
-struct TopicRoute: Hashable {
-    let id: Int
-    let topic: Topic?
 }
 
 #Preview {

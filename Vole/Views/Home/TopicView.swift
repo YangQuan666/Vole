@@ -89,6 +89,7 @@ struct TopicRow: View {
             }
 
         }
+        .contentShape(Rectangle())
         .onTapGesture {
             onTap()
         }

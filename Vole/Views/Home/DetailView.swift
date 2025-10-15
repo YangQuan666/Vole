@@ -37,12 +37,6 @@ struct DetailView: View {
                         Color.clear
                             .background(.ultraThinMaterial)
                             .ignoresSafeArea()
-//                            .onTapGesture {
-//                                withAnimation(.spring(dampingFraction: 0.6)) {
-//                                    selectedReply = nil
-//                                    navTitle = "帖子"
-//                                }
-//                            }
 
                         // 浮层内容
                         ScrollView {
@@ -174,12 +168,7 @@ struct DetailView: View {
                                         case .mention(let username):
                                             print("@\(username)")
                                         case .topic(let id):
-                                            path.append(
-                                                TopicRoute(
-                                                    id: id,
-                                                    topic: nil
-                                                )
-                                            )
+                                            path.append(id)
                                         default:
                                             break
                                         }
@@ -204,7 +193,7 @@ struct DetailView: View {
                                                 case .mention(let username):
                                                     print("@\(username)")
                                                 case .topic(let id):
-                                                    path.append(TopicRoute(id: id, topic: nil))
+                                                    path.append(id)
                                                 default:
                                                     break
                                                 }
@@ -291,9 +280,10 @@ struct DetailView: View {
                     await replyVM.load(topicId: topic.id)
                 }
                 .task(id: topic.id) {
-                    async let topicData: () = loadTopic()
-                    async let replies: () = replyVM.load(topicId: topic.id)
-                    _ = await (replies, topicData)
+                    await loadTopic()
+                    if replyVM.replies == nil {
+                        await replyVM.load(topicId: topic.id)
+                    }
                 }
                 .toolbar {
                     ToolbarItemGroup(placement: .navigationBarTrailing) {
@@ -348,11 +338,11 @@ struct DetailView: View {
         }
     }
     private func loadTopic() async {
-        guard topic == nil, let topicId else { return }
+        guard let id = topic?.id ?? topicId else { return }
         do {
-            let response = try await V2exAPI.shared.topic(topicId: topicId)
-            if let r = response, let t = r.result, r.success {
-                topic = t
+            let response = try await V2exAPI.shared.topic(topicId: id)
+            if let r = response, r.success, let newTopic = r.result {
+                topic = newTopic
             }
         } catch {
             print("❌ 获取 Topic 失败: \(error)")

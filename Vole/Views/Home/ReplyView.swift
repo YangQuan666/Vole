@@ -14,6 +14,9 @@ class ReplyViewModel: ObservableObject {
     @Published var isLoading = false
 
     func load(topicId: Int) async {
+        if replies != nil {
+            return
+        }
         isLoading = true
         defer { isLoading = false }
         do {
@@ -111,13 +114,7 @@ struct ReplyRowView: View {
                         case .mention(let username):
                             print("@\(username)")
                         case .topic(let id):
-                            print("topicId:", id)
-                            path.append(
-                                TopicRoute(
-                                    id: id,
-                                    topic: nil
-                                )
-                            )
+                            path.append(id)
                         default:
                             break
                         }
