@@ -181,9 +181,15 @@ struct DetailView: View {
 
                                     VStack(alignment: .leading, spacing: 8) {
                                         Divider()
-                                        Text("附言 \(idx + 1)")
-                                            .font(.subheadline)
-                                            .foregroundColor(.secondary)
+                                        HStack(alignment: .bottom) {
+                                            Text("第 \(idx + 1)条附言")
+                                                .foregroundColor(.secondary)
+                                            if let created = supplement.created {
+                                                Text(formattedTime(created))
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                            }
+                                        }
 
                                         MarkdownView(
                                             content: supplement.content ?? "",
@@ -277,12 +283,27 @@ struct DetailView: View {
                 .navigationTitle(navTitle)
                 .navigationBarTitleDisplayMode(.inline)
                 .refreshable {
-                    await replyVM.load(topicId: topic.id)
+                    await withTaskGroup(of: Void.self) { group in
+                        group.addTask {
+                            await loadTopic()
+                        }
+                        if replyVM.replies == nil {
+                            group.addTask {
+                                await replyVM.load(topicId: topic.id)
+                            }
+                        }
+                    }
                 }
                 .task(id: topic.id) {
-                    await loadTopic()
-                    if replyVM.replies == nil {
-                        await replyVM.load(topicId: topic.id)
+                    await withTaskGroup(of: Void.self) { group in
+                        group.addTask {
+                            await loadTopic()
+                        }
+                        if replyVM.replies == nil {
+                            group.addTask {
+                                await replyVM.load(topicId: topic.id)
+                            }
+                        }
                     }
                 }
                 .toolbar {
