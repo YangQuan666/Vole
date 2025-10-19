@@ -175,8 +175,11 @@ struct DetailView: View {
                                     }
                                 )
                             }
-                            if let supplements = topic.supplements, !supplements.isEmpty {
-                                ForEach(supplements.indices, id: \.self) { idx in
+                            if let supplements = topic.supplements,
+                                !supplements.isEmpty
+                            {
+                                ForEach(supplements.indices, id: \.self) {
+                                    idx in
                                     let supplement = supplements[idx]
 
                                     VStack(alignment: .leading, spacing: 8) {
@@ -184,7 +187,8 @@ struct DetailView: View {
                                         HStack(alignment: .bottom) {
                                             Text("第 \(idx + 1)条附言")
                                                 .foregroundColor(.secondary)
-                                            if let created = supplement.created {
+                                            if let created = supplement.created
+                                            {
                                                 Text(formattedTime(created))
                                                     .font(.caption)
                                                     .foregroundColor(.secondary)
@@ -280,8 +284,6 @@ struct DetailView: View {
                 }
                 .disabled(selectedReply != nil)
                 .listStyle(.plain)
-                .navigationTitle(navTitle)
-                .navigationBarTitleDisplayMode(.inline)
                 .refreshable {
                     await withTaskGroup(of: Void.self) { group in
                         group.addTask {
@@ -306,32 +308,6 @@ struct DetailView: View {
                         }
                     }
                 }
-                .toolbar {
-                    ToolbarItemGroup(placement: .navigationBarTrailing) {
-                        ShareLink(item: topic.url ?? "") {
-                            Image(systemName: "square.and.arrow.up")
-                        }
-                        Menu {
-                            Button("访问节点", systemImage: "scale.3d") {
-
-                            }
-                            Button("复制链接", systemImage: "link") {
-                                UIPasteboard.general.string = topic.url
-                                let generator =
-                                    UINotificationFeedbackGenerator()
-                                generator.notificationOccurred(.success)
-                            }
-                            Button("在浏览器中打开", systemImage: "safari") {
-                                if let url = URL(string: topic.url ?? "") {
-                                    openURL(url)
-                                }
-                            }
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
-                        }
-                    }
-                }
-
             } else if topicId != nil {
                 // 还没有加载到 topic
                 ProgressView("加载中...")
@@ -339,6 +315,34 @@ struct DetailView: View {
                     .task {
                         await loadTopic()
                     }
+            }
+        }
+        .navigationTitle(navTitle)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
+                let shareURL = topic?.url ?? ""
+                ShareLink(item: shareURL) {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                Menu {
+                    Button("访问节点", systemImage: "scale.3d") {
+
+                    }
+                    Button("复制链接", systemImage: "link") {
+                        UIPasteboard.general.string = shareURL
+                        let generator =
+                            UINotificationFeedbackGenerator()
+                        generator.notificationOccurred(.success)
+                    }
+                    Button("在浏览器中打开", systemImage: "safari") {
+                        if let url = URL(string: shareURL) {
+                            openURL(url)
+                        }
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
             }
         }
         .sheet(isPresented: $showSafari) {
