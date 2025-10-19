@@ -47,8 +47,9 @@ struct ProfileView: View {
                     member: userManager.currentMember,
                     admin: true,
                     onLogout: {
-                    logout()
-                })
+                        logout()
+                    }
+                )
             }
         }
         .animation(.easeInOut, value: step)
@@ -352,7 +353,6 @@ struct TokenInputPage: View {
     }
 }
 
-
 struct TokenRenewPage: View {
     let currentToken: Token
     @State private var newToken: String?
@@ -406,11 +406,22 @@ struct TokenRenewPage: View {
                             .multilineTextAlignment(.trailing)
                     }
                 }
-                if let goodForDays = currentToken.goodForDays {
+                if let created = currentToken.created,
+                    let expiration = currentToken.expiration
+                {
+                    // 当前时间戳（秒）
+                    let now = Date().timeIntervalSince1970
+                    // 过期时间戳
+                    let expireAt = Double(created) + Double(expiration)
+                    // 剩余秒数（小于 0 时强制为 0）
+                    let remainingSeconds = max(0, expireAt - now)
+                    // 转换成天数（保留 1 位小数）
+                    let remainingDays = remainingSeconds / 86400
+
                     HStack {
                         Text("剩余天数")
                         Spacer()
-                        Text("\(goodForDays) 天")
+                        Text("\(Int(remainingDays.rounded())) 天")
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.trailing)
                     }
