@@ -25,11 +25,17 @@ let categories = [
 struct NodeView: View {
     @State private var selectedCategory: NodeCategory? = nil
     @State private var path = NavigationPath()
-//    @State private var nodes: [Node] = []
     @State private var groups: [NodeGroup] = []
     @State private var isLoading = false
 
     let sections = ["必玩游戏", "热门游戏"]
+
+    @State private var selectedGroup: NodeGroup? = nil
+
+    private let cardWidth: CGFloat = 320
+    private let cardHeight: CGFloat = 80
+    private let trailingPeek: CGFloat = 40
+    private let maxRows = 3
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -61,72 +67,88 @@ struct NodeView: View {
                         .padding(.horizontal)
                     }
 
-                    // nodes 不为空的展示区（替换你原来的 LazyVStack 部分）
-//                    let groups = buildGroups(from: nodes)
+                    LazyVStack(
+                        alignment: .leading,
+                        spacing: 32,
+                        pinnedViews: []
+                    ) {
+                        ForEach(groups) { group in
+                            VStack(alignment: .leading, spacing: 12) {
+                                HStack {
+                                    Text(group.root.title ?? "")
+                                        .font(.title3.bold())
+                                    Spacer()
+                                    Button("查看全部") {
+                                        selectedGroup = group
+                                    }
+                                    .font(.subheadline)
+                                }
+                                .padding(.horizontal)
 
-                    VStack(spacing: 16) {
-                        ForEach(groups.indices, id: \.self) { gi in
-                            let root = groups[gi].root
-                            let descendants = groups[gi].descendants
-
-                            VStack(alignment: .leading, spacing: 8) {
-                                // 根节点标题
-                                Text(root.title ?? root.name)
-                                    .font(.headline)
-                                    .padding(.horizontal)
-
-                                // 如果没有后代，依然显示一个单列（根节点下无子，显示 root 自己或空）
-                                if descendants.isEmpty {
-                                    ScrollView(
-                                        .horizontal,
-                                        showsIndicators: false
-                                    ) {
-                                        HStack(spacing: 16) {
-                                            VStack(spacing: 8) {
-                                                NodeRowView(node: root)
-                                            }
-                                            .padding(.horizontal)
+                                // 横向滚动内容保持不变
+                                ScrollView(
+                                    .horizontal,
+                                    showsIndicators: false
+                                ) {
+                                    HStack(spacing: 16) {
+                                        let columns = stride(
+                                            from: 0,
+                                            to: group.nodes.count,
+                                            by: maxRows
+                                        ).map {
+                                            Array(
+                                                group.nodes[
+                                                    $0..<min(
+                                                        $0 + maxRows,
+                                                        group.nodes.count
+                                                    )
+                                                ]
+                                            )
                                         }
-                                    }
-                                } else {
-                                    // 把 descendants 切成每列最多 3 个
-                                    let columns: [[Node]] = stride(
-                                        from: 0,
-                                        to: descendants.count,
-                                        by: 3
-                                    ).map {
-                                        Array(
-                                            descendants[
-                                                $0..<min(
-                                                    $0 + 3,
-                                                    descendants.count
-                                                )
-                                            ]
-                                        )
-                                    }
 
-                                    
-                                    ScrollView(.horizontal) {
-                                        HStack(spacing: 16) {
-                                            ForEach(columns.indices, id: \.self) { ci in
-                                                VStack(spacing: 8) {
-                                                    ForEach(columns[ci], id: \.id) { node in
-                                                        NodeRowView(node: node)
+                                        ForEach(columns.indices, id: \.self) {
+                                            i in
+                                            VStack(spacing: 0) {
+                                                ForEach(
+                                                    columns[i].indices,
+                                                    id: \.self
+                                                ) { j in
+                                                    NodeCardView(
+                                                        node: columns[i][j]
+                                                    )
+                                                    .frame(width: cardWidth)
+                                                    if j < columns[i].count
+                                                        - 1
+                                                    {
+                                                        Divider().padding(
+                                                            .leading,
+                                                            16
+                                                        )
                                                     }
                                                 }
-                                                .frame(width: UIScreen.main.bounds.width * 0.8)
-                                                .background(Color(.systemBackground))
-                                                .clipShape(RoundedRectangle(cornerRadius: 16))
-                                                .shadow(color: .black.opacity(0.05), radius: 2)
                                             }
+                                            .background(
+                                                Color(.systemBackground)
+                                            )
+                                            .clipShape(
+                                                RoundedRectangle(
+                                                    cornerRadius: 12
+                                                )
+                                            )
+                                            .shadow(
+                                                color: .black.opacity(0.05),
+                                                radius: 3,
+                                                x: 0,
+                                                y: 2
+                                            )
                                         }
-                                        .padding(.horizontal, 16)
                                     }
-                                    .scrollTargetBehavior(.paging) // ✅ 自动分页滚动
                                 }
                             }
                         }
                     }
+                    .padding(.vertical)
+
                 }
                 .padding(.vertical)
             }
@@ -189,7 +211,8 @@ struct NodeView: View {
     }
 
     private func loadCachedGroups() -> [NodeGroup]? {
-        guard let data = UserDefaults.standard.data(forKey: "cachedGroups") else {
+        guard let data = UserDefaults.standard.data(forKey: "cachedGroups")
+        else {
             return nil
         }
         return try? JSONDecoder().decode([NodeGroup].self, from: data)
@@ -239,7 +262,7 @@ struct NodeView: View {
         var groups: [NodeGroup] = []
         for root in roots {
             let desc = collectDescendants(of: root)
-            groups.append(NodeGroup(root: root, descendants: desc))
+            groups.append(NodeGroup(root: root, nodes: desc))
         }
         return groups
     }
@@ -252,9 +275,10 @@ struct NodeCategory: Identifiable, Hashable {
     let systemIcon: String
 }
 
-struct NodeGroup: Codable {
+struct NodeGroup: Codable, Identifiable {
+    let id = UUID()
     let root: Node
-    let descendants: [Node]
+    let nodes: [Node]
 }
 #Preview {
     NodeView()
