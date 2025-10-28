@@ -9,10 +9,10 @@ import SwiftUI
 
 struct NodeDetailView: View {
     
-    let nodeName: String
+    let node: Node
     
     var body: some View {
-        Text("Hello, \(nodeName)!")
+        Text("Hello, \(node.name)!")
     }
 }
 

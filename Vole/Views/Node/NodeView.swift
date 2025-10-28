@@ -23,7 +23,7 @@ let categories = [
 ]
 
 enum NodeRoute: Hashable {
-    case single(String)       // 单个节点
+    case single(Node)       // 单个节点
     case multiple([String])   // 多个节点
     case group(NodeGroup)     // 分组
 }
@@ -123,7 +123,7 @@ struct NodeView: View {
                                             ForEach(columns[i].indices, id: \.self) { j in
                                                 let node = columns[i][j]
                                                 Button {
-                                                    path.append(NodeRoute.single(node.name))
+                                                    path.append(NodeRoute.single(node))
                                                 } label: {
                                                     NodeCardView(node: node)
                                                         .frame(width: 320)
@@ -147,8 +147,8 @@ struct NodeView: View {
             .navigationTitle("Node")
             .navigationDestination(for: NodeRoute.self) { route in
                 switch route {
-                case .single(let name):
-                    NodeDetailView(nodeName: name)  // 单个节点
+                case .single(let node):
+                    NodeDetailView(node: node)  // 单个节点
                 case .multiple(let ids):
                     Text("Multi")
 //                    NodeDetailView(nodeIds: ids)   // 多个节点
