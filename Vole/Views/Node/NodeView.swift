@@ -22,6 +22,12 @@ let categories = [
     ),
 ]
 
+enum NodeRoute: Hashable {
+    case single(String)       // 单个节点
+    case multiple([String])   // 多个节点
+    case group(NodeGroup)     // 分组
+}
+
 struct NodeView: View {
     @State private var selectedCategory: NodeCategory? = nil
     @State private var path = NavigationPath()
@@ -59,9 +65,8 @@ struct NodeView: View {
                                         .fill(Color.gray.opacity(0.1))
                                 )
                                 .onTapGesture {
-                                    withAnimation(.spring()) {
-                                        selectedCategory = category
-                                    }
+                                    let nodeIds = ["11","22"]
+                                    path.append(NodeRoute.multiple(nodeIds))
                                 }
                             }
                         }
@@ -72,7 +77,7 @@ struct NodeView: View {
                         LazyVStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Button(action: {
-                                    selectedGroup = group
+                                    path.append(NodeRoute.group(group))
                                 }) {
                                     HStack {
                                         Text(group.root.title ?? "")
@@ -113,28 +118,23 @@ struct NodeView: View {
                                         )
                                     }
 
-                                    ForEach(columns.indices, id: \.self) {
-                                        i in
+                                    ForEach(columns.indices, id: \.self) { i in
                                         VStack(spacing: 0) {
-                                            ForEach(
-                                                columns[i].indices,
-                                                id: \.self
-                                            ) { j in
-                                                NodeCardView(
-                                                    node: columns[i][j]
-                                                )
-                                                .frame(width: cardWidth)
+                                            ForEach(columns[i].indices, id: \.self) { j in
+                                                let node = columns[i][j]
+                                                Button {
+                                                    path.append(NodeRoute.single(node.name))
+                                                } label: {
+                                                    NodeCardView(node: node)
+                                                        .frame(width: 320)
+                                                }
+                                                .buttonStyle(.plain)
                                                 if j < columns[i].count - 1 {
-                                                    Divider().padding(
-                                                        .leading,
-                                                        16
-                                                    )
+                                                    Divider().padding(.leading, 16)
                                                 }
                                             }
                                         }
-                                        .background(
-                                            Color(.systemBackground)
-                                        )
+                                        .background(Color(.systemBackground))
                                     }
                                 }
                             }
@@ -145,6 +145,17 @@ struct NodeView: View {
                 .padding(.vertical)
             }
             .navigationTitle("Node")
+            .navigationDestination(for: NodeRoute.self) { route in
+                switch route {
+                case .single(let name):
+                    NodeDetailView(nodeName: name)  // 单个节点
+                case .multiple(let ids):
+                    Text("Multi")
+//                    NodeDetailView(nodeIds: ids)   // 多个节点
+                case .group(let group):
+                    NodeGroupView(group: group)
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Image(systemName: "person.crop.circle.fill")
@@ -267,10 +278,18 @@ struct NodeCategory: Identifiable, Hashable {
     let systemIcon: String
 }
 
-struct NodeGroup: Codable, Identifiable {
+struct NodeGroup: Codable, Identifiable, Hashable {
     var id = UUID()
     let root: Node
     let nodes: [Node]
+
+    static func == (lhs: NodeGroup, rhs: NodeGroup) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
 }
 #Preview {
     NodeView()

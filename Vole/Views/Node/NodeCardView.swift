@@ -10,12 +10,13 @@ import SwiftUI
 
 struct NodeCardView: View {
     let node: Node
+    private let baseURL = URL(string: "https://www.v2ex.com")!
 
     var body: some View {
         HStack {
             // 左侧头像
             if let avatarURL = node.avatarLarge,
-                let url = URL(string: avatarURL)
+               let url = makeFullURL(from: avatarURL)
             {
                 KFImage(url)
                     .placeholder {
@@ -29,6 +30,7 @@ struct NodeCardView: View {
                     .fill(Color.gray.opacity(0.2))
                     .frame(width: 50, height: 50)
             }
+
             VStack(alignment: .leading, spacing: 2) {
                 Text(node.title ?? "")
                     .font(.headline)
@@ -39,9 +41,31 @@ struct NodeCardView: View {
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
+
             Spacer()
         }
         .padding(8)
+    }
+
+    /// 构建完整 URL（支持相对路径）
+    private func makeFullURL(from path: String) -> URL? {
+        if path.hasPrefix("http") {
+            return URL(string: path)
+        } else {
+            return URL(string: path, relativeTo: baseURL)
+        }
+    }
+}
+
+struct NodeGroupView: View {
+    let group: NodeGroup
+
+    var body: some View {
+        List(group.nodes) { node in
+            NodeCardView(node: node)
+        }
+        .listStyle(.plain)
+        .navigationTitle(group.root.title ?? group.root.name)
     }
 }
 
