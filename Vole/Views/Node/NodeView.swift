@@ -31,6 +31,7 @@ struct NodeView: View {
     let sections = ["必玩游戏", "热门游戏"]
 
     @State private var selectedGroup: NodeGroup? = nil
+    @State private var selectedNode: Node? = nil
 
     private let cardWidth: CGFloat = 320
     private let cardHeight: CGFloat = 80
@@ -67,87 +68,78 @@ struct NodeView: View {
                         .padding(.horizontal)
                     }
 
-                    LazyVStack(
-                        alignment: .leading,
-                        spacing: 32,
-                        pinnedViews: []
-                    ) {
-                        ForEach(groups) { group in
-                            VStack(alignment: .leading, spacing: 12) {
-                                HStack {
-                                    Text(group.root.title ?? "")
-                                        .font(.title3.bold())
-                                    Spacer()
-                                    Button("查看全部") {
-                                        selectedGroup = group
-                                    }
-                                    .font(.subheadline)
-                                }
-                                .padding(.horizontal)
-
-                                // 横向滚动内容保持不变
-                                ScrollView(
-                                    .horizontal,
-                                    showsIndicators: false
-                                ) {
-                                    HStack(spacing: 16) {
-                                        let columns = stride(
-                                            from: 0,
-                                            to: group.nodes.count,
-                                            by: maxRows
-                                        ).map {
-                                            Array(
-                                                group.nodes[
-                                                    $0..<min(
-                                                        $0 + maxRows,
-                                                        group.nodes.count
-                                                    )
-                                                ]
-                                            )
-                                        }
-
-                                        ForEach(columns.indices, id: \.self) {
-                                            i in
-                                            VStack(spacing: 0) {
-                                                ForEach(
-                                                    columns[i].indices,
-                                                    id: \.self
-                                                ) { j in
-                                                    NodeCardView(
-                                                        node: columns[i][j]
-                                                    )
-                                                    .frame(width: cardWidth)
-                                                    if j < columns[i].count
-                                                        - 1
-                                                    {
-                                                        Divider().padding(
-                                                            .leading,
-                                                            16
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                            .background(
-                                                Color(.systemBackground)
-                                            )
-                                            .clipShape(
-                                                RoundedRectangle(
-                                                    cornerRadius: 12
+                    ForEach(groups) { group in
+                        LazyVStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Button(action: {
+                                    selectedGroup = group
+                                }) {
+                                    HStack {
+                                        Text(group.root.title ?? "")
+                                            .font(.title3.bold())
+                                        Image(systemName: "chevron.right")
+                                            .font(
+                                                .system(
+                                                    size: 14,
+                                                    weight: .semibold
                                                 )
                                             )
-                                            .shadow(
-                                                color: .black.opacity(0.05),
-                                                radius: 3,
-                                                x: 0,
-                                                y: 2
-                                            )
+
+                                    }
+                                    .contentShape(Rectangle())  // 让整行都可点击
+                                }
+                                .buttonStyle(.plain)  // 移除默认按钮高亮
+                            }
+                            .padding(.horizontal)
+
+                            // 横向滚动内容保持不变
+                            ScrollView(
+                                .horizontal,
+                                showsIndicators: false
+                            ) {
+                                HStack(spacing: 16) {
+                                    let columns = stride(
+                                        from: 0,
+                                        to: group.nodes.count,
+                                        by: maxRows
+                                    ).map {
+                                        Array(
+                                            group.nodes[
+                                                $0..<min(
+                                                    $0 + maxRows,
+                                                    group.nodes.count
+                                                )
+                                            ]
+                                        )
+                                    }
+
+                                    ForEach(columns.indices, id: \.self) {
+                                        i in
+                                        VStack(spacing: 0) {
+                                            ForEach(
+                                                columns[i].indices,
+                                                id: \.self
+                                            ) { j in
+                                                NodeCardView(
+                                                    node: columns[i][j]
+                                                )
+                                                .frame(width: cardWidth)
+                                                if j < columns[i].count - 1 {
+                                                    Divider().padding(
+                                                        .leading,
+                                                        16
+                                                    )
+                                                }
+                                            }
                                         }
+                                        .background(
+                                            Color(.systemBackground)
+                                        )
                                     }
                                 }
                             }
                         }
                     }
-                    .padding(.vertical)
 
                 }
                 .padding(.vertical)
@@ -276,7 +268,7 @@ struct NodeCategory: Identifiable, Hashable {
 }
 
 struct NodeGroup: Codable, Identifiable {
-    let id = UUID()
+    var id = UUID()
     let root: Node
     let nodes: [Node]
 }
