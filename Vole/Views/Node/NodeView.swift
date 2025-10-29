@@ -223,13 +223,13 @@ struct NodeView: View {
 
     // MARK: - 辅助：构建树并把每个根节点的后代展平成数组
     private func buildGroups(from nodes: [Node]) -> [NodeGroup] {
-        // 建 map：name -> Node
+        // 建立 name -> Node 映射
         var nameMap: [String: Node] = [:]
         for n in nodes {
-            if let name = n.name as String? { nameMap[name] = n }
+            nameMap[n.name] = n
         }
 
-        // 建 children map：parentName -> [Node]
+        // 建立 children 映射：parentName -> [Node]
         var childrenMap: [String: [Node]] = [:]
         for n in nodes {
             if let parent = n.parentNodeName {
@@ -237,37 +237,84 @@ struct NodeView: View {
             }
         }
 
-        // 找根节点：parentNodeName == nil 或 parent 不存在于 nameMap（保险）
+        // 找出根节点（parentNodeName == nil 或 parent 不存在）
         let roots: [Node] = nodes.filter {
             $0.parentNodeName == nil || nameMap[$0.parentNodeName ?? ""] == nil
         }
 
-        // DFS 展平后代（排除根自己）
-        func collectDescendants(of root: Node) -> [Node] {
+        // BFS 展平所有后代（包括 root 自身）
+        func collectDescendantsBFS(of root: Node) -> [Node] {
             var result: [Node] = []
             var visited: Set<String> = []
-            // 使用栈做迭代 DFS，或者递归也可以
-            func dfs(_ node: Node) {
-                guard let nName = node.name as String? else { return }
-                if visited.contains(nName) { return }  // 防环
-                visited.insert(nName)
+            var queue: [Node] = [root]
+
+            while !queue.isEmpty {
+                let node = queue.removeFirst()
+                guard !visited.contains(node.name) else { continue }
+                visited.insert(node.name)
+                result.append(node)
+
                 let children = childrenMap[node.name] ?? []
-                for child in children {
-                    result.append(child)  // 先把 child 放入结果
-                    dfs(child)  // 再遍历 child 的子孙
-                }
+                queue.append(contentsOf: children)
             }
-            dfs(root)
+
             return result
         }
 
-        // 返回顺序：按 roots 原数组顺序
+        // 构建 groups
         var groups: [NodeGroup] = []
+        var singleNodes: [Node] = []
+
         for root in roots {
-            let desc = collectDescendants(of: root)
-            groups.append(NodeGroup(root: root, nodes: desc))
+            let flattened = collectDescendantsBFS(of: root)
+            if flattened.isEmpty { continue }
+
+            // 如果 group 只有 1 个节点 → 暂存到 singleNodes
+            if flattened.count == 1 {
+                singleNodes.append(flattened[0])
+                continue
+            }
+
+            // group 内按 topics 降序排序
+            let sortedNodes = flattened.sorted { ($0.topics ?? 0) > ($1.topics ?? 0) }
+
+            // group 权重 = 所有 topics 之和
+            let totalTopics = sortedNodes.reduce(0) { $0 + ($1.topics ?? 0) }
+
+            groups.append(NodeGroup(root: root, nodes: sortedNodes, weight: totalTopics))
         }
-        return groups
+
+        // 如果有 single 节点，统一打包为一个“other”分组
+        if !singleNodes.isEmpty {
+            let sortedSingles = singleNodes.sorted { ($0.topics ?? 0) > ($1.topics ?? 0) }
+            let totalTopics = sortedSingles.reduce(0) { $0 + ($1.topics ?? 0) }
+
+            // 创建一个虚拟的 root 表示“other”组
+            let otherRoot = Node(
+                id: nil,
+                name: "other",
+                title: "其他",
+                url: nil,
+                topics: totalTopics,
+                footer: nil,
+                header: nil,
+                titleAlternative: nil,
+                avatarMini: nil,
+                avatarNormal: nil,
+                avatarLarge: nil,
+                stars: nil,
+                aliases: nil,
+                root: true,
+                parentNodeName: nil
+            )
+
+            groups.append(NodeGroup(root: otherRoot, nodes: sortedSingles, weight: totalTopics))
+        }
+
+        // 按权重倒序排列（topics 总和越高排越前）
+        let sortedGroups = groups.sorted { $0.weight > $1.weight }
+
+        return sortedGroups
     }
 }
 
@@ -282,6 +329,7 @@ struct NodeGroup: Codable, Identifiable, Hashable {
     var id = UUID()
     let root: Node
     let nodes: [Node]
+    let weight: Int
 
     static func == (lhs: NodeGroup, rhs: NodeGroup) -> Bool {
         lhs.id == rhs.id
