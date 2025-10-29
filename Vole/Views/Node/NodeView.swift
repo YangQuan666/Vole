@@ -103,19 +103,12 @@ struct NodeView: View {
                                 showsIndicators: false
                             ) {
                                 HStack(spacing: 16) {
-                                    let columns = stride(
-                                        from: 0,
-                                        to: group.nodes.count,
-                                        by: maxRows
-                                    ).map {
-                                        Array(
-                                            group.nodes[
-                                                $0..<min(
-                                                    $0 + maxRows,
-                                                    group.nodes.count
-                                                )
-                                            ]
-                                        )
+                                    // 限制最多展示 15 条节点
+                                    let limitedNodes = Array(group.nodes.prefix(15))
+
+                                    // 拆分成列
+                                    let columns = stride(from: 0, to: limitedNodes.count, by: maxRows).map {
+                                        Array(limitedNodes[$0..<min($0 + maxRows, limitedNodes.count)])
                                     }
 
                                     ForEach(columns.indices, id: \.self) { i in
