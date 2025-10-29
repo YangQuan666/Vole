@@ -46,7 +46,7 @@ struct NodeView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            ScrollView(.vertical, showsIndicators: false) {
+            ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: 24) {
 
                     // MARK: 分类横向滚动
