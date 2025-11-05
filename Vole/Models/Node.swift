@@ -6,7 +6,7 @@
 //
 import Foundation
 
-public struct Node: Identifiable, Decodable, Hashable {
+public struct Node: Identifiable, Codable, Hashable {
 
     public var id: Int?
     public let name: String
