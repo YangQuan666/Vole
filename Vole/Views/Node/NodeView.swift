@@ -34,14 +34,7 @@ struct NodeView: View {
     @State private var groups: [NodeGroup] = []
     @State private var isLoading = false
 
-    let sections = ["必玩游戏", "热门游戏"]
-
-    @State private var selectedGroup: NodeGroup? = nil
-    @State private var selectedNode: Node? = nil
-
     private let cardWidth: CGFloat = 320
-    private let cardHeight: CGFloat = 80
-    private let trailingPeek: CGFloat = 40
     private let maxRows = 3
 
     var body: some View {
@@ -98,15 +91,9 @@ struct NodeView: View {
                             .padding(.horizontal)
 
                             // 横向滚动内容保持不变
-                            ScrollView(
-                                .horizontal,
-                                showsIndicators: false
-                            ) {
+                            ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 16) {
-                                    // 限制最多展示 15 条节点
                                     let limitedNodes = Array(group.nodes.prefix(15))
-
-                                    // 拆分成列
                                     let columns = stride(from: 0, to: limitedNodes.count, by: maxRows).map {
                                         Array(limitedNodes[$0..<min($0 + maxRows, limitedNodes.count)])
                                     }
@@ -119,7 +106,7 @@ struct NodeView: View {
                                                     path.append(NodeRoute.single(node))
                                                 } label: {
                                                     NodeCardView(node: node)
-                                                        .frame(width: 320)
+                                                        .frame(width: cardWidth)
                                                 }
                                                 .buttonStyle(.plain)
                                                 if j < columns[i].count - 1 {
@@ -127,13 +114,20 @@ struct NodeView: View {
                                                 }
                                             }
                                         }
-                                        .background(Color(.systemBackground))
+                                        .frame(width: cardWidth)
+                                        .scrollTargetLayout()
                                     }
+
+                                    // 加入一个透明 Spacer，让最后一页右对齐
+                                    Color.clear
+                                        .frame(width: (UIScreen.main.bounds.width - cardWidth) / 2)
+                                        .scrollTargetLayout()
                                 }
+                                .padding(.leading, 16) // 第一页贴左
                             }
+                            .scrollTargetBehavior(.viewAligned)
                         }
                     }
-
                 }
                 .padding(.vertical)
             }
