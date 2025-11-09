@@ -23,28 +23,31 @@ struct TopicRow: View {
         VStack(alignment: .leading, spacing: 8) {
             // 头像 + 昵称
             HStack {
-                if let avatarURL = topic.member?.avatarNormal,
-                    let url = URL(string: avatarURL)
-                {
-                    KFImage(url)
-                        .placeholder {
-                            Color.gray
-                        }
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 24, height: 24)
-                        .clipShape(Circle())
-                } else {
-                    Circle()
-                        .fill(Color.gray)
-                        .frame(width: 24, height: 24)
+                if let member = topic.member {
+
+                    if let avatarURL = member.avatarNormal,
+                        let url = URL(string: avatarURL)
+                    {
+                        KFImage(url)
+                            .placeholder {
+                                Color.gray
+                            }
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 24, height: 24)
+                            .clipShape(Circle())
+                    } else {
+                        Circle()
+                            .fill(Color.gray)
+                            .frame(width: 24, height: 24)
+                    }
+
+                    Text(member.username)
+                        .font(.subheadline)
+                        .foregroundColor(.primary)
+
+                    Spacer()
                 }
-
-                Text(topic.member?.username ?? "未知用户")
-                    .font(.subheadline)
-                    .foregroundColor(.primary)
-
-                Spacer()
             }
 
             // 标题
