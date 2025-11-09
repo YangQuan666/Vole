@@ -131,7 +131,7 @@ struct NodeView: View {
                 }
                 .padding(.vertical)
             }
-            .navigationTitle("Node")
+            .navigationTitle("节点")
             .navigationDestination(for: NodeRoute.self) { route in
                 switch route {
                 case .single(let node):
