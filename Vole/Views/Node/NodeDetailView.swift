@@ -10,6 +10,7 @@ import SwiftUI
 
 struct NodeDetailView: View {
     let node: Node
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         List {
@@ -17,7 +18,8 @@ struct NodeDetailView: View {
                 VStack(spacing: 16) {
                     // 头像
                     if let avatarURL = node.avatarLarge,
-                       let url = URL(string: avatarURL) {
+                        let url = URL(string: avatarURL)
+                    {
                         KFImage(url)
                             .resizable()
                             .scaledToFill()
@@ -44,8 +46,11 @@ struct NodeDetailView: View {
 
                     // 发帖 + 星标
                     HStack(spacing: 24) {
-                        Label("\(node.topics ?? 0)", systemImage: "list.bullet.rectangle.portrait")
-                            .font(.subheadline)
+                        Label(
+                            "\(node.topics ?? 0)",
+                            systemImage: "list.bullet.rectangle.portrait"
+                        )
+                        .font(.subheadline)
                         Label("\(node.stars ?? 0)", systemImage: "star.fill")
                             .font(.subheadline)
                             .foregroundColor(.yellow)
@@ -60,14 +65,6 @@ struct NodeDetailView: View {
                             .padding(.horizontal)
                     }
 
-                    // parent 信息
-                    if let parent = node.parentNodeName, !parent.isEmpty {
-                        Text("上级节点：\(parent)")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                            .padding(.top, 4)
-                    }
-
                     // aliases 标签组
                     if let aliases = node.aliases, !aliases.isEmpty {
                         AliasesView(aliases: aliases)
@@ -77,13 +74,42 @@ struct NodeDetailView: View {
                 .frame(maxWidth: .infinity)
                 .listRowBackground(Color.clear)
             }
-            
+
             Section("话题") {
                 ForEach(0..<10) { i in
                     Text("示例帖子 \(i)")
                 }
             }
         }
+        .toolbar {
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
+                let shareURL = node.url ?? ""
+                ShareLink(item: shareURL) {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                Menu {
+                    Button("父节点", systemImage: "scale.3d") {
+                        // parent 信息
+//                        let parent = node.parentNodeName
+                        // todo 获取父亲节点node信息，然后路由过去
+                    }
+                    Button("复制链接", systemImage: "link") {
+                        UIPasteboard.general.string = shareURL
+                        let generator =
+                            UINotificationFeedbackGenerator()
+                        generator.notificationOccurred(.success)
+                    }
+                    Button("在浏览器中打开", systemImage: "safari") {
+                        if let url = URL(string: shareURL) {
+                            openURL(url)
+                        }
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+            }
+        }
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
