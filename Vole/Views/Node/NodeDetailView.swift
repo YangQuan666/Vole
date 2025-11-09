@@ -10,6 +10,7 @@ import SwiftUI
 
 struct NodeDetailView: View {
     let node: Node
+    @State private var topics: [Topic] = []
     @Environment(\.openURL) private var openURL
 
     var body: some View {
@@ -72,15 +73,26 @@ struct NodeDetailView: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
+                .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
             }
 
             Section("话题") {
-                ForEach(0..<10) { i in
-                    Text("示例帖子 \(i)")
+                if !topics.isEmpty {
+                    ForEach(topics) { topic in
+                        TopicRow(topic: topic) {
+                            // path.append(topic.id)
+                        }
+                    }
+                } else {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .listRowSeparator(.hidden)
                 }
             }
         }
+        .listStyle(.plain)
         .toolbar {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
                 let shareURL = node.url ?? ""
@@ -90,7 +102,7 @@ struct NodeDetailView: View {
                 Menu {
                     Button("父节点", systemImage: "scale.3d") {
                         // parent 信息
-//                        let parent = node.parentNodeName
+                        // let parent = node.parentNodeName
                         // todo 获取父亲节点node信息，然后路由过去
                     }
                     Button("复制链接", systemImage: "link") {
@@ -109,7 +121,29 @@ struct NodeDetailView: View {
                 }
             }
         }
-        .navigationBarTitleDisplayMode(.inline)
+        .task {
+            await loadTopics(name: node.name, page: 0)
+        }
+        .refreshable {
+            await loadTopics(name: node.name, page: 0)
+        }
+    }
+
+    func loadTopics(name: String, page: Int) async {
+        do {
+            let response = try await V2exAPI().topics(
+                nodeName: name,
+                page: page
+            )
+            if let r = response, r.success, let t = r.result ?? [] {
+                await MainActor.run {
+                    self.topics.append(contentsOf: t)
+                }
+            }
+        } catch {
+            if error is CancellationError { return }
+            print("出错了: \(error)")
+        }
     }
 }
 
