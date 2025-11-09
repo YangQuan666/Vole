@@ -278,7 +278,6 @@ struct MemberView: View {
                 }
             }
             .listStyle(.insetGrouped)
-            .background(Color(.blue))
             .navigationTitle("用户信息")
             .navigationBarTitleDisplayMode(.inline)
             // 2. 添加完成按钮
