@@ -11,10 +11,14 @@ import SwiftUI
 struct NodeDetailView: View {
     let node: Node
     @State private var topics: [Topic] = []
+    @State private var pagination: Pagination? = nil
+    @State private var currentPage = 1
+    @State private var isLoading = false
     @Environment(\.openURL) private var openURL
 
     var body: some View {
         List {
+            // MARK: 节点信息 Section
             Section {
                 VStack(spacing: 16) {
                     // 头像
@@ -78,17 +82,36 @@ struct NodeDetailView: View {
             }
 
             Section("话题") {
-                if !topics.isEmpty {
+                if topics.isEmpty && isLoading {
+                    // 初次加载动画
+                    HStack {
+                        Spacer()
+                        ProgressView("加载中…")
+                        Spacer()
+                    }
+                    .padding()
+                    .listRowSeparator(.hidden)
+                } else {
                     ForEach(topics) { topic in
                         TopicRow(topic: topic) {
-                            // path.append(topic.id)
+                            // 点击事件
+                        }
+                        .onAppear {
+                            if topic == topics.last {
+                                Task { await loadNextPageIfNeeded() }
+                            }
                         }
                     }
-                } else {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                        .padding()
+
+                    // 底部加载更多动画
+                    if isLoading {
+                        HStack {
+                            Spacer()
+                            ProgressView("加载中…")
+                            Spacer()
+                        }
                         .listRowSeparator(.hidden)
+                    }
                 }
             }
         }
@@ -101,9 +124,7 @@ struct NodeDetailView: View {
                 }
                 Menu {
                     Button("父节点", systemImage: "scale.3d") {
-                        // parent 信息
-                        // let parent = node.parentNodeName
-                        // todo 获取父亲节点node信息，然后路由过去
+                        // todo: 加载父节点
                     }
                     Button("复制链接", systemImage: "link") {
                         UIPasteboard.general.string = shareURL
@@ -122,22 +143,33 @@ struct NodeDetailView: View {
             }
         }
         .task {
-            await loadTopics(name: node.name, page: 0)
+            await loadTopics(name: node.name, page: 1)
         }
         .refreshable {
-            await loadTopics(name: node.name, page: 0)
+            await loadTopics(name: node.name, page: 1)
         }
     }
 
+    // 分页加载话题
     func loadTopics(name: String, page: Int) async {
+        guard !isLoading else { return }
+        isLoading = true
+        defer { isLoading = false }
+
         do {
             let response = try await V2exAPI().topics(
                 nodeName: name,
                 page: page
             )
-            if let r = response, r.success, let t = r.result ?? [] {
+            if let r = response, r.success, let t = r.result {
                 await MainActor.run {
-                    self.topics.append(contentsOf: t)
+                    if page == 1 {
+                        self.topics = t
+                    } else {
+                        self.topics.append(contentsOf: t)
+                    }
+                    self.pagination = r.pagination
+                    self.currentPage = page
                 }
             }
         } catch {
@@ -145,9 +177,18 @@ struct NodeDetailView: View {
             print("出错了: \(error)")
         }
     }
+
+    // MARK: - 分页加载逻辑
+    func loadNextPageIfNeeded() async {
+        guard !isLoading else { return }
+        guard let pagination = pagination else { return }
+        guard currentPage < pagination.pages else { return }
+
+        await loadTopics(name: node.name, page: currentPage + 1)
+    }
 }
 
-// Aliases 标签视图
+// liases 标签视图
 struct AliasesView: View {
     let aliases: [String]
 
