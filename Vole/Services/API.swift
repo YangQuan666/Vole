@@ -218,7 +218,7 @@ public struct V2exAPI {
      - parameter  page: 分页页码，默认为 1
      */
     public func topics(nodeName: String, page: Int = 1) async throws
-        -> Response<[Topic]?>?
+        -> Response<[Topic]>?
     {
         let path = "nodes/\(nodeName)/topics"
         return try await request(
@@ -226,7 +226,7 @@ public struct V2exAPI {
             args: [
                 "p": String(page)
             ],
-            decodeClass: Response<[Topic]?>.self,
+            decodeClass: Response<[Topic]>.self,
             //            useAuth: true
         )
     }
