@@ -115,7 +115,6 @@ struct NodeDetailView: View {
                 }
             }
         }
-        .listStyle(.plain)
         .toolbar {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
                 let shareURL = node.url ?? ""
