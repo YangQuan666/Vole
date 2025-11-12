@@ -22,23 +22,18 @@ let categories = [
     ),
 ]
 
-enum NodeRoute: Hashable {
-    case single(Node)       // 单个节点
-    case multiple([String])   // 多个节点
-    case group(NodeGroup)     // 分组
-}
-
 struct NodeView: View {
     @State private var selectedCategory: NodeCategory? = nil
-    @State private var path = NavigationPath()
     @State private var groups: [NodeGroup] = []
     @State private var isLoading = false
+
+    @EnvironmentObject var navManager: NavigationManager
 
     private let cardWidth: CGFloat = 320
     private let maxRows = 3
 
     var body: some View {
-        NavigationStack(path: $path) {
+        NavigationStack(path: $navManager.nodePath) {
             ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: 24) {
 
@@ -58,8 +53,8 @@ struct NodeView: View {
                                         .fill(Color.gray.opacity(0.1))
                                 )
                                 .onTapGesture {
-                                    let nodeIds = ["11","22"]
-                                    path.append(NodeRoute.multiple(nodeIds))
+                                    let nodeIds = ["11", "22"]
+                                    navManager.nodePath.append(NodeRoute.multiple(nodeIds))
                                 }
                             }
                         }
@@ -70,7 +65,7 @@ struct NodeView: View {
                         LazyVStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Button(action: {
-                                    path.append(NodeRoute.group(group))
+                                    navManager.nodePath.append(NodeRoute.group(group))
                                 }) {
                                     HStack {
                                         Text(group.root.title ?? "")
@@ -103,7 +98,7 @@ struct NodeView: View {
                                             ForEach(columns[i].indices, id: \.self) { j in
                                                 let node = columns[i][j]
                                                 Button {
-                                                    path.append(NodeRoute.single(node))
+                                                    navManager.nodePath.append(NodeRoute.single(node))
                                                 } label: {
                                                     NodeCardView(node: node)
                                                         .frame(width: cardWidth)
@@ -123,7 +118,7 @@ struct NodeView: View {
                                         .frame(width: (UIScreen.main.bounds.width - cardWidth) / 2)
                                         .scrollTargetLayout()
                                 }
-                                .padding(.leading, 16) // 第一页贴左
+                                .padding(.leading, 16)  // 第一页贴左
                             }
                             .scrollTargetBehavior(.viewAligned)
                         }
@@ -135,10 +130,10 @@ struct NodeView: View {
             .navigationDestination(for: NodeRoute.self) { route in
                 switch route {
                 case .single(let node):
-                    NodeDetailView(node: node)  // 单个节点
+                    NodeDetailView(node: node, path: $navManager.nodePath)  // 单个节点
                 case .multiple(let ids):
                     Text("Multi")
-//                    NodeDetailView(nodeIds: ids)   // 多个节点
+                //                    NodeDetailView(nodeIds: ids)   // 多个节点
                 case .group(let group):
                     NodeGroupView(group: group)
                 }
@@ -263,17 +258,23 @@ struct NodeView: View {
             }
 
             // group 内按 topics 降序排序
-            let sortedNodes = flattened.sorted { ($0.topics ?? 0) > ($1.topics ?? 0) }
+            let sortedNodes = flattened.sorted {
+                ($0.topics ?? 0) > ($1.topics ?? 0)
+            }
 
             // group 权重 = 所有 topics 之和
             let totalTopics = sortedNodes.reduce(0) { $0 + ($1.topics ?? 0) }
 
-            groups.append(NodeGroup(root: root, nodes: sortedNodes, weight: totalTopics))
+            groups.append(
+                NodeGroup(root: root, nodes: sortedNodes, weight: totalTopics)
+            )
         }
 
         // 如果有 single 节点，统一打包为一个“other”分组
         if !singleNodes.isEmpty {
-            let sortedSingles = singleNodes.sorted { ($0.topics ?? 0) > ($1.topics ?? 0) }
+            let sortedSingles = singleNodes.sorted {
+                ($0.topics ?? 0) > ($1.topics ?? 0)
+            }
             let totalTopics = sortedSingles.reduce(0) { $0 + ($1.topics ?? 0) }
 
             // 创建一个虚拟的 root 表示“other”组
@@ -295,7 +296,13 @@ struct NodeView: View {
                 parentNodeName: nil
             )
 
-            groups.append(NodeGroup(root: otherRoot, nodes: sortedSingles, weight: totalTopics))
+            groups.append(
+                NodeGroup(
+                    root: otherRoot,
+                    nodes: sortedSingles,
+                    weight: totalTopics
+                )
+            )
         }
 
         // 按权重倒序排列（topics 总和越高排越前）

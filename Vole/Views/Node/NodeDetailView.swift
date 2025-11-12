@@ -15,6 +15,7 @@ struct NodeDetailView: View {
     @State private var currentPage = 1
     @State private var isLoading = false
     @Environment(\.openURL) private var openURL
+    @Binding var path: NavigationPath
 
     var body: some View {
         List {
@@ -94,7 +95,7 @@ struct NodeDetailView: View {
                 } else {
                     ForEach(topics) { topic in
                         TopicRow(topic: topic) {
-                            // 点击事件
+                            path.append(topic.id)
                         }
                         .onAppear {
                             if topic == topics.last {
@@ -114,6 +115,9 @@ struct NodeDetailView: View {
                     }
                 }
             }
+        }
+        .navigationDestination(for: Int.self) { topicId in
+            DetailView(topicId: topicId, path: $path)
         }
         .toolbar {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
@@ -208,6 +212,7 @@ struct AliasesView: View {
 }
 
 #Preview {
+    @Previewable @State var path = NavigationPath()
     let node = Node(
         id: nil,
         name: "other",
@@ -225,5 +230,5 @@ struct AliasesView: View {
         root: true,
         parentNodeName: nil
     )
-    NodeDetailView(node: node)
+    NodeDetailView(node: node, path: $path)
 }

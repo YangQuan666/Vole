@@ -10,12 +10,12 @@ import SwiftUI
 
 struct HomeView: View {
 
-    @State private var path = NavigationPath()
     @State private var selection: Category = .latest
     @State private var data: [Category: [Topic]] = [:]
     @State private var showProfile = false
 
     @ObservedObject private var userManager = UserManager.shared
+    @EnvironmentObject var navManager: NavigationManager
 
     func loadTopics(for category: Category) async {
         do {
@@ -30,13 +30,13 @@ struct HomeView: View {
     }
 
     var body: some View {
-        NavigationStack(path: $path) {
+        NavigationStack(path: $navManager.homePath) {
             Group {
                 if let topics = data[selection], !topics.isEmpty {
                     List {
                         ForEach(topics) { topic in
                             TopicRow(topic: topic) {
-                                path.append(topic.id)
+                                navManager.homePath.append(topic.id)
                             }
                         }
                     }
@@ -56,7 +56,7 @@ struct HomeView: View {
             }
             .navigationTitle("首页")
             .navigationDestination(for: Int.self) { topicId in
-                DetailView(topicId: topicId, path: $path)
+                DetailView(topicId: topicId, path: $navManager.homePath)
             }
             .toolbar {
                 if #available(iOS 26, *) {
