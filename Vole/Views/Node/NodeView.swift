@@ -128,7 +128,7 @@ struct NodeView: View {
                 case .multiple(let ids):
                     Text("Multi") // 多个节点
                 case .group(let group):
-                    NodeGroupView(group: group)
+                    NodeGroupView(group: group, path: $navManager.nodePath)
                 }
             }
             .toolbar {

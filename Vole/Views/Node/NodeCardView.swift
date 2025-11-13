@@ -16,7 +16,7 @@ struct NodeCardView: View {
         HStack {
             // 左侧头像
             if let avatarURL = node.avatarLarge,
-               let url = makeFullURL(from: avatarURL)
+                let url = makeFullURL(from: avatarURL)
             {
                 KFImage(url)
                     .placeholder {
@@ -54,18 +54,6 @@ struct NodeCardView: View {
         } else {
             return URL(string: path, relativeTo: baseURL)
         }
-    }
-}
-
-struct NodeGroupView: View {
-    let group: NodeGroup
-
-    var body: some View {
-        List(group.nodes) { node in
-            NodeCardView(node: node)
-        }
-        .listStyle(.plain)
-        .navigationTitle(group.root.title ?? group.root.name)
     }
 }
 
