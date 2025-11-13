@@ -18,7 +18,6 @@ struct NodeGroupView: View {
                     path.append(Route.node(node))
                 }
         }
-        .listStyle(.plain)
         .navigationTitle(group.root.title ?? group.root.name)
     }
 }

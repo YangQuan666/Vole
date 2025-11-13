@@ -147,7 +147,6 @@ struct NodeView: View {
                     await refreshNodes(force: false)
                 }
             }
-            .background(Color(.systemBackground))
         }
     }
 
