@@ -10,59 +10,71 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var selection: TabID = .home
+    @StateObject private var navManager = NavigationManager()
 
     var body: some View {
-        
-        if #available(iOS 26, *) {
-            TabView(selection: $selection) {
-                Tab("Home", systemImage: "doc.text.image", value: .home) {
-                    HomeView()
+
+        Group {
+            if #available(iOS 26, *) {
+                TabView(selection: $selection) {
+                    Tab("Home", systemImage: "doc.text.image", value: .home) {
+                        HomeView()
+                    }
+                    Tab(
+                        "Node",
+                        systemImage: "square.grid.2x2.fill",
+                        value: .node
+                    ) {
+                        NodeView()
+                    }
+                    Tab(
+                        "Notify",
+                        systemImage: "tray.full.fill",
+                        value: .notify
+                    ) {
+                        NotifyView()
+                    }
+                    Tab(
+                        "Search",
+                        systemImage: "magnifyingglass",
+                        value: .search,
+                        role: .search
+                    ) {
+                        SearchView()
+                    }
                 }
-                Tab("Node", systemImage: "square.grid.2x2.fill", value: .node) {
-                    NodeView()
-                }
-                Tab(
-                    "Notify",
-                    systemImage: "tray.full.fill",
-                    value: .notify
-                ) {
-                    NotifyView()
-                }
-                Tab(
-                    "Search",
-                    systemImage: "magnifyingglass",
-                    value: .search,
-                    role: .search
-                ) {
-                    SearchView()
-                }
-            }
-            .tabBarMinimizeBehavior(.onScrollDown)
-        }else {
-            TabView(selection: $selection) {
-                Tab("Home", systemImage: "doc.text.image", value: .home) {
-                    HomeView()
-                }
-                Tab("Node", systemImage: "square.grid.2x2.fill", value: .node) {
-                    NodeView()
-                }
-                Tab(
-                    "Notify",
-                    systemImage: "tray.full.fill",
-                    value: .notify
-                ) {
-                    NotifyView()
-                }
-                Tab(
-                    "Search",
-                    systemImage: "magnifyingglass",
-                    value: .search,
-                    role: .search
-                ) {
-                    SearchView()
+                .tabBarMinimizeBehavior(.onScrollDown)
+            } else {
+                TabView(selection: $selection) {
+                    Tab("Home", systemImage: "doc.text.image", value: .home) {
+                        HomeView()
+                    }
+                    Tab(
+                        "Node",
+                        systemImage: "square.grid.2x2.fill",
+                        value: .node
+                    ) {
+                        NodeView()
+                    }
+                    Tab(
+                        "Notify",
+                        systemImage: "tray.full.fill",
+                        value: .notify
+                    ) {
+                        NotifyView()
+                    }
+                    Tab(
+                        "Search",
+                        systemImage: "magnifyingglass",
+                        value: .search,
+                        role: .search
+                    ) {
+                        SearchView()
+                    }
                 }
             }
         }
+        .environmentObject(navManager)
     }
 }
 
