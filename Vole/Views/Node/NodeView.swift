@@ -54,7 +54,7 @@ struct NodeView: View {
                                 )
                                 .onTapGesture {
                                     let nodeIds = ["11", "22"]
-                                    navManager.nodePath.append(NodeRoute.multiple(nodeIds))
+                                    navManager.nodePath.append(Route.multiple(nodeIds))
                                 }
                             }
                         }
@@ -65,7 +65,7 @@ struct NodeView: View {
                         LazyVStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Button(action: {
-                                    navManager.nodePath.append(NodeRoute.group(group))
+                                    navManager.nodePath.append(Route.group(group))
                                 }) {
                                     HStack {
                                         Text(group.root.title ?? "")
@@ -98,7 +98,7 @@ struct NodeView: View {
                                             ForEach(columns[i].indices, id: \.self) { j in
                                                 let node = columns[i][j]
                                                 Button {
-                                                    navManager.nodePath.append(NodeRoute.single(node))
+                                                    navManager.nodePath.append(Route.node(node))
                                                 } label: {
                                                     NodeCardView(node: node)
                                                         .frame(width: cardWidth)
@@ -127,13 +127,14 @@ struct NodeView: View {
                 .padding(.vertical)
             }
             .navigationTitle("节点")
-            .navigationDestination(for: NodeRoute.self) { route in
+            .navigationDestination(for: Route.self) { route in
                 switch route {
-                case .single(let node):
+                case .topicId(let topicId):
+                    DetailView(topicId: topicId, path: $navManager.nodePath)
+                case .node(let node):
                     NodeDetailView(node: node, path: $navManager.nodePath)  // 单个节点
                 case .multiple(let ids):
-                    Text("Multi")
-                //                    NodeDetailView(nodeIds: ids)   // 多个节点
+                    Text("Multi") // 多个节点
                 case .group(let group):
                     NodeGroupView(group: group)
                 }

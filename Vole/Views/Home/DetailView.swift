@@ -118,8 +118,9 @@ struct DetailView: View {
                             .buttonStyle(.borderless)
                             Spacer()
                             Button {
-                                // 点击事件
-                                print("点击了标签：\(topic.node?.title ?? "")")
+                                if let node = topic.node {
+                                    path.append(Route.node(node))
+                                }
                             } label: {
                                 Text(topic.node?.title ?? "")
                                     .font(.callout)
@@ -168,7 +169,7 @@ struct DetailView: View {
                                         case .mention(let username):
                                             print("@\(username)")
                                         case .topic(let id):
-                                            path.append(id)
+                                            path.append(Route.topicId(id))
                                         default:
                                             break
                                         }
@@ -203,7 +204,7 @@ struct DetailView: View {
                                                 case .mention(let username):
                                                     print("@\(username)")
                                                 case .topic(let id):
-                                                    path.append(id)
+                                                    path.append(Route.topicId(id))
                                                 default:
                                                     break
                                                 }
@@ -327,7 +328,9 @@ struct DetailView: View {
                 }
                 Menu {
                     Button("访问节点", systemImage: "scale.3d") {
-
+                        if let topic = topic, let node = topic.node {
+                            path.append(Route.node(node))
+                        }
                     }
                     Button("复制链接", systemImage: "link") {
                         UIPasteboard.general.string = shareURL

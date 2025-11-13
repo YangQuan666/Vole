@@ -36,7 +36,7 @@ struct HomeView: View {
                     List {
                         ForEach(topics) { topic in
                             TopicRow(topic: topic) {
-                                navManager.homePath.append(topic.id)
+                                navManager.homePath.append(Route.topicId(topic.id))
                             }
                         }
                     }
@@ -55,8 +55,16 @@ struct HomeView: View {
                 }
             }
             .navigationTitle("首页")
-            .navigationDestination(for: Int.self) { topicId in
-                DetailView(topicId: topicId, path: $navManager.homePath)
+            .navigationDestination(for: Route.self) { route in
+                switch route {
+                case .topicId(let topicId):
+                    DetailView(topicId: topicId, path: $navManager.homePath)
+                case .node(let node):
+                    let n = node.avatarLarge
+                    NodeDetailView(node: node, path: $navManager.homePath)  // 单个节点
+                default:
+                    EmptyView()
+                }
             }
             .toolbar {
                 if #available(iOS 26, *) {

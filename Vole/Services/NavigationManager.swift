@@ -15,8 +15,9 @@ final class NavigationManager: ObservableObject {
     @Published var searchPath = NavigationPath()
 }
 
-enum NodeRoute: Hashable {
-    case single(Node)  // 单个节点
+enum Route: Hashable {
+    case topicId(Int)   // topicId
+    case node(Node)  // 单个节点
     case multiple([String])  // 多个节点
     case group(NodeGroup)  // 分组
 }
