@@ -60,7 +60,6 @@ struct HomeView: View {
                 case .topicId(let topicId):
                     DetailView(topicId: topicId, path: $navManager.homePath)
                 case .node(let node):
-                    let n = node.avatarLarge
                     NodeDetailView(node: node, path: $navManager.homePath)  // 单个节点
                 default:
                     EmptyView()
