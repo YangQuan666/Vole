@@ -63,26 +63,18 @@ struct NodeView: View {
 
                     ForEach(groups) { group in
                         LazyVStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Button(action: {
-                                    navManager.nodePath.append(Route.group(group))
-                                }) {
-                                    HStack {
-                                        Text(group.root.title ?? "")
-                                            .font(.title3.bold())
-                                        Image(systemName: "chevron.right")
-                                            .font(
-                                                .system(
-                                                    size: 14,
-                                                    weight: .semibold
-                                                )
-                                            )
-
-                                    }
-                                    .contentShape(Rectangle())  // 让整行都可点击
+                            NavigationLink(value: Route.group(group)) {
+                                HStack {
+                                    Text(group.root.title ?? "")
+                                        .font(.title3.bold())
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(.secondary)
+                                    Spacer()
                                 }
-                                .buttonStyle(.plain)  // 移除默认按钮高亮
+                                .contentShape(Rectangle()) // 整行可点
                             }
+                            .buttonStyle(.plain)
                             .padding(.horizontal)
 
                             // 横向滚动内容保持不变
