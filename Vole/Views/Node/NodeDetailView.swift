@@ -23,7 +23,7 @@ struct NodeDetailView: View {
             Section {
                 VStack(spacing: 16) {
                     // 头像
-                    if let avatarURL = node.avatarLarge,
+                    if let avatarURL = node.avatarLarge ?? node.avatar,
                         let url = URL(string: avatarURL)
                     {
                         KFImage(url)
@@ -222,6 +222,7 @@ struct AliasesView: View {
         footer: nil,
         header: nil,
         titleAlternative: nil,
+        avatar: nil,
         avatarMini: nil,
         avatarNormal: nil,
         avatarLarge: nil,

@@ -16,6 +16,7 @@ public struct Node: Identifiable, Codable, Hashable {
     public let footer: String?
     public let header: String?
     public let titleAlternative: String?
+    public let avatar: String?
     public let avatarMini: String?
     public let avatarNormal: String?
     public let avatarLarge: String?
@@ -25,7 +26,7 @@ public struct Node: Identifiable, Codable, Hashable {
     public let parentNodeName: String?
 
     enum CodingKeys: String, CodingKey {
-        case name, stars, aliases, root, id, title, url, topics, footer, header
+        case name, stars, aliases, root, id, title, url, topics, footer, header, avatar
         case titleAlternative = "title_alternative"
         case avatarMini = "avatar_mini"
         case avatarNormal = "avatar_normal"

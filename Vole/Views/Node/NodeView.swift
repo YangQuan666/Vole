@@ -288,6 +288,7 @@ struct NodeView: View {
                 footer: nil,
                 header: nil,
                 titleAlternative: nil,
+                avatar: nil,
                 avatarMini: nil,
                 avatarNormal: nil,
                 avatarLarge: nil,
