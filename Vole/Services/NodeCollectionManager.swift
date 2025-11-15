@@ -16,11 +16,12 @@ class NodeCollectionManager {
     private let saveKey = "node_collections_v1"
 
     init() {
-//        load()
-//        if collections.isEmpty {
-//            loadDefaultCollections()
-//        }
-        loadDefaultCollections()
+        // UserDefaults.standard.removeObject(forKey: saveKey)
+        // loadDefaultCollections()
+        load()
+        if collections.isEmpty {
+            loadDefaultCollections()
+        }
     }
 
     // MARK: - 默认合集
