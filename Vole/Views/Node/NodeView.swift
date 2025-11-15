@@ -54,7 +54,7 @@ struct NodeView: View {
                                 )
                                 .onTapGesture {
                                     let nodeIds = ["11", "22"]
-                                    navManager.nodePath.append(Route.multiple(nodeIds))
+                                    navManager.nodePath.append(Route.nodeCollect(nodeIds))
                                 }
                             }
                         }
@@ -63,7 +63,7 @@ struct NodeView: View {
 
                     ForEach(groups) { group in
                         LazyVStack(alignment: .leading, spacing: 12) {
-                            NavigationLink(value: Route.group(group)) {
+                            NavigationLink(value: Route.moreNode(group)) {
                                 HStack {
                                     Text(group.root.title ?? "")
                                         .font(.title3.bold())
@@ -125,9 +125,9 @@ struct NodeView: View {
                     DetailView(topicId: topicId, path: $navManager.nodePath)
                 case .node(let node):
                     NodeDetailView(node: node, path: $navManager.nodePath)  // 单个节点
-                case .multiple(let ids):
+                case .nodeCollect(let ids):
                     Text("Multi") // 多个节点
-                case .group(let group):
+                case .moreNode(let group):
                     List(Array(group.nodes.enumerated()), id: \.1.id) { index, node in
                         NodeCardView(node: node)
                             .onTapGesture {

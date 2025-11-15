@@ -18,6 +18,6 @@ final class NavigationManager: ObservableObject {
 enum Route: Hashable {
     case topicId(Int)   // topicId
     case node(Node)  // 单个节点
-    case multiple([String])  // 多个节点
-    case group(NodeGroup)  // 分组
+    case nodeCollect([String])  // 多个节点
+    case moreNode(NodeGroup)  // 分组
 }
