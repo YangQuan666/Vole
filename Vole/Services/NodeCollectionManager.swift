@@ -82,14 +82,14 @@ class NodeCollectionManager {
             colorHex: "blue",
             nodeNames: ["qna"]
         )
-        let xna = NodeCollection(
-            name: "VXNA",
-            systemIcon: "globe.fill",
-            colorHex: "yellow",
-            nodeNames: ["qna"]
-        )
+        //        let xna = NodeCollection(
+        //            name: "VXNA",
+        //            systemIcon: "globe.fill",
+        //            colorHex: "yellow",
+        //            nodeNames: ["vxna"]
+        //        )
         collections = [
-            tech, creative, fun, apple, job, exchange, city, ask, xna,
+            tech, creative, fun, apple, job, exchange, city, ask,
         ]
         save()
     }
