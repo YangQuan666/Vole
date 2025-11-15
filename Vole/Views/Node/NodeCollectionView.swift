@@ -16,8 +16,23 @@ struct NodeCollectionView: View {
 
     var body: some View {
         List {
-            // MARK: - 横向 node 标签 Section
+            // Topics 列表 Section
             Section {
+                if isLoading {
+                    HStack {
+                        Spacer()
+                        ProgressView("加载中…")
+                        Spacer()
+                    }
+                    .listRowSeparator(.hidden)
+                } else {
+                    ForEach(topics) { topic in
+                        TopicRow(topic: topic) {
+                            path.append(Route.topicId(topic.id))
+                        }
+                    }
+                }
+            } header: {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
                         ForEach(collection.nodeNames, id: \.self) { nodeName in
@@ -34,32 +49,9 @@ struct NodeCollectionView: View {
                                 }
                         }
                     }
-                    .padding(.horizontal)
-                }
-                .listRowInsets(EdgeInsets())  // 去掉默认左右间距
-                .listRowSeparator(.hidden)  // 去掉分隔线
-                .listRowBackground(Color.clear)
-            }
-
-            // MARK: - Topics 列表 Section
-            Section {
-                if isLoading {
-                    HStack {
-                        Spacer()
-                        ProgressView("加载中…")
-                        Spacer()
-                    }
-                    .listRowSeparator(.hidden)
-                } else {
-                    ForEach(topics) { topic in
-                        TopicRow(topic: topic) {
-                            path.append(Route.topicId(topic.id))
-                        }
-                    }
                 }
             }
         }
-        .listStyle(.sidebar)
         .navigationTitle(collection.name)
         .navigationBarTitleDisplayMode(.inline)
         .task {
@@ -69,7 +61,7 @@ struct NodeCollectionView: View {
         }
     }
 
-    // MARK: - 并发加载所有节点的 topics
+    // 并发加载所有节点的 topics
     private func loadTopics() async {
         isLoading = true
 
