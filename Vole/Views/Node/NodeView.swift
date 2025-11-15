@@ -128,7 +128,16 @@ struct NodeView: View {
                 case .multiple(let ids):
                     Text("Multi") // 多个节点
                 case .group(let group):
-                    NodeGroupView(group: group, path: $navManager.nodePath)
+                    List(Array(group.nodes.enumerated()), id: \.1.id) { index, node in
+                        NodeCardView(node: node)
+                            .onTapGesture {
+                                navManager.nodePath.append(Route.node(node))
+                            }
+                            .listRowSeparator(index == 0 ? .hidden : .visible, edges: .top)
+                    }
+                    .listStyle(.plain)
+                    .navigationTitle(group.root.title ?? group.root.name)
+                    .navigationBarTitleDisplayMode(.inline)
                 }
             }
             .toolbar {
