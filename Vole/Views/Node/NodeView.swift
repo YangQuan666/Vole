@@ -53,7 +53,7 @@ struct NodeView: View {
                                         .fill(Color.gray.opacity(0.1))
                                 )
                                 .onTapGesture {
-                                    let nodeIds = ["11", "22"]
+                                    let nodeIds = ["nas", "android", "programmer"]
                                     navManager.nodePath.append(Route.nodeCollect(nodeIds))
                                 }
                             }
@@ -124,9 +124,9 @@ struct NodeView: View {
                 case .topicId(let topicId):
                     DetailView(topicId: topicId, path: $navManager.nodePath)
                 case .node(let node):
-                    NodeDetailView(node: node, path: $navManager.nodePath)  // 单个节点
-                case .nodeCollect(let ids):
-                    Text("Multi") // 多个节点
+                    NodeDetailView(node: node, path: $navManager.nodePath)
+                case .nodeCollect(let nodeNames):
+                    NodeCollectionView(nodeNames: nodeNames, path: $navManager.nodePath)
                 case .moreNode(let group):
                     List(Array(group.nodes.enumerated()), id: \.1.id) { index, node in
                         NodeCardView(node: node)
