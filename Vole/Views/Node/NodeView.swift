@@ -7,23 +7,9 @@
 
 import SwiftUI
 
-let categories = [
-    NodeCategory(name: "技术", color: .indigo, systemIcon: "hammer.fill"),
-    NodeCategory(name: "创意", color: .green, systemIcon: "sparkles.2"),
-    NodeCategory(name: "好玩", color: .cyan, systemIcon: "puzzlepiece.fill"),
-    NodeCategory(name: "Apple", color: .gray, systemIcon: "apple.logo"),
-    NodeCategory(name: "酷工作", color: .brown, systemIcon: "briefcase.fill"),
-    NodeCategory(name: "交易", color: .teal, systemIcon: "creditcard.fill"),
-    NodeCategory(name: "城市", color: .blue, systemIcon: "building.2.fill"),
-    NodeCategory(
-        name: "问与答",
-        color: .blue,
-        systemIcon: "questionmark.bubble.fill"
-    ),
-]
-
 struct NodeView: View {
     @State private var selectedCategory: NodeCategory? = nil
+    @State private var collections = NodeCollectionManager.shared.collections
     @State private var groups: [NodeGroup] = []
     @State private var isLoading = false
 
@@ -37,14 +23,14 @@ struct NodeView: View {
             ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: 24) {
 
-                    // MARK: 分类横向滚动
+                    // 分类横向滚动
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
-                            ForEach(categories, id: \.self) { category in
+                            ForEach(collections, id: \.self) { collection in
                                 HStack(spacing: 8) {
-                                    Image(systemName: category.systemIcon)
-                                        .foregroundColor(category.color)
-                                    Text(category.name)
+                                    Image(systemName: collection.systemIcon)
+                                        .foregroundColor(collection.color)
+                                    Text(collection.name)
                                 }
                                 .padding(.vertical, 8)
                                 .padding(.horizontal, 12)
@@ -126,7 +112,8 @@ struct NodeView: View {
                 case .node(let node):
                     NodeDetailView(node: node, path: $navManager.nodePath)
                 case .nodeCollect(let nodeNames):
-                    NodeCollectionView(nodeNames: nodeNames, path: $navManager.nodePath)
+//                    NodeCollectionView(nodeNames: nodeNames, path: $navManager.nodePath)
+                    Text("hj")
                 case .moreNode(let group):
                     List(Array(group.nodes.enumerated()), id: \.1.id) { index, node in
                         NodeCardView(node: node)

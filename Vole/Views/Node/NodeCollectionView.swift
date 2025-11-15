@@ -8,38 +8,72 @@
 import SwiftUI
 
 struct NodeCollectionView: View {
-    let title: String = "合集"
-    let nodeNames: [String]
+    @State var collection: NodeCollection
     @Binding var path: NavigationPath
 
     @State private var topics: [Topic] = []
     @State private var isLoading = true
 
     var body: some View {
-        Group {
-            if isLoading {
-                ProgressView("加载中…")
-            } else {
-                List(topics) { topic in
-                    TopicRow(topic: topic) {
-                        path.append(Route.topicId(topic.id))
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+
+                // MARK: - 集合信息
+                HStack(spacing: 12) {
+                    Image(systemName: collection.systemIcon)
+                        .font(.largeTitle)
+                        .foregroundStyle(Color(collection.color))
+
+                    VStack(alignment: .leading) {
+                        Text(collection.name)
+                            .font(.title.bold())
+                        Text("共 \(collection.nodeNames.count) 个节点")
+                            .foregroundStyle(.secondary)
+                            .font(.subheadline)
                     }
                 }
+
+                Divider()
+
+                // MARK: - 节点列表
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("包含的节点")
+                        .font(.title3.bold())
+                    ForEach(collection.nodeNames, id: \.self) { nodeName in
+                        Text(nodeName)
+                            .font(.headline)
+                    }
+                }
+
+                Divider()
+
+                // MARK: - Topics 列表
+                if isLoading {
+                    ProgressView("加载中…")
+                } else {
+                    List(topics) { topic in
+                        TopicRow(topic: topic) {
+                            path.append(topic.id)
+                        }
+                    }
+                    .listStyle(.plain)
+                }
             }
+            .padding()
         }
         .task {
             await loadTopics()
         }
-        .navigationTitle(title)
+        .navigationTitle(collection.name)
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    // 并发加载
+    // MARK: - 并发加载所有节点的 topics
     private func loadTopics() async {
         isLoading = true
 
         await withTaskGroup(of: [Topic].self) { group in
-            for name in nodeNames {  // ← 使用 nodeNames
+            for name in collection.nodeNames {
                 group.addTask {
                     do {
                         let response = try await V2exAPI().topics(
@@ -84,7 +118,6 @@ struct NodeCollectionView: View {
             }
 
             var all: [Topic] = []
-
             for await list in group {
                 all += list
             }
