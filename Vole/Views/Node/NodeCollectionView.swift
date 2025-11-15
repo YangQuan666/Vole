@@ -29,6 +29,9 @@ struct NodeCollectionView: View {
                                         collection.color.opacity(0.5)
                                     )
                                 )
+                                .onTapGesture {
+                                    path.append(Route.nodeName(nodeName))
+                                }
                         }
                     }
                     .padding(.horizontal)

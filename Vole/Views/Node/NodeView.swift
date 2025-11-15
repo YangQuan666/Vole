@@ -110,6 +110,8 @@ struct NodeView: View {
                     DetailView(topicId: topicId, path: $navManager.nodePath)
                 case .node(let node):
                     NodeDetailView(node: node, path: $navManager.nodePath)
+                case .nodeName(let nodeName):
+                    NodeDetailView(nodeName: nodeName, path: $navManager.nodePath)
                 case .nodeCollect(let nodeCollection):
                     NodeCollectionView(collection: nodeCollection, path: $navManager.nodePath)
                 case .moreNode(let group):

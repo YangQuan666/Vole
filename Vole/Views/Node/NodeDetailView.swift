@@ -9,7 +9,8 @@ import Kingfisher
 import SwiftUI
 
 struct NodeDetailView: View {
-    let node: Node
+    var nodeName: String? = nil
+    @State var node: Node?
     @State private var topics: [Topic] = []
     @State private var pagination: Pagination? = nil
     @State private var currentPage = 1
@@ -18,102 +19,123 @@ struct NodeDetailView: View {
     @Binding var path: NavigationPath
 
     var body: some View {
-        List {
-            // MARK: 节点信息 Section
-            Section {
-                VStack(spacing: 16) {
-                    // 头像
-                    if let avatarURL = node.avatarLarge ?? node.avatar,
-                        let url = URL(string: avatarURL)
-                    {
-                        KFImage(url)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 100, height: 100)
-                    } else {
-                        Circle()
-                            .fill(Color.gray.opacity(0.4))
-                            .frame(width: 100, height: 100)
-                            .padding(.top, 20)
-                    }
+        ZStack {
+            if let node = node {
+                List {
+                    // 节点信息 Section
+                    Section {
+                        VStack(spacing: 16) {
+                            // 头像
+                            if let avatarURL = node.avatarLarge ?? node.avatar,
+                                let url = URL(string: avatarURL)
+                            {
+                                KFImage(url)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 100, height: 100)
+                            } else {
+                                Circle()
+                                    .fill(Color.gray.opacity(0.4))
+                                    .frame(width: 100, height: 100)
+                                    .padding(.top, 20)
+                            }
 
-                    // 名称 + 英文名
-                    VStack(spacing: 4) {
-                        Text(node.title ?? "")
-                            .font(.title2)
-                            .fontWeight(.semibold)
+                            // 名称 + 英文名
+                            VStack(spacing: 4) {
+                                Text(node.title ?? "")
+                                    .font(.title2)
+                                    .fontWeight(.semibold)
 
-                        if !node.name.isEmpty {
-                            Text(node.name)
+                                if !node.name.isEmpty {
+                                    Text(node.name)
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+
+                            // 发帖 + 星标
+                            HStack(spacing: 24) {
+                                Label(
+                                    "\(node.topics ?? 0)",
+                                    systemImage:
+                                        "list.bullet.rectangle.portrait"
+                                )
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                Label(
+                                    "\(node.stars ?? 0)",
+                                    systemImage: "star.fill"
+                                )
+                                .font(.subheadline)
+                                .foregroundColor(.yellow)
+                            }
+
+                            // header 简介
+                            if let header = node.header, !header.isEmpty {
+                                Text(header)
+                                    .font(.body)
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal)
+                            }
+
+                            // aliases 标签组
+                            if let aliases = node.aliases, !aliases.isEmpty {
+                                AliasesView(aliases: aliases)
+                                    .padding(.top, 6)
+                            }
                         }
+                        .frame(maxWidth: .infinity)
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                     }
 
-                    // 发帖 + 星标
-                    HStack(spacing: 24) {
-                        Label(
-                            "\(node.topics ?? 0)",
-                            systemImage: "list.bullet.rectangle.portrait"
-                        )
-                        .font(.subheadline)
-                        Label("\(node.stars ?? 0)", systemImage: "star.fill")
-                            .font(.subheadline)
-                            .foregroundColor(.yellow)
-                    }
+                    Section("话题") {
+                        if topics.isEmpty && isLoading {
+                            // 初次加载动画
+                            HStack {
+                                Spacer()
+                                ProgressView("加载中…")
+                                Spacer()
+                            }
+                            .padding()
+                            .listRowSeparator(.hidden)
+                        } else {
+                            ForEach(topics) { topic in
+                                TopicRow(topic: topic) {
+                                    path.append(topic.id)
+                                }
+                                .onAppear {
+                                    if topic == topics.last {
+                                        Task { await loadNextPageIfNeeded() }
+                                    }
+                                }
+                            }
 
-                    // header 简介
-                    if let header = node.header, !header.isEmpty {
-                        Text(header)
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                    }
-
-                    // aliases 标签组
-                    if let aliases = node.aliases, !aliases.isEmpty {
-                        AliasesView(aliases: aliases)
-                            .padding(.top, 6)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
-            }
-
-            Section("话题") {
-                if topics.isEmpty && isLoading {
-                    // 初次加载动画
-                    HStack {
-                        Spacer()
-                        ProgressView("加载中…")
-                        Spacer()
-                    }
-                    .padding()
-                    .listRowSeparator(.hidden)
-                } else {
-                    ForEach(topics) { topic in
-                        TopicRow(topic: topic) {
-                            path.append(topic.id)
-                        }
-                        .onAppear {
-                            if topic == topics.last {
-                                Task { await loadNextPageIfNeeded() }
+                            // 底部加载更多动画
+                            if isLoading {
+                                HStack {
+                                    Spacer()
+                                    ProgressView("加载中…")
+                                    Spacer()
+                                }
+                                .listRowSeparator(.hidden)
                             }
                         }
                     }
-
-                    // 底部加载更多动画
-                    if isLoading {
-                        HStack {
-                            Spacer()
-                            ProgressView("加载中…")
-                            Spacer()
-                        }
-                        .listRowSeparator(.hidden)
-                    }
                 }
+                .task {
+                    await loadTopics(name: node.name, page: 1)
+                }
+                .refreshable {
+                    await loadTopics(name: node.name, page: 1)
+                }
+            } else if let nodeName {
+                // 还没有加载到 topic
+                ProgressView("加载中...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .task {
+                        await loadNode(name: nodeName)
+                    }
             }
         }
         .navigationDestination(for: Int.self) { topicId in
@@ -121,7 +143,7 @@ struct NodeDetailView: View {
         }
         .toolbar {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
-                let shareURL = node.url ?? ""
+                let shareURL = node?.url ?? ""
                 ShareLink(item: shareURL) {
                     Image(systemName: "square.and.arrow.up")
                 }
@@ -145,11 +167,19 @@ struct NodeDetailView: View {
                 }
             }
         }
-        .task {
-            await loadTopics(name: node.name, page: 1)
-        }
-        .refreshable {
-            await loadTopics(name: node.name, page: 1)
+    }
+
+    func loadNode(name: String) async {
+        do {
+            let response = try await V2exAPI().getNode(nodeName: name)
+            if let r = response, r.success, let n = r.result {
+                await MainActor.run {
+                    self.node = n
+                }
+            }
+        } catch {
+            if error is CancellationError { return }
+            print("出错了: \(error)")
         }
     }
 
@@ -181,13 +211,15 @@ struct NodeDetailView: View {
         }
     }
 
-    // MARK: - 分页加载逻辑
+    // 分页加载逻辑
     func loadNextPageIfNeeded() async {
         guard !isLoading else { return }
         guard let pagination = pagination else { return }
         guard currentPage < pagination.pages else { return }
 
-        await loadTopics(name: node.name, page: currentPage + 1)
+        if let node {
+            await loadTopics(name: node.name, page: currentPage + 1)
+        }
     }
 }
 

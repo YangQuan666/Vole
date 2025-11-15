@@ -61,6 +61,8 @@ struct HomeView: View {
                     DetailView(topicId: topicId, path: $navManager.homePath)
                 case .node(let node):
                     NodeDetailView(node: node, path: $navManager.homePath)  // 单个节点
+                case .nodeName(let nodeName):
+                    NodeDetailView(nodeName: nodeName, path: $navManager.nodePath)
                 default:
                     EmptyView()
                 }
