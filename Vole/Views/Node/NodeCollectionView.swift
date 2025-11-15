@@ -60,7 +60,9 @@ struct NodeCollectionView: View {
         .navigationTitle(collection.name)
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            await loadTopics()
+            if topics.isEmpty {
+                await loadTopics()
+            }
         }
     }
 
