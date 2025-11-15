@@ -9,7 +9,7 @@ import Foundation
 
 public struct Topic: Identifiable, Decodable, Hashable {
     public let id: Int
-    public let node: Node?
+    public var node: Node?
     public let member: Member?
     public let title: String?
     public let url: String?
