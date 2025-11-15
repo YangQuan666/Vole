@@ -39,8 +39,7 @@ struct NodeView: View {
                                         .fill(Color.gray.opacity(0.1))
                                 )
                                 .onTapGesture {
-                                    let nodeIds = ["nas", "android", "programmer"]
-                                    navManager.nodePath.append(Route.nodeCollect(nodeIds))
+                                    navManager.nodePath.append(Route.nodeCollect(collection))
                                 }
                             }
                         }
@@ -111,9 +110,8 @@ struct NodeView: View {
                     DetailView(topicId: topicId, path: $navManager.nodePath)
                 case .node(let node):
                     NodeDetailView(node: node, path: $navManager.nodePath)
-                case .nodeCollect(let nodeNames):
-//                    NodeCollectionView(nodeNames: nodeNames, path: $navManager.nodePath)
-                    Text("hj")
+                case .nodeCollect(let nodeCollection):
+                    NodeCollectionView(collection: nodeCollection, path: $navManager.nodePath)
                 case .moreNode(let group):
                     List(Array(group.nodes.enumerated()), id: \.1.id) { index, node in
                         NodeCardView(node: node)
