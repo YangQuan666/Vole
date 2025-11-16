@@ -149,7 +149,9 @@ struct NodeDetailView: View {
                 }
                 Menu {
                     Button("父节点", systemImage: "scale.3d") {
-                        // todo: 加载父节点
+                        if let node, let parentNodeName = node.parentNodeName {
+                            path.append(Route.nodeName(parentNodeName))
+                        }
                     }
                     Button("复制链接", systemImage: "link") {
                         UIPasteboard.general.string = shareURL
