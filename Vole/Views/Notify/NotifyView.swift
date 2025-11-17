@@ -5,6 +5,7 @@
 //  Created by 杨权 on 8/25/25.
 //
 
+import SwiftSoup
 import SwiftUI
 
 struct NotifyView: View {
@@ -26,18 +27,19 @@ struct NotifyView: View {
                 } else {
                     List(notifications, id: \.id) { item in
                         VStack(alignment: .leading, spacing: 6) {
-                            // 用户名
-                            Text(item.member?.username ?? "")
-                                .font(.headline)
-
                             // 主内容 text
-                            Text(item.text ?? "")
-                                .font(.body)
-                                .foregroundColor(.secondary)
-
+                            if let text = item.text, let topic = parseTopic(html: text) {
+                                Text(topic.title ?? "")
+                                    .font(.subheadline)
+                            }
+                            // 用户名
+                            Text("\(item.member?.username ?? "")回复了你：")
+                                .font(.headline)
                             // payload
                             if let payload = item.payload {
-                                MarkdownView(content: payload)
+                                Text(payload)
+                                    .font(.body)
+                                    .foregroundColor(.secondary)
                             }
                         }
                         .padding(.vertical, 6)
@@ -97,6 +99,36 @@ struct NotifyView: View {
             print(error.localizedDescription)
         }
         isLoading = false
+    }
+
+    private func parseTopic(html: String) -> Topic? {
+        do {
+            let document = try SwiftSoup.parse(html)
+            let link = try document.select("a").select(".topic-link").first()
+            if let link = link {
+                let href = try link.attr("href")
+                let title = try link.text()
+                return Topic(
+                    id: 0,
+                    member: nil,
+                    title: title,
+                    url: nil,
+                    created: nil,
+                    deleted: nil,
+                    content: href,
+                    contentRendered: nil,
+                    syntax: nil,
+                    lastModified: nil,
+                    replies: nil,
+                    lastReplyBy: nil,
+                    lastTouched: nil,
+                    supplements: nil
+                )
+            }
+        } catch {
+            print(error.localizedDescription)
+        }
+        return nil
     }
 }
 
