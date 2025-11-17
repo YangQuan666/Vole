@@ -28,13 +28,20 @@ struct NotifyView: View {
                     List(notifications, id: \.id) { item in
                         VStack(alignment: .leading, spacing: 6) {
                             // 主内容 text
-                            if let text = item.text, let topic = parseTopic(html: text) {
+                            if let text = item.text,
+                                let topic = parseTopic(html: text)
+                            {
                                 Text(topic.title ?? "")
                                     .font(.subheadline)
                             }
-                            // 用户名
-                            Text("\(item.member?.username ?? "")回复了你：")
-                                .font(.headline)
+                            // 拼接文本，username 蓝色
+                            HStack {
+                                (Text(item.member?.username ?? "")
+                                    .foregroundColor(.accentColor)
+                                    .font(.headline)
+                                    + Text(" 回复了你：")
+                                    .font(.headline))
+                            }
                             // payload
                             if let payload = item.payload {
                                 Text(payload)
