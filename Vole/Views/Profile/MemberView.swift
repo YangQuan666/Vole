@@ -43,9 +43,11 @@ struct MemberView: View {
                                     .font(.title3)
                                     .fontWeight(.semibold)
 
-                                Text("第 \(member.id) 位会员")
-                                    .foregroundColor(.secondary)
-                                    .font(.subheadline)
+                                if let id = member.id {
+                                    Text("第 \(id) 位会员")
+                                        .foregroundColor(.secondary)
+                                        .font(.subheadline)
+                                }
 
                                 if let tagline = member.tagline,
                                     !tagline.isEmpty
