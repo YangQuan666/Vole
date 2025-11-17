@@ -282,8 +282,8 @@ public struct V2exAPI {
     
      - parameter  page: 分页页码，默认为 1
      */
-    public func notifications(page: Int = 1) async throws -> Response<
-        [Notification]?
+    public func notifications(page: Int = 1, token: String) async throws -> Response<
+        [Notification]
     >? {
         let path = "notifications"
         return try await request(
@@ -291,7 +291,8 @@ public struct V2exAPI {
             args: [
                 "p": String(page)
             ],
-            decodeClass: Response<[Notification]?>.self
+            decodeClass: Response<[Notification]>.self,
+            token: token
         )
     }
 
