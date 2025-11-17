@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		144905932E58A8F60009F393 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 144905922E58A8F60009F393 /* MarkdownUI */; };
+		14F7DDE42ECB790400065422 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 14F7DDE32ECB790400065422 /* SwiftSoup */; };
 		14F82C652E56106700B2321A /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 14F82C642E56106700B2321A /* Kingfisher */; };
 /* End PBXBuildFile section */
 
@@ -59,6 +60,7 @@
 			files = (
 				14F82C652E56106700B2321A /* Kingfisher in Frameworks */,
 				144905932E58A8F60009F393 /* MarkdownUI in Frameworks */,
+				14F7DDE42ECB790400065422 /* SwiftSoup in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -129,6 +131,7 @@
 			packageProductDependencies = (
 				14F82C642E56106700B2321A /* Kingfisher */,
 				144905922E58A8F60009F393 /* MarkdownUI */,
+				14F7DDE32ECB790400065422 /* SwiftSoup */,
 			);
 			productName = Vole;
 			productReference = 142124B52DE4494800A88EE4 /* Vole.app */;
@@ -216,6 +219,7 @@
 			packageReferences = (
 				14F82C632E560F5600B2321A /* XCRemoteSwiftPackageReference "Kingfisher" */,
 				14F82C6A2E58A5EF00B2321A /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
+				14F7DDE22ECB788500065422 /* XCRemoteSwiftPackageReference "SwiftSoup" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 142124B62DE4494800A88EE4 /* Products */;
@@ -594,6 +598,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		14F7DDE22ECB788500065422 /* XCRemoteSwiftPackageReference "SwiftSoup" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/scinfu/SwiftSoup.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.11.1;
+			};
+		};
 		14F82C632E560F5600B2321A /* XCRemoteSwiftPackageReference "Kingfisher" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/onevcat/Kingfisher";
@@ -617,6 +629,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 14F82C6A2E58A5EF00B2321A /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;
 			productName = MarkdownUI;
+		};
+		14F7DDE32ECB790400065422 /* SwiftSoup */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 14F7DDE22ECB788500065422 /* XCRemoteSwiftPackageReference "SwiftSoup" */;
+			productName = SwiftSoup;
 		};
 		14F82C642E56106700B2321A /* Kingfisher */ = {
 			isa = XCSwiftPackageProductDependency;
