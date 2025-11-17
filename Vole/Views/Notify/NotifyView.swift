@@ -8,24 +8,99 @@
 import SwiftUI
 
 struct NotifyView: View {
+    @State private var notifications: [Notification] = []
+    @State private var isLoading = false
+    @EnvironmentObject var navManager: NavigationManager
+    @ObservedObject private var userManager = UserManager.shared
+
     var body: some View {
-        Button(action: {
-            print("按钮点击了")
-        }) {
-            Text("点击我")
-                .font(.headline)                   // 字体大小/样式
-                .foregroundColor(.primary)           // 字体颜色
-                .padding(.vertical, 12)            // 上下内边距
-                .padding(.horizontal, 12)          // 左右内边距
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color.secondary)          // 背景色
-                )
-                .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2) // 阴影，可选
+        NavigationStack(path: $navManager.nodePath) {
+            Group {
+                if isLoading {
+                    ProgressView("加载中…")
+                        .padding()
+                } else if notifications.isEmpty {
+                    Text("暂无通知")
+                        .foregroundColor(.secondary)
+                        .padding()
+                } else {
+                    List(notifications, id: \.id) { item in
+                        VStack(alignment: .leading, spacing: 6) {
+                            // 用户名
+                            Text(item.member?.username ?? "")
+                                .font(.headline)
+
+                            // 主内容 text
+                            Text(item.text ?? "")
+                                .font(.body)
+                                .foregroundColor(.secondary)
+
+                            // payload
+                            if let payload = item.payload {
+                                MarkdownView(content: payload)
+                            }
+                        }
+                        .padding(.vertical, 6)
+                        .onTapGesture {
+                            // 你自己决定路由逻辑
+                            navManager.notifyPath.append(
+                                Route.topicId(1_163_971)
+                            )
+                        }
+                    }
+                }
+            }
+            .navigationTitle("通知")
+            .refreshable {
+                await loadNotifications()
+            }
+            .task {
+                if notifications.isEmpty {  // 防止重复加载
+                    await loadNotifications()
+                }
+            }
+            .navigationDestination(for: Route.self) { route in
+                switch route {
+                case .topicId(let topicId):
+                    DetailView(topicId: topicId, path: $navManager.nodePath)
+                case .nodeName(let nodeName):
+                    NodeDetailView(
+                        nodeName: nodeName,
+                        path: $navManager.nodePath
+                    )
+                default: EmptyView()
+                }
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Image(systemName: "person.crop.circle.fill")
+                        .font(.system(size: 28))
+                        .foregroundStyle(.gray)
+                }
+            }
         }
+    }
+
+    // 加载数据
+    private func loadNotifications() async {
+        guard let t = userManager.token else { return }
+        isLoading = true
+        do {
+            let response = try await V2exAPI().notifications(
+                page: 1,
+                token: t.token ?? ""
+            )
+            if let r = response, r.success, let n = r.result {
+                notifications = n
+            }
+        } catch {
+            print(error.localizedDescription)
+        }
+        isLoading = false
     }
 }
 
 #Preview {
-    NotifyView()
+    @Previewable var navManager = NavigationManager()
+    NotifyView().environmentObject(navManager)
 }
