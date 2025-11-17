@@ -323,5 +323,7 @@ struct NodeGroup: Codable, Identifiable, Hashable {
     }
 }
 #Preview {
+    @Previewable var navManager = NavigationManager()
     NodeView()
+        .environmentObject(navManager)
 }
