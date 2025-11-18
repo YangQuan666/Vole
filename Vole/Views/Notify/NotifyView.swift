@@ -15,46 +15,25 @@ struct NotifyView: View {
     @ObservedObject private var userManager = UserManager.shared
 
     var body: some View {
-        NavigationStack(path: $navManager.nodePath) {
-            Group {
+        NavigationStack(path: $navManager.notifyPath) {
+            List {
                 if isLoading {
-                    ProgressView("加载中…")
-                        .padding()
+                    HStack {
+                        Spacer()
+                        ProgressView("加载中…")
+                        Spacer()
+                    }
                 } else if notifications.isEmpty {
-                    Text("暂无通知")
-                        .foregroundColor(.secondary)
-                        .padding()
+                    HStack {
+                        Spacer()
+                        Text("暂无通知")
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
                 } else {
-                    List(notifications, id: \.id) { item in
-                        VStack(alignment: .leading, spacing: 6) {
-                            // 主内容 text
-                            if let text = item.text,
-                                let topic = parseTopic(html: text)
-                            {
-                                Text(topic.title ?? "")
-                                    .font(.subheadline)
-                            }
-                            // 拼接文本，username 蓝色
-                            HStack {
-                                (Text(item.member?.username ?? "")
-                                    .foregroundColor(.accentColor)
-                                    .font(.headline)
-                                    + Text(" 回复了你：")
-                                    .font(.headline))
-                            }
-                            // payload
-                            if let payload = item.payload {
-                                Text(payload)
-                                    .font(.body)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        .padding(.vertical, 6)
-                        .onTapGesture {
-                            // 你自己决定路由逻辑
-                            navManager.notifyPath.append(
-                                Route.topicId(1_163_971)
-                            )
+                    ForEach(notifications, id: \.id) { item in
+                        NotifyRowView(item: item) { topicId in
+                            navManager.notifyPath.append(Route.topicId(topicId))
                         }
                     }
                 }
@@ -71,12 +50,14 @@ struct NotifyView: View {
             .navigationDestination(for: Route.self) { route in
                 switch route {
                 case .topicId(let topicId):
-                    DetailView(topicId: topicId, path: $navManager.nodePath)
+                    DetailView(topicId: topicId, path: $navManager.notifyPath)
                 case .nodeName(let nodeName):
                     NodeDetailView(
                         nodeName: nodeName,
                         path: $navManager.nodePath
                     )
+                case .node(let node):
+                    NodeDetailView(node: node, path: $navManager.notifyPath)
                 default: EmptyView()
                 }
             }
@@ -108,35 +89,13 @@ struct NotifyView: View {
         isLoading = false
     }
 
-    private func parseTopic(html: String) -> Topic? {
-        do {
-            let document = try SwiftSoup.parse(html)
-            let link = try document.select("a").select(".topic-link").first()
-            if let link = link {
-                let href = try link.attr("href")
-                let title = try link.text()
-                return Topic(
-                    id: 0,
-                    member: nil,
-                    title: title,
-                    url: nil,
-                    created: nil,
-                    deleted: nil,
-                    content: href,
-                    contentRendered: nil,
-                    syntax: nil,
-                    lastModified: nil,
-                    replies: nil,
-                    lastReplyBy: nil,
-                    lastTouched: nil,
-                    supplements: nil
-                )
-            }
-        } catch {
-            print(error.localizedDescription)
-        }
-        return nil
-    }
+}
+
+struct ParsedNotification {
+    let username: String
+    let action: String
+    let topicTitle: String?
+    let topicId: Int?
 }
 
 #Preview {
