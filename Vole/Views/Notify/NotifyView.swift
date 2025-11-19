@@ -34,7 +34,6 @@ struct NotifyView: View {
                     }
                     .listRowSeparator(.hidden)
                 } else {
-
                     Section {
                         ForEach(notifications, id: \.id) { item in
                             NotifyRowView(item: item) { topicId in
