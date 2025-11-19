@@ -5,52 +5,58 @@
 //  Created by 杨权 on 11/18/25.
 //
 
-import SwiftUI
 import SwiftSoup
+import SwiftUI
 
 struct NotifyRowView: View {
     let item: Notification
     let onTap: (Int) -> Void
     @ObservedObject private var notifyManager = NotifyManager.shared
 
-        var body: some View {
-            let parsed = parseNotificationHTML(item.text ?? "")
+    var body: some View {
+        let parsed = parseNotificationHTML(item.text ?? "")
 
-            VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 6) {
 
-                if let title = parsed?.topicTitle {
-                    Text(title)
-                        .font(.subheadline)
-                        .foregroundStyle(notifyManager.isRead(item.id) ? .secondary : .primary)
-                }
-
-                if let p = parsed {
-                    (Text(p.username).foregroundStyle(.blue).font(.headline)
-                     + Text(p.action).font(.headline))
-                    .foregroundStyle(notifyManager.isRead(item.id) ? .secondary : .primary)
-                }
-
-                if let payload = item.payload {
-                    Text(payload)
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                }
+            if let title = parsed?.topicTitle {
+                Text(title)
+                    .font(.subheadline)
+                    .foregroundStyle(
+                        notifyManager.isRead(item.id) ? .secondary : .primary
+                    )
             }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                if let topicId = parsed?.topicId {
-                    notifyManager.markRead(item.id)
-                    onTap(topicId)
-                }
+
+            if let p = parsed {
+                (Text(p.username).foregroundStyle(.blue).font(.headline)
+                    + Text(p.action).font(.headline))
+                    .foregroundStyle(
+                        notifyManager.isRead(item.id) ? .secondary : .primary
+                    )
             }
-            .swipeActions(edge: .trailing) {
-                Button("已读") {
-                    notifyManager.markRead(item.id)
-                }
-                .tint(.green)
+
+            if let payload = item.payload {
+                Text(payload)
+                    .font(.body)
+                    .foregroundStyle(.secondary)
             }
         }
-    
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if let topicId = parsed?.topicId {
+                notifyManager.markRead(item.id)
+                onTap(topicId)
+            }
+        }
+        .swipeActions(edge: .trailing) {
+            Button {
+                notifyManager.markRead(item.id)
+            } label: {
+                Label("已读", systemImage: "checkmark")
+            }
+            .tint(.green)
+        }
+    }
+
     private func parseNotificationHTML(_ html: String) -> ParsedNotification? {
         do {
             let doc = try SwiftSoup.parse(html)
@@ -67,8 +73,11 @@ struct NotifyRowView: View {
             // 2.1️⃣ 解析 topicId：/t/776391#reply0 -> 776391
             var topicId: Int? = nil
             if let url = topicURL {
-                if let match = url.split(separator: "/").last?.split(separator: "#").first,
-                   let id = Int(match) {
+                if let match = url.split(separator: "/").last?.split(
+                    separator: "#"
+                ).first,
+                    let id = Int(match)
+                {
                     topicId = id
                 }
             }
@@ -84,7 +93,7 @@ struct NotifyRowView: View {
             } else if fullText.contains("收藏") {
                 actionText = "收藏了你发布的主题"
             } else {
-                actionText = fullText   // 兜底
+                actionText = fullText  // 兜底
             }
 
             return ParsedNotification(
