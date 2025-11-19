@@ -23,6 +23,7 @@ struct NotifyView: View {
                         ProgressView("加载中…")
                         Spacer()
                     }
+                    .listRowSeparator(.hidden)
                 } else if notifications.isEmpty {
                     HStack {
                         Spacer()
@@ -30,6 +31,7 @@ struct NotifyView: View {
                             .foregroundStyle(.secondary)
                         Spacer()
                     }
+                    .listRowSeparator(.hidden)
                 } else {
 
                     Section {
@@ -44,7 +46,7 @@ struct NotifyView: View {
                         HStack {
                             Spacer()
                             Button {
-//                                                                markAllRead()
+                                //markAllRead()
                             } label: {
                                 HStack(spacing: 4) {
                                     Image(systemName: "checkmark.circle")
@@ -56,6 +58,7 @@ struct NotifyView: View {
                     }
                 }
             }
+            .listStyle(.plain)
             .navigationTitle("通知")
             .refreshable {
                 await loadNotifications()
