@@ -31,9 +31,27 @@ struct NotifyView: View {
                         Spacer()
                     }
                 } else {
-                    ForEach(notifications, id: \.id) { item in
-                        NotifyRowView(item: item) { topicId in
-                            navManager.notifyPath.append(Route.topicId(topicId))
+
+                    Section {
+                        ForEach(notifications, id: \.id) { item in
+                            NotifyRowView(item: item) { topicId in
+                                navManager.notifyPath.append(
+                                    Route.topicId(topicId)
+                                )
+                            }
+                        }
+                    } header: {
+                        HStack {
+                            Spacer()
+                            Button {
+//                                                                markAllRead()
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "checkmark.circle")
+                                    Text("一键已读")
+                                }
+                                .font(.subheadline)
+                            }
                         }
                     }
                 }
