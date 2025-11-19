@@ -108,6 +108,16 @@ struct TopicRow: View {
                 Label("分享", systemImage: "square.and.arrow.up")
             }
         }
+        .swipeActions(
+            edge: .trailing,
+            allowsFullSwipe: true
+        ) {
+            ShareLink(item: topic.url ?? "") {
+                Label("分享", systemImage: "square.and.arrow.up")
+            }
+            .tint(.accentColor)
+        }
+
     }
 }
 
