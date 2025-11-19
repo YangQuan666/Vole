@@ -11,7 +11,8 @@ import Foundation
  通知
  */
 public struct Notification: Decodable, Identifiable, Hashable {
-    public let id, memberID, forMemberID: Int?
+    public let id: Int
+    public let memberID, forMemberID: Int?
     public let text, payload, payloadRendered: String?
     public let created: Int?
     public let member: Member?

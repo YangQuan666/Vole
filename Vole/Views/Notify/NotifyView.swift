@@ -13,6 +13,7 @@ struct NotifyView: View {
     @State private var isLoading = false
     @EnvironmentObject var navManager: NavigationManager
     @ObservedObject private var userManager = UserManager.shared
+    @ObservedObject private var notifyManager = NotifyManager.shared
 
     var body: some View {
         NavigationStack(path: $navManager.notifyPath) {
@@ -46,7 +47,7 @@ struct NotifyView: View {
                         HStack {
                             Spacer()
                             Button {
-                                //markAllRead()
+                                notifyManager.markAllRead(notifications.map { $0.id })
                             } label: {
                                 HStack(spacing: 4) {
                                     Image(systemName: "checkmark.circle")

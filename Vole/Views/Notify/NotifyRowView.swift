@@ -11,20 +11,24 @@ import SwiftSoup
 struct NotifyRowView: View {
     let item: Notification
     let onTap: (Int) -> Void
+    @ObservedObject private var notifyManager = NotifyManager.shared
 
-    var body: some View {
-        if let parsed = parseNotificationHTML(item.text ?? "") {
+        var body: some View {
+            let parsed = parseNotificationHTML(item.text ?? "")
+
             VStack(alignment: .leading, spacing: 6) {
-                if let title = parsed.topicTitle {
+
+                if let title = parsed?.topicTitle {
                     Text(title)
                         .font(.subheadline)
+                        .foregroundStyle(notifyManager.isRead(item.id) ? .secondary : .primary)
                 }
 
-                (Text(parsed.username)
-                    .foregroundStyle(.tint)
-                    .font(.headline)
-                 + Text(parsed.action)
-                    .font(.headline))
+                if let p = parsed {
+                    (Text(p.username).foregroundStyle(.blue).font(.headline)
+                     + Text(p.action).font(.headline))
+                    .foregroundStyle(notifyManager.isRead(item.id) ? .secondary : .primary)
+                }
 
                 if let payload = item.payload {
                     Text(payload)
@@ -32,14 +36,20 @@ struct NotifyRowView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .contentShape(Rectangle())  // 👈 必须放在结构稳定的视图上
+            .contentShape(Rectangle())
             .onTapGesture {
-                if let topicId = parsed.topicId {
+                if let topicId = parsed?.topicId {
+                    notifyManager.markRead(item.id)
                     onTap(topicId)
                 }
             }
+            .swipeActions(edge: .trailing) {
+                Button("已读") {
+                    notifyManager.markRead(item.id)
+                }
+                .tint(.green)
+            }
         }
-    }
     
     private func parseNotificationHTML(_ html: String) -> ParsedNotification? {
         do {
