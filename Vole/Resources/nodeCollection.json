@@ -1,0 +1,50 @@
+[
+  {
+    "name": "技术",
+    "systemIcon": "hammer.fill",
+    "colorHex": "indigo",
+    "nodeNames": ["programmer", "cloud", "idev", "rss", "nas", "android"]
+  },
+  {
+    "name": "创意",
+    "systemIcon": "sparkles.2",
+    "colorHex": "green",
+    "nodeNames": ["create", "design", "ideas"]
+  },
+  {
+    "name": "好玩",
+    "systemIcon": "puzzlepiece.fill",
+    "colorHex": "cyan",
+    "nodeNames": ["share", "bb", "music", "movie", "travel", "afterdark"]
+  },
+  {
+    "name": "Apple",
+    "systemIcon": "apple.logo",
+    "colorHex": "gray",
+    "nodeNames": ["apple", "iphone", "ipad", "mbp", "macos", "ios", "appletv", "idev"]
+  },
+  {
+    "name": "酷工作",
+    "systemIcon": "apple.logo",
+    "colorHex": "brown",
+    "nodeNames": ["jobs", "cv", "career", "meet", "outsourcing", "remote"]
+  },
+  {
+    "name": "交易",
+    "systemIcon": "creditcard.fill",
+    "colorHex": "teal",
+    "nodeNames": ["all4all", "exchange", "free", "dn", "tuan"]
+  },
+  {
+    "name": "城市",
+    "systemIcon": "building.2.fill",
+    "colorHex": "blue",
+    "nodeNames": ["life", "beijing", "shanghai", "shenzhen", "guangzhou", "hangzhou", "chengdu"]
+  },
+  {
+    "name": "问与答",
+    "systemIcon": "questionmark.bubble.fill",
+    "colorHex": "blue",
+    "nodeNames": ["qna"]
+  }
+]

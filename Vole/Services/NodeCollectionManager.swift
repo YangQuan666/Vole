@@ -16,82 +16,34 @@ class NodeCollectionManager {
     private let saveKey = "node_collections_v1"
 
     init() {
-//         UserDefaults.standard.removeObject(forKey: saveKey)
-         loadDefaultCollections()
-//        load()
-//        if collections.isEmpty {
-//            loadDefaultCollections()
-//        }
+        //         UserDefaults.standard.removeObject(forKey: saveKey)
+        loadDefaultCollections()
+        //        load()
+        //        if collections.isEmpty {
+        //            loadDefaultCollections()
+        //        }
     }
 
     // MARK: - 默认合集
     private func loadDefaultCollections() {
-        let tech = NodeCollection(
-            name: "技术",
-            systemIcon: "hammer.fill",
-            colorHex: "indigo",
-            nodeNames: ["programmer", "cloud", "idev", "rss", "nas", "android"]
-        )
-        let creative = NodeCollection(
-            name: "创意",
-            systemIcon: "sparkles.2",
-            colorHex: "green",
-            nodeNames: ["create", "design", "ideas"]
-        )
-        let fun = NodeCollection(
-            name: "好玩",
-            systemIcon: "puzzlepiece.fill",
-            colorHex: "cyan",
-            nodeNames: ["share", "bb", "music", "movie", "travel", "afterdark"]
-        )
-        let apple = NodeCollection(
-            name: "Apple",
-            systemIcon: "apple.logo",
-            colorHex: "gray",
-            nodeNames: [
-                "apple", "iphone", "ipad", "mbp", "macos", "ios", "appletv",
-                "idev",
-            ]
-        )
-        let job = NodeCollection(
-            name: "酷工作",
-            systemIcon: "apple.logo",
-            colorHex: "brown",
-            nodeNames: [
-                "jobs", "cv", "career", "meet", "outsourcing", "remote",
-            ]
-        )
-        let exchange = NodeCollection(
-            name: "交易",
-            systemIcon: "creditcard.fill",
-            colorHex: "teal",
-            nodeNames: ["all4all", "exchange", "free", "dn", "tuan"]
-        )
-        let city = NodeCollection(
-            name: "城市",
-            systemIcon: "building.2.fill",
-            colorHex: "blue",
-            nodeNames: [
-                "life", "beijing", "shanghai", "shenzhen", "guangzhou",
-                "hangzhou", "chengdu",
-            ]
-        )
-        let ask = NodeCollection(
-            name: "问与答",
-            systemIcon: "questionmark.bubble.fill",
-            colorHex: "blue",
-            nodeNames: ["qna"]
-        )
-        //        let xna = NodeCollection(
-        //            name: "VXNA",
-        //            systemIcon: "globe.fill",
-        //            colorHex: "yellow",
-        //            nodeNames: ["vxna"]
-        //        )
-        collections = [
-            tech, creative, fun, apple, job, exchange, city, ask,
-        ]
-        save()
+        guard
+            let url = Bundle.main.url(
+                forResource: "nodes",
+                withExtension: "json"
+            )
+        else {
+            print("❌ nodes.json not found")
+            return
+        }
+        do {
+            let data = try Data(contentsOf: url)
+            collections = try JSONDecoder().decode(
+                [NodeCollection].self,
+                from: data
+            )
+        } catch {
+            print("❌ Failed to decode nodes.json: \(error)")
+        }
     }
 
     // MARK: - CRUD 集合
