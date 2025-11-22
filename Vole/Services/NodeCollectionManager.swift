@@ -28,7 +28,7 @@ class NodeCollectionManager {
     private func loadDefaultCollections() {
         guard
             let url = Bundle.main.url(
-                forResource: "nodes",
+                forResource: "nodeCollection",
                 withExtension: "json"
             )
         else {
