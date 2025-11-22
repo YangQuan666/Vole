@@ -6,6 +6,7 @@
 //
 
 import Kingfisher
+import SwiftSoup
 import SwiftUI
 
 struct NodeDetailView: View {
@@ -70,12 +71,11 @@ struct NodeDetailView: View {
                             }
 
                             // header 简介
-                            if let header = node.header, !header.isEmpty {
-                                Text(header)
-                                    .font(.body)
+                            let text = parseHTML(node.header)
+                            if  !text.isEmpty{
+                                Text(text)
+                                    .font(.subheadline)
                                     .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.center)
-                                    .padding(.horizontal)
                             }
 
                             // aliases 标签组
@@ -221,6 +221,18 @@ struct NodeDetailView: View {
 
         if let node {
             await loadTopics(name: node.name, page: currentPage + 1)
+        }
+    }
+
+    private func parseHTML(_ html: String?) -> String {
+        guard let content = html else { return "" }
+        do {
+            let doc = try SwiftSoup.parse(content)
+            let fullText = try doc.text()
+            return fullText
+        } catch {
+            print("HTML 解析失败: \(error)")
+            return ""
         }
     }
 }
