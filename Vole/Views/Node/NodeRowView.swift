@@ -17,23 +17,28 @@ struct NodeRowView: View {
         HStack {
             // 左侧头像
             if let avatarURL = node.avatarLarge,
-                let url = makeFullURL(from: avatarURL)
+               let url = makeFullURL(from: avatarURL)
             {
                 KFImage(url)
                     .placeholder {
                         Color.gray
+                            .cornerRadius(8)
                     }
                     .resizable()
                     .scaledToFit()
                     .frame(width: 50, height: 50)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.secondary.opacity(0.2))
+                    )
             } else {
-                Circle()
+                RoundedRectangle(cornerRadius: 8)
                     .fill(Color.gray.opacity(0.2))
                     .frame(width: 50, height: 50)
             }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(node.title ?? "")
+                Text(node.title ?? node.name)
                     .font(.headline)
                     .lineLimit(1)
 
