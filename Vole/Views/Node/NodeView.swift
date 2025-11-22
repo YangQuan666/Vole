@@ -102,7 +102,7 @@ struct NodeView: View {
                     List(Array(group.nodes.enumerated()), id: \.1.id) {
                         index,
                         node in
-                        NodeCardView(node: node)
+                        NodeRowView(node: node)
                             .onTapGesture {
                                 navManager.nodePath.append(Route.node(node))
                             }
@@ -164,7 +164,7 @@ struct NodeView: View {
                                 Button {
                                     navManager.nodePath.append(Route.node(node))
                                 } label: {
-                                    NodeCardView(node: node)
+                                    NodeRowView(node: node)
                                         .frame(width: cardWidth)
                                 }
                                 .buttonStyle(.plain)

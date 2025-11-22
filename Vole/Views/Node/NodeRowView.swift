@@ -8,7 +8,7 @@
 import Kingfisher
 import SwiftUI
 
-struct NodeCardView: View {
+struct NodeRowView: View {
     let node: Node
     private let baseURL = URL(string: "https://www.v2ex.com")!
 
@@ -59,6 +59,6 @@ struct NodeCardView: View {
 
 #Preview {
     if let node = ModelData().topics[0].node {
-        NodeCardView(node: node)
+        NodeRowView(node: node)
     }
 }
