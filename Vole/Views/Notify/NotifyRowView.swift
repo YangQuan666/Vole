@@ -39,7 +39,13 @@ struct NotifyRowView: View {
                     .font(.body)
                     .foregroundStyle(.secondary)
             }
+            if let created = item.created {
+                Text(formattedTime(created))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
         .onTapGesture {
             if let topicId = parsed?.topicId {
@@ -111,5 +117,18 @@ struct NotifyRowView: View {
 }
 
 #Preview {
-    //    NotifyRowView()
+    let notification = Notification(
+        id: 1,
+        memberID: 123,
+        forMemberID: 456,
+        text:
+            "<a href=\"/member/tomyail\" target=\"_blank\"><strong>tomyail</strong></a> 在回复 <a href=\"/t/1163971#reply3\" class=\"topic-link\">摸鱼刷 Reddit 太累了？写了个 AI 总结工具，一键看精华</a> 时提到了你",
+        payload: "@oligi 有查询频率限制，没有次数限制",
+        payloadRendered: nil,
+        created: 123123,
+        member: nil
+    )
+    NotifyRowView(item: notification) { topicId in
+
+    }
 }
