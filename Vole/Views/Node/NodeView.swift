@@ -246,7 +246,8 @@ struct NodeView: View {
 
         // 找出根节点（parentNodeName == nil 或 parent 不存在）
         let roots: [Node] = nodes.filter {
-            $0.parentNodeName == nil || $0.name == "v2ex" || nameMap[$0.parentNodeName ?? ""] == nil
+            $0.parentNodeName == nil || $0.name == "v2ex"
+                || nameMap[$0.parentNodeName ?? ""] == nil
         }
 
         // BFS 展平所有后代（包括 root 自身）
