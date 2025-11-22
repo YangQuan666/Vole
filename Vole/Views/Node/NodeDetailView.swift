@@ -56,23 +56,29 @@ struct NodeDetailView: View {
 
                             // 发帖 + 星标
                             HStack(spacing: 24) {
-                                Label(
-                                    "\(node.topics ?? 0)",
-                                    systemImage:
-                                        "list.bullet.rectangle.portrait"
-                                )
-                                .font(.subheadline)
-                                Label(
-                                    "\(node.stars ?? 0)",
-                                    systemImage: "star.fill"
-                                )
-                                .font(.subheadline)
-                                .foregroundColor(.yellow)
+                                if let topics = node.topics, topics > 0 {
+                                    HStack(spacing: 8) {
+                                        Image(
+                                            systemName: "append.page.fill"
+                                        )
+                                        .foregroundColor(.blue)
+                                        Text("\(topics)")
+                                    }
+                                }
+                                if let stars = node.stars, stars > 0 {
+                                    HStack(spacing: 8) {
+                                        Image(
+                                            systemName: "star.fill"
+                                        )
+                                        .foregroundColor(.yellow)
+                                        Text("\(stars)")
+                                    }
+                                }
                             }
 
                             // header 简介
                             let text = parseHTML(node.header)
-                            if  !text.isEmpty{
+                            if !text.isEmpty {
                                 Text(text)
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
