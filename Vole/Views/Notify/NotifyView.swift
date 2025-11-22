@@ -10,23 +10,15 @@ import SwiftUI
 
 struct NotifyView: View {
     @State private var notifications: [Notification] = []
-    @State private var isLoading = false
     @EnvironmentObject var navManager: NavigationManager
     @ObservedObject private var userManager = UserManager.shared
     @ObservedObject private var notifyManager = NotifyManager.shared
 
     var body: some View {
         NavigationStack(path: $navManager.notifyPath) {
-            List {
-                if isLoading {
-                    HStack {
-                        Spacer()
-                        ProgressView("加载中…")
-                        Spacer()
-                    }
-                    .listRowSeparator(.hidden)
-                } else if notifications.isEmpty {
-                    HStack {
+            Group {
+                if notifications.isEmpty {
+                    VStack {
                         Spacer()
                         Text("暂无通知")
                             .foregroundStyle(.secondary)
@@ -34,35 +26,40 @@ struct NotifyView: View {
                     }
                     .listRowSeparator(.hidden)
                 } else {
-                    Section {
-                        ForEach(notifications, id: \.id) { item in
-                            NotifyRowView(item: item) { topicId in
-                                navManager.notifyPath.append(
-                                    Route.topicId(topicId)
-                                )
-                            }
-                        }
-                    } header: {
-                        HStack {
-                            Spacer()
-                            Button {
-                                notifyManager.markAllRead(notifications.map { $0.id })
-                            } label: {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "checkmark.circle")
-                                    Text("一键已读")
+                    List {
+                        Section {
+                            ForEach(notifications, id: \.id) { item in
+                                NotifyRowView(item: item) { topicId in
+                                    navManager.notifyPath.append(
+                                        Route.topicId(topicId)
+                                    )
                                 }
-                                .font(.subheadline)
+                            }
+                        } header: {
+                            HStack {
+                                Spacer()
+                                Button {
+                                    notifyManager.markAllRead(
+                                        notifications.map { $0.id }
+                                    )
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "checkmark.circle")
+                                        Text("一键已读")
+                                    }
+                                    .font(.subheadline)
+                                }
                             }
                         }
+
+                    }
+                    .listStyle(.plain)
+                    .refreshable {
+                        await loadNotifications()
                     }
                 }
             }
-            .listStyle(.plain)
             .navigationTitle("通知")
-            .refreshable {
-                await loadNotifications()
-            }
             .task {
                 if notifications.isEmpty {  // 防止重复加载
                     await loadNotifications()
@@ -95,7 +92,6 @@ struct NotifyView: View {
     // 加载数据
     private func loadNotifications() async {
         guard let t = userManager.token else { return }
-        isLoading = true
         do {
             let response = try await V2exAPI().notifications(
                 page: 1,
@@ -107,9 +103,7 @@ struct NotifyView: View {
         } catch {
             print(error.localizedDescription)
         }
-        isLoading = false
     }
-
 }
 
 struct ParsedNotification {
