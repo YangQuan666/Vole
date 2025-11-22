@@ -89,15 +89,10 @@ struct NodeView: View {
                                         .frame(width: cardWidth)
                                         .scrollTargetLayout()
                                     }
-
-                                    // 加入一个透明 Spacer，让最后一页右对齐
-                                    Color.clear
-                                        .frame(width: (UIScreen.main.bounds.width - cardWidth) / 2)
-                                        .scrollTargetLayout()
                                 }
-                                .padding(.leading, 16)  // 第一页贴左
                             }
                             .scrollTargetBehavior(.viewAligned)
+                            //                            .gesture(DragGesture().onChanged { _ in })
                         }
                     }
                 }
