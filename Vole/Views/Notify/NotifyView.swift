@@ -9,7 +9,7 @@ import SwiftSoup
 import SwiftUI
 
 struct NotifyView: View {
-    @State private var notifications: [Notification] = []
+    @State private var notifications: [Notification]? = nil
     @EnvironmentObject var navManager: NavigationManager
     @ObservedObject private var userManager = UserManager.shared
     @ObservedObject private var notifyManager = NotifyManager.shared
@@ -17,41 +17,54 @@ struct NotifyView: View {
     var body: some View {
         NavigationStack(path: $navManager.notifyPath) {
             Group {
-                if notifications.isEmpty {
+                if notifications == nil {
+                    // 加载中 UI
                     VStack {
-                        Spacer()
-                        Text("暂无通知")
-                            .foregroundStyle(.secondary)
-                        Spacer()
+                        ProgressView("加载中…")
+                            .progressViewStyle(.circular)
+                            .padding()
                     }
-                    .listRowSeparator(.hidden)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     List {
                         Section {
-                            ForEach(notifications, id: \.id) { item in
-                                NotifyRowView(item: item) { topicId in
-                                    navManager.notifyPath.append(
-                                        Route.topicId(topicId)
+                            if let notifications, notifications.isEmpty {
+                                Text("暂无通知")
+                                    .foregroundStyle(.secondary)
+                                    .frame(
+                                        maxWidth: .infinity,
+                                        alignment: .center
                                     )
+                                    .listRowSeparator(.hidden)
+                            } else {
+                                ForEach(notifications ?? [], id: \.id) { item in
+                                    NotifyRowView(item: item) { topicId in
+                                        navManager.notifyPath.append(
+                                            Route.topicId(topicId)
+                                        )
+                                    }
                                 }
                             }
                         } header: {
-                            HStack {
-                                Spacer()
-                                Button {
-                                    notifyManager.markAllRead(
-                                        notifications.map { $0.id }
-                                    )
-                                } label: {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "checkmark.circle")
-                                        Text("一键已读")
+                            if let notifications, !notifications.isEmpty {
+                                HStack {
+                                    Spacer()
+                                    Button {
+                                        notifyManager.markAllRead(
+                                            notifications.map { $0.id }
+                                        )
+                                    } label: {
+                                        HStack(spacing: 4) {
+                                            Image(
+                                                systemName: "checkmark.circle"
+                                            )
+                                            Text("一键已读")
+                                        }
+                                        .font(.subheadline)
                                     }
-                                    .font(.subheadline)
                                 }
                             }
                         }
-
                     }
                     .listStyle(.plain)
                     .refreshable {
@@ -61,7 +74,7 @@ struct NotifyView: View {
             }
             .navigationTitle("通知")
             .task {
-                if notifications.isEmpty {  // 防止重复加载
+                if notifications == nil {
                     await loadNotifications()
                 }
             }
@@ -91,7 +104,10 @@ struct NotifyView: View {
 
     // 加载数据
     private func loadNotifications() async {
-        guard let t = userManager.token else { return }
+        guard let t = userManager.token else {
+            notifications = []
+            return
+        }
         do {
             let response = try await V2exAPI().notifications(
                 page: 1,
