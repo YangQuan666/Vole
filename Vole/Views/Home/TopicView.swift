@@ -78,15 +78,15 @@ struct TopicRow: View {
                         formattedTime(created)
                     )
                     .font(.caption)
-                    .foregroundColor(.gray)
+                    .foregroundColor(.secondary)
                 }
                 if let replies = topic.replies {
                     HStack(spacing: 4) {  // 图标和文字间距
                         Image(systemName: "ellipsis.bubble")
-                            .foregroundColor(.gray)  // 图标颜色
+                            .foregroundColor(.secondary)  // 图标颜色
                         Text("\(replies)")
                             .font(.subheadline)
-                            .foregroundColor(.gray)
+                            .foregroundColor(.secondary)
                     }
                 }
             }

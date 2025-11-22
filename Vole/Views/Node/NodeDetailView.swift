@@ -254,7 +254,7 @@ struct AliasesView: View {
                     .font(.caption)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
-                    .background(Color.gray.opacity(0.15))
+                    .background(Color.secondary.opacity(0.15))
                     .clipShape(Capsule())
             }
         }

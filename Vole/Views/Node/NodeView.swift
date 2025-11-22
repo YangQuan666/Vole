@@ -50,7 +50,7 @@ struct NodeView: View {
                                         .padding(.horizontal, 12)
                                         .background(
                                             Capsule().fill(
-                                                Color.gray.opacity(0.1)
+                                                Color.secondary.opacity(0.1)
                                             )
                                         )
                                         .onTapGesture {
