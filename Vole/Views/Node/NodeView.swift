@@ -20,85 +20,68 @@ struct NodeView: View {
 
     var body: some View {
         NavigationStack(path: $navManager.nodePath) {
-            ScrollView(.vertical) {
-                VStack(alignment: .leading, spacing: 24) {
 
-                    // 分类横向滚动
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
-                            ForEach(collections, id: \.self) { collection in
-                                HStack(spacing: 8) {
-                                    Image(systemName: collection.systemIcon)
-                                        .foregroundColor(collection.color)
-                                    Text(collection.name)
-                                }
-                                .padding(.vertical, 8)
-                                .padding(.horizontal, 12)
-                                .background(
-                                    Capsule()
-                                        .fill(Color.gray.opacity(0.1))
-                                )
-                                .onTapGesture {
-                                    navManager.nodePath.append(Route.nodeCollect(collection))
-                                }
-                            }
-                        }
-                        .padding(.horizontal)
+            Group {
+                if groups.isEmpty {
+                    VStack {
+                        ProgressView("加载中…")
+                            .progressViewStyle(.circular)
+                            .padding()
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ScrollView(.vertical) {
+                        VStack(alignment: .leading, spacing: 24) {
 
-                    ForEach(groups) { group in
-                        LazyVStack(alignment: .leading, spacing: 12) {
-                            NavigationLink(value: Route.moreNode(group)) {
-                                HStack {
-                                    Text(group.root.title ?? "")
-                                        .font(.title3.bold())
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundColor(.secondary)
-                                    Spacer()
-                                }
-                                .contentShape(Rectangle()) // 整行可点
-                            }
-                            .buttonStyle(.plain)
-                            .padding(.horizontal)
-
-                            // 横向滚动内容保持不变
+                            // 分类横向滚动
                             ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 16) {
-                                    let limitedNodes = Array(group.nodes.prefix(15))
-                                    let columns = stride(from: 0, to: limitedNodes.count, by: maxRows).map {
-                                        Array(limitedNodes[$0..<min($0 + maxRows, limitedNodes.count)])
-                                    }
-
-                                    ForEach(columns.indices, id: \.self) { i in
-                                        VStack(spacing: 0) {
-                                            ForEach(columns[i].indices, id: \.self) { j in
-                                                let node = columns[i][j]
-                                                Button {
-                                                    navManager.nodePath.append(Route.node(node))
-                                                } label: {
-                                                    NodeCardView(node: node)
-                                                        .frame(width: cardWidth)
-                                                }
-                                                .buttonStyle(.plain)
-                                                if j < columns[i].count - 1 {
-                                                    Divider().padding(.leading, 16)
-                                                }
-                                            }
+                                HStack(spacing: 12) {
+                                    ForEach(collections, id: \.self) {
+                                        collection in
+                                        HStack(spacing: 8) {
+                                            Image(
+                                                systemName: collection
+                                                    .systemIcon
+                                            )
+                                            .foregroundColor(collection.color)
+                                            Text(collection.name)
                                         }
-                                        .frame(width: cardWidth)
-                                        .scrollTargetLayout()
+                                        .padding(.vertical, 8)
+                                        .padding(.horizontal, 12)
+                                        .background(
+                                            Capsule().fill(
+                                                Color.gray.opacity(0.1)
+                                            )
+                                        )
+                                        .onTapGesture {
+                                            navManager.nodePath.append(
+                                                Route.nodeCollect(collection)
+                                            )
+                                        }
                                     }
                                 }
+                                .padding(.horizontal)
                             }
-                            .scrollTargetBehavior(.viewAligned)
-                            //                            .gesture(DragGesture().onChanged { _ in })
+
+                            // 分组内容
+                            ForEach(groups) { group in
+                                groupSection(group)
+                            }
                         }
+                        .padding(.vertical)
                     }
                 }
-                .padding(.vertical)
             }
+
             .navigationTitle("节点")
+            .task {
+                if groups.isEmpty {
+                    await refreshNodes(force: false)
+                }
+            }
+            .refreshable {
+                await refreshNodes(force: true)
+            }
             .navigationDestination(for: Route.self) { route in
                 switch route {
                 case .topicId(let topicId):
@@ -106,16 +89,27 @@ struct NodeView: View {
                 case .node(let node):
                     NodeDetailView(node: node, path: $navManager.nodePath)
                 case .nodeName(let nodeName):
-                    NodeDetailView(nodeName: nodeName, path: $navManager.nodePath)
+                    NodeDetailView(
+                        nodeName: nodeName,
+                        path: $navManager.nodePath
+                    )
                 case .nodeCollect(let nodeCollection):
-                    NodeCollectionView(collection: nodeCollection, path: $navManager.nodePath)
+                    NodeCollectionView(
+                        collection: nodeCollection,
+                        path: $navManager.nodePath
+                    )
                 case .moreNode(let group):
-                    List(Array(group.nodes.enumerated()), id: \.1.id) { index, node in
+                    List(Array(group.nodes.enumerated()), id: \.1.id) {
+                        index,
+                        node in
                         NodeCardView(node: node)
                             .onTapGesture {
                                 navManager.nodePath.append(Route.node(node))
                             }
-                            .listRowSeparator(index == 0 ? .hidden : .visible, edges: .top)
+                            .listRowSeparator(
+                                index == 0 ? .hidden : .visible,
+                                edges: .top
+                            )
                     }
                     .listStyle(.plain)
                     .navigationTitle(group.root.title ?? group.root.name)
@@ -129,15 +123,63 @@ struct NodeView: View {
                         .foregroundStyle(.gray)
                 }
             }
-            .refreshable {
-                await refreshNodes(force: true)
-            }
-            .task {
-                // 首次进入页面时加载
-                if groups.isEmpty {
-                    await refreshNodes(force: false)
+        }
+    }
+
+    // 单独抽出 group section，减少 body 复杂度
+    @ViewBuilder
+    private func groupSection(_ group: NodeGroup) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            NavigationLink(value: Route.moreNode(group)) {
+                HStack {
+                    Text(group.root.title ?? "")
+                        .font(.title3.bold())
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                    Spacer()
                 }
             }
+            .buttonStyle(.plain)
+            .padding(.horizontal)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 16) {
+                    let limitedNodes = Array(group.nodes.prefix(15))
+                    let columns = stride(
+                        from: 0,
+                        to: limitedNodes.count,
+                        by: maxRows
+                    ).map {
+                        Array(
+                            limitedNodes[
+                                $0..<min($0 + maxRows, limitedNodes.count)
+                            ]
+                        )
+                    }
+
+                    ForEach(columns.indices, id: \.self) { i in
+                        VStack(spacing: 0) {
+                            ForEach(columns[i].indices, id: \.self) { j in
+                                let node = columns[i][j]
+                                Button {
+                                    navManager.nodePath.append(Route.node(node))
+                                } label: {
+                                    NodeCardView(node: node)
+                                        .frame(width: cardWidth)
+                                }
+                                .buttonStyle(.plain)
+
+                                if j < columns[i].count - 1 {
+                                    Divider().padding(.leading, 16)
+                                }
+                            }
+                        }
+                        .frame(width: cardWidth)
+                        .scrollTargetLayout()
+                    }
+                }
+            }
+            .scrollTargetBehavior(.viewAligned)
         }
     }
 
