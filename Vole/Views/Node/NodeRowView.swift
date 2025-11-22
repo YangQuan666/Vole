@@ -17,7 +17,7 @@ struct NodeRowView: View {
         HStack {
             // 左侧头像
             if let avatarURL = node.avatarLarge,
-               let url = makeFullURL(from: avatarURL)
+                let url = makeFullURL(from: avatarURL)
             {
                 KFImage(url)
                     .placeholder {
@@ -25,8 +25,9 @@ struct NodeRowView: View {
                             .cornerRadius(8)
                     }
                     .resizable()
-                    .scaledToFit()
+                    .scaledToFill()
                     .frame(width: 50, height: 50)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
                     .background(
                         RoundedRectangle(cornerRadius: 8)
                             .fill(Color.secondary.opacity(0.2))
