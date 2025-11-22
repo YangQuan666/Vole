@@ -16,6 +16,14 @@ struct NodeCollection: Identifiable, Codable, Hashable {
     var nodeNames: [String] = []
 
     var color: Color { Color(named: colorHex) }
+
+    enum CodingKeys: String, CodingKey {
+        case name
+        case systemIcon
+        case colorHex
+        case nodeNames
+        // id 不列入 keys，这样 JSON 里没有 id 也不会报错
+    }
 }
 
 extension Color {
