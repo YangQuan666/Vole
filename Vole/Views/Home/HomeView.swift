@@ -36,7 +36,9 @@ struct HomeView: View {
                     List {
                         ForEach(topics) { topic in
                             TopicRow(topic: topic) {
-                                navManager.homePath.append(Route.topicId(topic.id))
+                                navManager.homePath.append(
+                                    Route.topicId(topic.id)
+                                )
                             }
                         }
                     }
@@ -45,13 +47,10 @@ struct HomeView: View {
                         await loadTopics(for: selection)
                     }
                 } else {
-                    VStack {
-                        Spacer()
+                    ZStack {
                         ProgressView("加载中…")
-                            .progressViewStyle(.circular)
-                            .padding()
-                        Spacer()
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
             .navigationTitle("首页")
@@ -62,7 +61,10 @@ struct HomeView: View {
                 case .node(let node):
                     NodeDetailView(node: node, path: $navManager.homePath)
                 case .nodeName(let nodeName):
-                    NodeDetailView(nodeName: nodeName, path: $navManager.nodePath)
+                    NodeDetailView(
+                        nodeName: nodeName,
+                        path: $navManager.nodePath
+                    )
                 default:
                     EmptyView()
                 }
