@@ -32,7 +32,7 @@ class DateConverter {
         ]
     
         guard let date = isoFormatter.date(from: isoDateString) else {
-            return "N/A" // 解析失败返回默认值，避免返回空字符串
+            return ""
         }
         
         // 使用 RelativeDateTimeFormatter 格式化
