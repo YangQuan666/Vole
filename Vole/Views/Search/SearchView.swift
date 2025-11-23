@@ -154,7 +154,9 @@ struct SearchView: View {
                     Spacer()
 
                     Text(
-                        res.source.created
+                        DateConverter.relativeTimeString(
+                            isoDateString: res.source.created
+                        )
                     )
                     .font(.caption)
                     .foregroundColor(.secondary)

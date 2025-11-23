@@ -16,4 +16,28 @@ class DateConverter {
         formatter.unitsStyle = .full
         return formatter.localizedString(for: date, relativeTo: Date())
     }
+    
+    // iso时间转为相对时间
+    static func relativeTimeString(isoDateString: String) -> String {
+        let isoFormatter = ISO8601DateFormatter()
+        
+        // 关键修改：移除 .withInternetDateTime，并明确列出所有需要的组件
+        isoFormatter.formatOptions = [
+            .withYear,
+            .withMonth,
+            .withDay,
+            .withTime,
+            .withDashSeparatorInDate,
+            .withColonSeparatorInTime
+        ]
+    
+        guard let date = isoFormatter.date(from: isoDateString) else {
+            return "N/A" // 解析失败返回默认值，避免返回空字符串
+        }
+        
+        // 使用 RelativeDateTimeFormatter 格式化
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
 }
