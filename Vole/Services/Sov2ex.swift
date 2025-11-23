@@ -8,7 +8,12 @@
 import Foundation
 
 // MARK: - Response Models (响应模型)
-
+struct SearchPagingState {
+    // 固定的每页大小，作为我们发送给 API 的 size 参数
+    let pageSize: Int = 20
+    var totalResults: Int? = nil     // 从 API 的 total 字段获取
+    var currentOffset: Int = 0       // 当前已加载的条数 (from)
+}
 /// 顶层响应结构
 struct SoV2exResponse: Codable {
     let took: Int
