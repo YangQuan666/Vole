@@ -48,6 +48,13 @@ struct SearchView: View {
             .onSubmit(of: .search) {
                 Task { await performSearch() }
             }
+            .onChange(of: searchText) { oldValue, newValue in
+                // 当输入框变为空时，重置所有搜索状态
+                if newValue.isEmpty {
+                    results = []        // 清空结果数据
+                    isLoading = false   // 如果正在加载中，也强制停止加载状态
+                }
+            }
             .navigationDestination(for: Route.self) { route in
                 routeDestination(for: route)
             }
