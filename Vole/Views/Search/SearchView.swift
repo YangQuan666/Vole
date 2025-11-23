@@ -128,10 +128,7 @@ struct SearchView: View {
     // 结果列表视图
     private var resultsListView: some View {
         List(results) { res in
-            // 这里假设你有对应的 Row View
-            // TopicRow(topic: res.source)
 
-            // 临时使用 Text 代替展示
             VStack(alignment: .leading, spacing: 5) {
                 HStack {
                     Text(res.source.member)
@@ -191,8 +188,7 @@ struct SearchView: View {
         }
     }
 
-    // MARK: - Logic
-
+    // 执行搜索
     private func performSearch() async {
         let keyword = searchText.trimmingCharacters(in: .whitespaces)
         guard !keyword.isEmpty else {
