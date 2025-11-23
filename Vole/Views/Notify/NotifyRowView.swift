@@ -40,7 +40,7 @@ struct NotifyRowView: View {
                     .foregroundStyle(.secondary)
             }
             if let created = item.created {
-                Text(formattedTime(created))
+                Text(DateConverter.relativeTimeString(created))
                     .font(.caption)
                     .foregroundColor(.secondary)
             }

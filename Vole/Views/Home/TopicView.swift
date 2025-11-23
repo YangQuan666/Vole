@@ -75,7 +75,7 @@ struct TopicRow: View {
                 Spacer()
                 if let created = topic.created {
                     Text(
-                        formattedTime(created)
+                        DateConverter.relativeTimeString(created)
                     )
                     .font(.caption)
                     .foregroundColor(.secondary)

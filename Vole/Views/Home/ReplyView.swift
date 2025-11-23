@@ -29,14 +29,6 @@ class ReplyViewModel: ObservableObject {
     }
 }
 
-// 时间格式化工具
-func formattedTime(_ timestamp: Int) -> String {
-    let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
-    let formatter = RelativeDateTimeFormatter()
-    formatter.unitsStyle = .full
-    return formatter.localizedString(for: date, relativeTo: Date())
-}
-
 struct ReplyRowView: View {
     @State private var showUserInfo = false
     @State private var selectedUser: Member?
@@ -91,7 +83,7 @@ struct ReplyRowView: View {
                             .foregroundColor(.yellow)
                             .imageScale(.small)
                     }
-                    Text(formattedTime(reply.created))
+                    Text(DateConverter.relativeTimeString(reply.created))
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Spacer()

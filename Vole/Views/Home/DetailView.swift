@@ -109,7 +109,7 @@ struct DetailView: View {
                                         .font(.subheadline)
                                         .foregroundColor(.primary)
                                     if let created = topic.created {
-                                        Text(formattedTime(created))
+                                        Text(DateConverter.relativeTimeString(created))
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                     }
@@ -190,7 +190,7 @@ struct DetailView: View {
                                                 .foregroundColor(.secondary)
                                             if let created = supplement.created
                                             {
-                                                Text(formattedTime(created))
+                                                Text(DateConverter.relativeTimeString(created))
                                                     .font(.caption)
                                                     .foregroundColor(.secondary)
                                             }
