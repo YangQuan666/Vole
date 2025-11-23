@@ -104,7 +104,9 @@ struct SearchView: View {
             let req = SoV2exSearchRequest(q: keyword)
             let res = try await SoV2exService.shared.search(req)
             await MainActor.run {
-                results = res.hits
+                if !res.timedOut {
+                    results = res.hits
+                }
             }
         } catch {
             print("搜索失败，请稍后再试")
