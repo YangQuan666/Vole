@@ -21,20 +21,35 @@ struct SearchView: View {
             VStack(spacing: 0) {
                 // 状态分流逻辑
                 if searchText.isEmpty {
-                    // MARK: 1. 输入框无内容 -> 展示历史记录 或 提示
+                    // 1. 输入框无内容 -> 展示历史记录 或 提示
                     if history.keywords.isEmpty {
-                        emptyPlaceholderView
+                        VStack {
+                            Spacer()
+                            Text("请输入关键词进行搜索")
+                                .foregroundColor(.secondary)
+                            Spacer()
+                        }
                     } else {
                         historyListView
                     }
                 } else if isLoading {
-                    // MARK: 2. 加载中
-                    loadingView
+                    // 2. 加载中
+                    VStack {
+                        Spacer()
+                        ProgressView("搜索中…")
+                            .padding()
+                        Spacer()
+                    }
                 } else if results.isEmpty {
-                    // MARK: 3. 无结果
-                    noResultsView
+                    // 3. 无结果
+                    VStack {
+                        Spacer()
+                        Text("没有搜索到相关内容")
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
                 } else {
-                    // MARK: 4. 搜索结果列表
+                    // 4. 搜索结果列表
                     resultsListView
                 }
             }
@@ -51,8 +66,8 @@ struct SearchView: View {
             .onChange(of: searchText) { oldValue, newValue in
                 // 当输入框变为空时，重置所有搜索状态
                 if newValue.isEmpty {
-                    results = []        // 清空结果数据
-                    isLoading = false   // 如果正在加载中，也强制停止加载状态
+                    results = []  // 清空结果数据
+                    isLoading = false  // 如果正在加载中，也强制停止加载状态
                 }
             }
             .navigationDestination(for: Route.self) { route in
@@ -65,18 +80,6 @@ struct SearchView: View {
                         .foregroundStyle(.gray)
                 }
             }
-        }
-    }
-
-    // MARK: - Subviews (为了代码整洁，拆分视图)
-
-    // 空状态提示
-    private var emptyPlaceholderView: some View {
-        VStack {
-            Spacer()
-            Text("请输入关键词进行搜索")
-                .foregroundColor(.secondary)
-            Spacer()
         }
     }
 
@@ -114,32 +117,12 @@ struct SearchView: View {
                         Button("清除") {
                             history.clear()
                         }
-                        .font(.caption)
+                        .font(.subheadline)
                     }
                 }
             }
         }
-        .listStyle(.plain)  // 或 .insetGrouped 根据喜好
-    }
-
-    // 加载视图
-    private var loadingView: some View {
-        VStack {
-            Spacer()
-            ProgressView("搜索中…")
-                .padding()
-            Spacer()
-        }
-    }
-
-    // 无结果视图
-    private var noResultsView: some View {
-        VStack {
-            Spacer()
-            Text("没有搜索到相关内容")
-                .foregroundColor(.secondary)
-            Spacer()
-        }
+        .listStyle(.insetGrouped)
     }
 
     // 结果列表视图
@@ -150,12 +133,39 @@ struct SearchView: View {
 
             // 临时使用 Text 代替展示
             VStack(alignment: .leading, spacing: 5) {
+                HStack {
+                    Text(res.source.member)
+                        .font(.subheadline)
+                        .foregroundColor(.primary)
+                    Spacer()
+                }
                 Text(res.source.title)
                     .font(.headline)
                 Text(res.source.content)
-                    .font(.caption)
+                    .font(.body)
                     .lineLimit(2)
                     .foregroundStyle(.secondary)
+                // 节点+发布时间 + 评论数量
+                HStack {
+                    Text("\(res.source.node)")
+                        .font(.subheadline)
+                        .foregroundColor(.accentColor)
+                        .lineLimit(1)
+                    Spacer()
+
+                    Text(
+                        res.source.created
+                    )
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    HStack(spacing: 4) {  // 图标和文字间距
+                        Image(systemName: "ellipsis.bubble")
+                            .foregroundColor(.secondary)  // 图标颜色
+                        Text("\(res.source.replies)")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
             .padding(.vertical, 4)
             .onTapGesture {
@@ -163,7 +173,6 @@ struct SearchView: View {
                 navManager.searchPath.append(Route.topicId(res.source.id))
             }
         }
-        .listStyle(.plain)
     }
 
     // 路由逻辑
@@ -176,7 +185,7 @@ struct SearchView: View {
             NodeDetailView(nodeName: nodeName, path: $navManager.nodePath)
         case .node(let node):
             NodeDetailView(node: node, path: $navManager.searchPath)
-         default: EmptyView() // 如果 Route 是 enum 且 exhaustive，不需要 default
+        default: EmptyView()  // 如果 Route 是 enum 且 exhaustive，不需要 default
         }
     }
 
