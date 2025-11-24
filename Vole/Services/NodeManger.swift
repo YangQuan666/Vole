@@ -15,11 +15,13 @@ class NodeManager: ObservableObject {
     @Published private(set) var groups: [NodeGroup] = []
     @Published private(set) var nodes: [Node] = []
 
+    private var idMap: [Int: Node] = [:]
+    private var nameMap: [String: Node] = [:]
+
     private var isLoading = false
     private let cacheKey = "cachedGroups"
 
     private init() {}
-
 
     /// 刷新节点，force = true 表示强制从网络拉取
     func refreshNodes(force: Bool) async {
@@ -32,17 +34,33 @@ class NodeManager: ObservableObject {
         let fetched = await loadNodes()
         self.nodes = fetched
         self.groups = buildGroups(from: fetched)
+        rebuildIndex(from: fetched)
     }
 
     /// 根据 id 查询 Node
-    func getNodeById(_ id: Int?) -> Node? {
+    func getNode(_ id: Int?) -> Node? {
         guard let id else { return nil }
-        return nodes.first { $0.id == id }
+        return idMap[id]
     }
 
     /// 根据 name 查询 Node
-    func getNodeByName(_ name: String) -> Node? {
-        return nodes.first { $0.name == name }
+    func getNode(_ name: String) -> Node? {
+        return nameMap[name]
+    }
+
+    private func rebuildIndex(from nodes: [Node]) {
+        var idMapTmp: [Int: Node] = [:]
+        var nameMapTmp: [String: Node] = [:]
+
+        for node in nodes {
+            if let id = node.id {
+                idMapTmp[id] = node
+            }
+            nameMapTmp[node.name] = node
+        }
+
+        self.idMap = idMapTmp
+        self.nameMap = nameMapTmp
     }
 
     // MARK: - 加载节点（网络 + 本地缓存）
@@ -56,6 +74,7 @@ class NodeManager: ObservableObject {
             let list = try await V2exAPI.shared.nodesList() ?? []
             let groups = buildGroups(from: list)
             saveGroupsToCache(groups)
+            print("成功加载\(list.count)个节点")
             return list
         } catch {
             print("❌ 加载节点失败:", error)
