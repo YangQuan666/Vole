@@ -9,9 +9,7 @@ import SwiftUI
 
 struct NodeView: View {
     @State private var collections = NodeCollectionManager.shared.collections
-    @State private var groups: [NodeGroup] = []
-    @State private var isLoading = false
-
+    @StateObject private var nodeManager = NodeManager.shared
     @EnvironmentObject var navManager: NavigationManager
 
     private let cardWidth: CGFloat = 320
@@ -21,7 +19,7 @@ struct NodeView: View {
         NavigationStack(path: $navManager.nodePath) {
 
             Group {
-                if groups.isEmpty {
+                if nodeManager.groups.isEmpty {
                     VStack {
                         ProgressView("加载中…")
                             .progressViewStyle(.circular)
@@ -63,7 +61,7 @@ struct NodeView: View {
                             }
 
                             // 分组内容
-                            ForEach(groups) { group in
+                            ForEach(nodeManager.groups) { group in
                                 groupSection(group)
                             }
                         }
@@ -74,12 +72,12 @@ struct NodeView: View {
 
             .navigationTitle("节点")
             .task {
-                if groups.isEmpty {
-                    await refreshNodes(force: false)
+                if nodeManager.groups.isEmpty {
+                    await nodeManager.refreshNodes(force: true)
                 }
             }
             .refreshable {
-                await refreshNodes(force: true)
+                await nodeManager.refreshNodes(force: true)
             }
             .navigationDestination(for: Route.self) { route in
                 switch route {
@@ -182,160 +180,7 @@ struct NodeView: View {
         }
     }
 
-    private func refreshNodes(force: Bool) async {
-        /// ① 优先加载本地缓存
-        if !force, let cached = loadCachedGroups(), !cached.isEmpty {
-            groups = cached
-            print("✅ 从本地缓存加载节点: \(cached.count)")
-            return
-        }
 
-        /// ② 若本地为空或强制刷新，则重新请求网络
-        let nodes = await loadNodes()
-        groups = buildGroups(from: nodes)
-    }
-
-    private func loadNodes() async -> [Node] {
-        guard !isLoading else { return [] }
-        isLoading = true
-        defer { isLoading = false }
-
-        do {
-            let nodes = try await V2exAPI.shared.nodesList() ?? []
-            let groups = buildGroups(from: nodes)
-            saveGroupsToCache(groups)
-            return nodes
-        } catch {
-            if error is CancellationError { return [] }
-            print("❌ 加载节点失败:", error)
-            return []
-        }
-    }
-
-    // 本地缓存逻辑
-    private func saveGroupsToCache(_ groups: [NodeGroup]) {
-        if let data = try? JSONEncoder().encode(groups) {
-            UserDefaults.standard.set(data, forKey: "cachedGroups")
-        }
-    }
-
-    private func loadCachedGroups() -> [NodeGroup]? {
-        guard let data = UserDefaults.standard.data(forKey: "cachedGroups")
-        else {
-            return nil
-        }
-        return try? JSONDecoder().decode([NodeGroup].self, from: data)
-    }
-
-    // MARK: - 辅助：构建树并把每个根节点的后代展平成数组
-    private func buildGroups(from nodes: [Node]) -> [NodeGroup] {
-        // 建立 name -> Node 映射
-        var nameMap: [String: Node] = [:]
-        for n in nodes {
-            nameMap[n.name] = n
-        }
-
-        // 建立 children 映射：parentName -> [Node]
-        var childrenMap: [String: [Node]] = [:]
-        for n in nodes {
-            if let parent = n.parentNodeName {
-                childrenMap[parent, default: []].append(n)
-            }
-        }
-
-        // 找出根节点（parentNodeName == nil 或 parent 不存在）
-        let roots: [Node] = nodes.filter {
-            $0.parentNodeName == nil || $0.name == "v2ex"
-                || nameMap[$0.parentNodeName ?? ""] == nil
-        }
-
-        // BFS 展平所有后代（包括 root 自身）
-        func collectDescendantsBFS(of root: Node) -> [Node] {
-            var result: [Node] = []
-            var visited: Set<String> = []
-            var queue: [Node] = [root]
-
-            while !queue.isEmpty {
-                let node = queue.removeFirst()
-                guard !visited.contains(node.name) else { continue }
-                visited.insert(node.name)
-                result.append(node)
-
-                let children = childrenMap[node.name] ?? []
-                queue.append(contentsOf: children)
-            }
-
-            return result
-        }
-
-        // 构建 groups
-        var groups: [NodeGroup] = []
-        var singleNodes: [Node] = []
-
-        for root in roots {
-            let flattened = collectDescendantsBFS(of: root)
-            if flattened.isEmpty { continue }
-
-            // 如果 group 只有 1 个节点 → 暂存到 singleNodes
-            if flattened.count == 1 {
-                singleNodes.append(flattened[0])
-                continue
-            }
-
-            // group 内按 topics 降序排序
-            let sortedNodes = flattened.sorted {
-                ($0.topics ?? 0) > ($1.topics ?? 0)
-            }
-
-            // group 权重 = 所有 topics 之和
-            let totalTopics = sortedNodes.reduce(0) { $0 + ($1.topics ?? 0) }
-
-            groups.append(
-                NodeGroup(root: root, nodes: sortedNodes, weight: totalTopics)
-            )
-        }
-
-        // 如果有 single 节点，统一打包为一个“other”分组
-        if !singleNodes.isEmpty {
-            let sortedSingles = singleNodes.sorted {
-                ($0.topics ?? 0) > ($1.topics ?? 0)
-            }
-            let totalTopics = sortedSingles.reduce(0) { $0 + ($1.topics ?? 0) }
-
-            // 创建一个虚拟的 root 表示“other”组
-            let otherRoot = Node(
-                id: nil,
-                name: "other",
-                title: "其他",
-                url: nil,
-                topics: totalTopics,
-                footer: nil,
-                header: nil,
-                titleAlternative: nil,
-                avatar: nil,
-                avatarMini: nil,
-                avatarNormal: nil,
-                avatarLarge: nil,
-                stars: nil,
-                aliases: nil,
-                root: true,
-                parentNodeName: nil
-            )
-
-            groups.append(
-                NodeGroup(
-                    root: otherRoot,
-                    nodes: sortedSingles,
-                    weight: totalTopics
-                )
-            )
-        }
-
-        // 按权重倒序排列（topics 总和越高排越前）
-        let sortedGroups = groups.sorted { $0.weight > $1.weight }
-
-        return sortedGroups
-    }
 }
 
 struct NodeGroup: Codable, Identifiable, Hashable {
