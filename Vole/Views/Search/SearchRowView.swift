@@ -9,6 +9,8 @@ import SwiftUI
 
 struct SearchRowView: View {
     let result: SoV2exHit
+    
+    @StateObject private var nodeManager = NodeManager.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
@@ -32,8 +34,9 @@ struct SearchRowView: View {
 
             // 底部信息：节点 + 时间 + 评论数量
             HStack {
+                let node = nodeManager.getNode(result.source.node)
                 // 节点
-                Text("\(result.source.node)")
+                Text(node?.title ?? "\(result.source.node)")
                     .font(.subheadline)
                     .foregroundColor(.accentColor)
                     .lineLimit(1)

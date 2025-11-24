@@ -21,13 +21,24 @@ class NodeManager: ObservableObject {
     private var isLoading = false
     private let cacheKey = "cachedGroups"
 
-    private init() {}
+    private init() {
+        // 启动时从缓存加载
+        if let cached = loadCachedGroups(), !cached.isEmpty {
+            self.groups = cached
+            let allNodes = cached.flatMap { $0.nodes }
+            self.nodes = allNodes
+            rebuildIndex(from: allNodes)
+            print("⭕️ NodeManager 已从缓存构建索引 (\(allNodes.count) nodes)")
+        }
+    }
 
-    /// 刷新节点，force = true 表示强制从网络拉取
+    /// 刷新节点
     func refreshNodes(force: Bool) async {
         if !force, let cached = loadCachedGroups(), !cached.isEmpty {
             self.groups = cached
-            print("✅ 使用缓存 groups：\(cached.count)")
+            let allNodes = cached.flatMap { $0.nodes }
+            self.nodes = allNodes
+            rebuildIndex(from: allNodes)
             return
         }
 
@@ -49,18 +60,15 @@ class NodeManager: ObservableObject {
     }
 
     private func rebuildIndex(from nodes: [Node]) {
-        var idMapTmp: [Int: Node] = [:]
-        var nameMapTmp: [String: Node] = [:]
+        idMap = [:]
+        nameMap = [:]
 
-        for node in nodes {
-            if let id = node.id {
-                idMapTmp[id] = node
+        for n in nodes {
+            if let id = n.id {
+                idMap[id] = n
             }
-            nameMapTmp[node.name] = node
+            nameMap[n.name] = n
         }
-
-        self.idMap = idMapTmp
-        self.nameMap = nameMapTmp
     }
 
     // MARK: - 加载节点（网络 + 本地缓存）
