@@ -8,11 +8,13 @@
 import SwiftUI
 
 struct NodeCollectionView: View {
-    @State var collection: NodeCollection
     @Binding var path: NavigationPath
 
+    @State var collection: NodeCollection
     @State private var topics: [Topic] = []
     @State private var isLoading = true
+
+    @StateObject private var nodeManager = NodeManager.shared
 
     var body: some View {
         List {
@@ -36,7 +38,8 @@ struct NodeCollectionView: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
                         ForEach(collection.nodeNames, id: \.self) { nodeName in
-                            Text(nodeName)
+                            let node = nodeManager.getNode(nodeName)
+                            Text(node?.title ?? nodeName)
                                 .padding(.vertical, 8)
                                 .padding(.horizontal, 12)
                                 .background(

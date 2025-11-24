@@ -92,8 +92,8 @@ struct NodeView: View {
                     )
                 case .nodeCollect(let nodeCollection):
                     NodeCollectionView(
-                        collection: nodeCollection,
-                        path: $navManager.nodePath
+                        path: $navManager.nodePath,
+                        collection: nodeCollection
                     )
                 case .moreNode(let group):
                     List(Array(group.nodes.enumerated()), id: \.1.id) {
