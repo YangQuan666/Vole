@@ -8,7 +8,6 @@
 import SwiftUI
 
 struct NodeView: View {
-    @State private var selectedCategory: NodeCategory? = nil
     @State private var collections = NodeCollectionManager.shared.collections
     @State private var groups: [NodeGroup] = []
     @State private var isLoading = false
@@ -337,13 +336,6 @@ struct NodeView: View {
 
         return sortedGroups
     }
-}
-
-struct NodeCategory: Identifiable, Hashable {
-    let id = UUID()
-    let name: String
-    let color: Color
-    let systemIcon: String
 }
 
 struct NodeGroup: Codable, Identifiable, Hashable {
