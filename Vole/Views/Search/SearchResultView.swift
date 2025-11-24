@@ -47,7 +47,7 @@ struct SearchResultView: View {
                         ForEach(results.indices, id: \.self) { index in
                             let res = results[index]
 
-                            resultRowView(res: res)
+                            SearchRowView(result: res)
                                 .onTapGesture {
                                     navManager.searchPath.append(
                                         Route.topicId(res.source.id)
@@ -63,56 +63,10 @@ struct SearchResultView: View {
                 }
             }
         }
-        // ⭐️ 核心逻辑：当 query 改变时，自动触发搜索
-        // .task(id:) 会在视图出现或 id 变化时运行，如果 id 变化会自动取消上一次任务
+        // 当 query 改变时，自动触发搜索
         .task(id: query) {
             await performSearch()
         }
-    }
-
-    // MARK: - Subviews
-
-    private func resultRowView(res: SoV2exHit) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack {
-                Text(res.source.member)
-                    .font(.subheadline)
-                    .foregroundColor(.primary)
-                Spacer()
-            }
-            Text(res.source.title)
-                .font(.headline)
-            Text(res.source.content)
-                .font(.body)
-                .lineLimit(2)
-                .foregroundStyle(.secondary)
-
-            HStack {
-                Text("\(res.source.node)")
-                    .font(.subheadline)
-                    .foregroundColor(.accentColor)
-                    .lineLimit(1)
-                Spacer()
-
-                // 假设 DateConverter 可用
-                Text(
-                    DateConverter.relativeTimeString(
-                        isoDateString: res.source.created
-                    )
-                )
-                .font(.caption)
-                .foregroundColor(.secondary)
-
-                HStack(spacing: 4) {
-                    Image(systemName: "ellipsis.bubble")
-                        .foregroundColor(.secondary)
-                    Text("\(res.source.replies)")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-            }
-        }
-        .padding(.vertical, 4)
     }
 
     @ViewBuilder
