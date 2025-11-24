@@ -11,9 +11,6 @@ struct SearchResultView: View {
 
     let results: [SoV2exHit]
     let onResultTapped: (Route) -> Void  // 点击结果后通知父视图进行导航
-
-    // MARK: - 分页状态
-
     let totalResults: Int?  // 总结果数 (从 API 获取)
     let isPagingLoading: Bool  // 是否正在加载下一页
     let onLoadMore: () -> Void  // 加载下一页的动作/回调
@@ -77,11 +74,9 @@ struct SearchResultView: View {
                     }
                 }
             }
-
             // 底部加载指示器和完成提示
             footerView
         }
-        .listStyle(.plain)
     }
 
     // 列表底部视图（加载指示器或完成提示）
