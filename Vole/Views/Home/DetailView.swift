@@ -15,6 +15,7 @@ struct DetailView: View {
     @State var topic: Topic?
 
     @StateObject private var replyVM = ReplyViewModel()
+    @StateObject private var nodeManager = NodeManager.shared
     @State private var allMentions: [Int: [String]] = [:]
     @State private var navTitle: String = "帖子"
     @State private var selectedReply: Reply? = nil
@@ -119,7 +120,11 @@ struct DetailView: View {
                             Spacer()
                             Button {
                                 if let node = topic.node {
-                                    path.append(Route.node(node))
+                                    if let n = nodeManager.getNode(node.id) {
+                                        path.append(Route.node(n))
+                                    }else {
+                                        path.append(Route.node(node))
+                                    }
                                 }
                             } label: {
                                 Text(topic.node?.title ?? "")

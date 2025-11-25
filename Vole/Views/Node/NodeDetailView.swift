@@ -17,6 +17,7 @@ struct NodeDetailView: View {
     @State private var currentPage = 1
     @State private var isLoading = false
     @Environment(\.openURL) private var openURL
+    @StateObject private var nodeManager = NodeManager.shared
     @Binding var path: NavigationPath
 
     var body: some View {
@@ -156,7 +157,11 @@ struct NodeDetailView: View {
                 Menu {
                     Button("父节点", systemImage: "scale.3d") {
                         if let node, let parentNodeName = node.parentNodeName {
-                            path.append(Route.nodeName(parentNodeName))
+                            if let n = nodeManager.getNode(parentNodeName) {
+                                path.append(Route.node(n))
+                            }else {
+                                path.append(Route.nodeName(parentNodeName))
+                            }
                         }
                     }
                     Button("复制链接", systemImage: "link") {

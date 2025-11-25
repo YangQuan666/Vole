@@ -48,7 +48,11 @@ struct NodeCollectionView: View {
                                     )
                                 )
                                 .onTapGesture {
-                                    path.append(Route.nodeName(nodeName))
+                                    if let node {
+                                        path.append(Route.node(node))
+                                    }else {
+                                        path.append(Route.nodeName(nodeName))
+                                    }
                                 }
                         }
                     }
