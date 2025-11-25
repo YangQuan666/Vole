@@ -5,11 +5,14 @@
 //  Created by 杨权 on 5/25/25.
 //
 
+import Kingfisher
 import SwiftUI
 
 struct NodeView: View {
     @State private var collections = NodeCollectionManager.shared.collections
+    @State private var showProfile = false
     @StateObject private var nodeManager = NodeManager.shared
+    @ObservedObject private var userManager = UserManager.shared
     @EnvironmentObject var navManager: NavigationManager
 
     private let cardWidth: CGFloat = 320
@@ -114,11 +117,56 @@ struct NodeView: View {
                 }
             }
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Image(systemName: "person.crop.circle.fill")
-                        .font(.system(size: 28))
-                        .foregroundStyle(.gray)
+                if #available(iOS 26, *) {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button {
+                            showProfile = true
+                        } label: {
+                            if let memeber = userManager.currentMember,
+                                let avatarURL =
+                                    memeber.getHighestQualityAvatar(),
+                                let url = URL(string: avatarURL)
+                            {
+                                KFImage(url)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 64, height: 64)
+                                    .clipShape(Circle())
+                            } else {
+                                Image(systemName: "person.crop.circle.fill")
+                                    .resizable()
+                                    .frame(width: 32, height: 32)
+                                    .foregroundStyle(.blue)
+                            }
+                        }
+                    }
+                    .sharedBackgroundVisibility(.hidden)
+                } else {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button {
+                            showProfile = true
+                        } label: {
+                            if let memeber = userManager.currentMember,
+                                let avatarURL = memeber.avatarNormal,
+                                let url = URL(string: avatarURL)
+                            {
+                                KFImage(url)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 32, height: 32)
+                                    .clipShape(Circle())
+                            } else {
+                                Image(systemName: "person.crop.circle.fill")
+                                    .resizable()
+                                    .frame(width: 32, height: 32)
+                                    .foregroundStyle(.blue)
+                            }
+                        }
+                    }
                 }
+            }
+            .sheet(isPresented: $showProfile) {
+                ProfileView()
             }
         }
     }
@@ -179,7 +227,6 @@ struct NodeView: View {
             .scrollTargetBehavior(.viewAligned)
         }
     }
-
 
 }
 

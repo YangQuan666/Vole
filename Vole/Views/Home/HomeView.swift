@@ -117,7 +117,7 @@ struct HomeView: View {
                         Button {
                             showProfile = true
                         } label: {
-                            if let memeber = UserManager.shared.currentMember,
+                            if let memeber = userManager.currentMember,
                                 let avatarURL = memeber.avatarNormal,
                                 let url = URL(string: avatarURL)
                             {
