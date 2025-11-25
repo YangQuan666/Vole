@@ -24,9 +24,7 @@ class NodeManager: ObservableObject {
     private init() {
         // 启动时从缓存加载
         if let cached = loadCachedGroups(), !cached.isEmpty {
-            self.groups = cached
             let allNodes = cached.flatMap { $0.nodes }
-            self.nodes = allNodes
             rebuildIndex(from: allNodes)
             print("⭕️ NodeManager 已从缓存构建索引 (\(allNodes.count) nodes)")
         }
