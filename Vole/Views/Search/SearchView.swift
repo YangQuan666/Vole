@@ -41,7 +41,7 @@ struct SearchView: View {
             .searchable(
                 text: $searchText,
                 placement: .navigationBarDrawer(displayMode: .automatic),
-                prompt: "搜索 主题、节点、用户"
+                prompt: "搜索 V2EX 主题"
             )
             .onSubmit(of: .search) {
                 handleSubmit(searchText)
