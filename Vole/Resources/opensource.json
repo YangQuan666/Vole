@@ -1,0 +1,22 @@
+[
+    {
+        "name": "MarkdownUI",
+        "url": "https://github.com/gonzalezreal/swift-markdown-ui"
+    },
+    {
+        "name": "SwiftSoup",
+        "url": "https://github.com/scinfu/SwiftSoup"
+    },
+    {
+        "name": "Kingfisher",
+        "url": "https://github.com/onevcat/Kingfisher"
+    },
+    {
+        "name": "SOV2EX",
+        "url": "https://github.com/bynil/sov2ex"
+    },
+    {
+        "name": "V2exAPI",
+        "url": "https://github.com/isaced/V2exAPI"
+    },
+]
