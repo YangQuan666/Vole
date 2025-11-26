@@ -25,9 +25,12 @@ struct VoleApp: App {
         }
     }()
 
+    @AppStorage("appTheme") private var appTheme: AppTheme = .blue
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .tint(appTheme.color)
         }
         .modelContainer(sharedModelContainer)
     }

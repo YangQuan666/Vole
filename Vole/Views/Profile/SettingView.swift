@@ -20,7 +20,7 @@ enum AppTheme: String, CaseIterable, Identifiable {
 }
 
 struct SettingView: View {
-    // 2. 使用 AppStorage 持久化存储主题设置，默认蓝色
+    // 主题色
     @AppStorage("appTheme") private var selectedTheme: AppTheme = .blue
 
     // 获取 App 版本号
@@ -69,6 +69,7 @@ struct SettingView: View {
                 } label: {
                     HStack {
                         Label("版本号", systemImage: "info.circle.fill")
+                            .foregroundColor(.primary)
                         Spacer()
                         Text(appVersion)
                     }
@@ -180,17 +181,21 @@ struct LicenseContentView: View {
 struct OpenSourceListView: View {
     // 状态变量的类型为 OpenSourceItem
     @State private var items: [OpenSourceItem] = []
-    
+
     var body: some View {
         List {
             // 使用 Link 打开外部 URL
             ForEach(items) { item in
-                Link(destination: URL(string: item.url) ?? URL(string: "about:blank")!) {
+                Link(
+                    destination: URL(string: item.url) ?? URL(
+                        string: "about:blank"
+                    )!
+                ) {
                     HStack {
                         Text(item.name)
                             .foregroundColor(.primary)
                         Spacer()
-                        Image(systemName: "link") // 外部链接图标
+                        Image(systemName: "link")  // 外部链接图标
                             .foregroundColor(.secondary)
                             .font(.caption)
                     }
@@ -202,19 +207,27 @@ struct OpenSourceListView: View {
             loadOpenSourceProjects()
         }
     }
-    
+
     // MARK: - 加载 JSON 逻辑
     private func loadOpenSourceProjects() {
         // 尝试从 Bundle 中查找 opensource.json 文件
-        guard let url = Bundle.main.url(forResource: "opensource", withExtension: "json") else {
+        guard
+            let url = Bundle.main.url(
+                forResource: "opensource",
+                withExtension: "json"
+            )
+        else {
             print("Error: opensource.json file not found in bundle.")
             return
         }
-        
+
         do {
             let data = try Data(contentsOf: url)
             // 使用 JSONDecoder 解析数据，类型为 OpenSourceItem
-            let decodedItems = try JSONDecoder().decode([OpenSourceItem].self, from: data)
+            let decodedItems = try JSONDecoder().decode(
+                [OpenSourceItem].self,
+                from: data
+            )
             self.items = decodedItems
         } catch {
             print("Error decoding or loading opensource.json: \(error)")

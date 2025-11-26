@@ -27,7 +27,7 @@ struct NotifyRowView: View {
             }
 
             if let p = parsed {
-                (Text(p.username).foregroundStyle(.blue).font(.headline)
+                (Text(p.username).foregroundColor(.accentColor).font(.headline)
                     + Text(p.action).font(.headline))
                     .foregroundStyle(
                         notifyManager.isRead(item.id) ? .secondary : .primary
