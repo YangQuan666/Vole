@@ -298,7 +298,7 @@ struct MemberView: View {
 #Preview {
     let member = Member(
         id: 1111,
-        username: "yangquan",
+        username: "oligi",
         location: "陕西",
         tagline: "NS 巫师3 真好玩",
         bio: "我是一名爱打游戏，爱编程、喜欢打羽毛球的INTP人格",
