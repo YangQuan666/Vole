@@ -155,13 +155,17 @@ struct NodeDetailView: View {
                     Image(systemName: "square.and.arrow.up")
                 }
                 Menu {
-                    Button("父节点", systemImage: "scale.3d") {
-                        if let node, let parentNodeName = node.parentNodeName {
+                    if let node, let parentNodeName = node.parentNodeName,
+                        !parentNodeName.isEmpty
+                    {
+                        Button("父节点", systemImage: "scale.3d") {
+
                             if let n = nodeManager.getNode(parentNodeName) {
                                 path.append(Route.node(n))
-                            }else {
+                            } else {
                                 path.append(Route.nodeName(parentNodeName))
                             }
+
                         }
                     }
                     Button("复制链接", systemImage: "link") {
