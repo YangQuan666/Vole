@@ -87,13 +87,14 @@ struct SearchView: View {
                             showProfile = true
                         } label: {
                             if let memeber = userManager.currentMember,
-                                let avatarURL = memeber.avatarNormal,
+                                let avatarURL =
+                                    memeber.getHighestQualityAvatar(),
                                 let url = URL(string: avatarURL)
                             {
                                 KFImage(url)
                                     .resizable()
                                     .scaledToFill()
-                                    .frame(width: 32, height: 32)
+                                    .frame(width: 64, height: 64)
                                     .clipShape(Circle())
                             } else {
                                 Image(systemName: "person.crop.circle.fill")
