@@ -27,7 +27,7 @@ struct SettingView: View {
     private var appVersion: String {
         let version =
             Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
-            ?? "1.0.0"
+            ?? "1.0"
         let build =
             Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
         return "v\(version) (\(build))"
@@ -60,17 +60,17 @@ struct SettingView: View {
             // 基本信息
             Section {
                 // 点击跳转 App Store
-                Button {
-                    if let url = URL(
-                        string: "itms-apps://itunes.apple.com/app/id\(appID)"
-                    ) {
-                        UIApplication.shared.open(url)
-                    }
-                } label: {
-                    HStack {
-                        Label("版本号", systemImage: "info.circle.fill")
-                            .foregroundColor(.primary)
-                        Spacer()
+                HStack {
+                    Label("版本号", systemImage: "info.circle.fill")
+                    Spacer()
+                    Button {
+                        if let url = URL(
+                            string:
+                                "itms-apps://itunes.apple.com/app/id\(appID)"
+                        ) {
+                            UIApplication.shared.open(url)
+                        }
+                    } label: {
                         Text(appVersion)
                     }
                 }
@@ -79,7 +79,8 @@ struct SettingView: View {
                 HStack {
                     Label("请我喝咖啡", systemImage: "cup.and.saucer.fill")
                     Spacer()
-                    Text("为爱发电感谢支持")
+                    Text("为爱发电感谢支持~")
+                        .foregroundColor(.secondary)
                         .font(.caption)
                 }
             } header: {
@@ -89,25 +90,25 @@ struct SettingView: View {
             // 关于与法律
             Section {
                 // 联系我们 (打开邮件)
-                Button {
-                    let mailToString =
-                        "mailto:\(contactEmail)?subject=App反馈&body=你好，我想反馈..."
-                    if let mailUrl = URL(
-                        string: mailToString.addingPercentEncoding(
-                            withAllowedCharacters: .urlQueryAllowed
-                        ) ?? ""
-                    ) {
-                        if UIApplication.shared.canOpenURL(mailUrl) {
-                            UIApplication.shared.open(mailUrl)
-                        } else {
-                            // 这里可以弹窗提示未配置邮件账户，为简化仅打印
-                            print("无法打开邮件客户端")
+                HStack {
+                    Label("联系我们", systemImage: "envelope.fill")
+                    Spacer()
+                    Button {
+                        let mailToString =
+                            "mailto:\(contactEmail)?subject=App反馈&body=你好，我想反馈..."
+                        if let mailUrl = URL(
+                            string: mailToString.addingPercentEncoding(
+                                withAllowedCharacters: .urlQueryAllowed
+                            ) ?? ""
+                        ) {
+                            if UIApplication.shared.canOpenURL(mailUrl) {
+                                UIApplication.shared.open(mailUrl)
+                            } else {
+                                // 这里可以弹窗提示未配置邮件账户，为简化仅打印
+                                print("无法打开邮件客户端")
+                            }
                         }
-                    }
-                } label: {
-                    HStack {
-                        Label("联系我们", systemImage: "envelope.fill")
-                        Spacer()
+                    } label: {
                         Text(contactEmail)
                             .foregroundColor(.secondary)
                             .font(.caption)
