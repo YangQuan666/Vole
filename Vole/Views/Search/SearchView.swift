@@ -34,7 +34,7 @@ struct SearchView: View {
                     }
                 } else {
                     // ⭐️ 核心变化：只传递 query，逻辑全在内部
-                    SearchResultView(query: submittedQuery)
+                    SearchResultView(query: submittedQuery, path: $navManager.searchPath)
                 }
             }
             .navigationTitle("搜索")

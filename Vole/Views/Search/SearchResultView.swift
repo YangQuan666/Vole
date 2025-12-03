@@ -21,8 +21,7 @@ struct SearchResultView: View {
     @State private var filterOptions = SearchFilterOptions()
     @State private var isFilterPresented = false
 
-    // 环境对象
-    @EnvironmentObject var navManager: NavigationManager
+    @Binding var path: NavigationPath
 
     // 判断是否有筛选条件生效（用于改变图标状态）
     private var isFiltering: Bool {
@@ -49,9 +48,7 @@ struct SearchResultView: View {
                             let res = results[index]
                             SearchRowView(result: res)
                                 .onTapGesture {
-                                    navManager.searchPath.append(
-                                        Route.topicId(res.source.id)
-                                    )
+                                    path.append(Route.topicId(res.source.id))
                                 }
                                 .onAppear {
                                     if index == results.count - 1 {
@@ -163,7 +160,6 @@ struct SearchResultView: View {
             Spacer()
         }
     }
-
 
     private func resetFilters() {
         filterOptions = SearchFilterOptions()
