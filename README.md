@@ -27,8 +27,8 @@ GPL-3.0 License, see the [LICENSE](./LICENSE) file for details.
 如果你觉得这个项目对你有帮助，欢迎捐赠支持我继续开发和维护这个项目。
 - 微信支付：扫描下方二维码
 
-    ![](./wechatpay.jpg)
+    ![](./Images/wechatpay.jpg)
 
 - 支付宝支付：扫描下方二维码
 
-    ![](./alipay.jpg)
+    ![](./Images/alipay.jpg)
