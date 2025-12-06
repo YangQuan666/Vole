@@ -84,5 +84,5 @@ enum TabID: Hashable {
 
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
+//        .modelContainer(for: Item.self, inMemory: true)
 }
