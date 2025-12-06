@@ -122,8 +122,8 @@ struct TopicRow: View {
 }
 
 #Preview {
-    let topic = ModelData().topics[0]
-    TopicRow(topic: topic) {
-
-    }
+//    let topic = ModelData().topics[0]
+//    TopicRow(topic: topic) {
+//
+//    }
 }

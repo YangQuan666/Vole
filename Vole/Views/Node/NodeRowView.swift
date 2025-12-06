@@ -78,7 +78,7 @@ struct NodeRowView: View {
 }
 
 #Preview {
-    if let node = ModelData().topics[0].node {
-        NodeRowView(node: node)
-    }
+//    if let node = ModelData().topics[0].node {
+//        NodeRowView(node: node)
+//    }
 }

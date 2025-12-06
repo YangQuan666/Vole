@@ -434,7 +434,7 @@ struct DetailView: View {
 }
 
 #Preview {
-    @Previewable @State var path = NavigationPath()
-    let topic: Topic = ModelData().topics[0]
-    DetailView(topicId: nil, topic: topic, path: $path)
+//    @Previewable @State var path = NavigationPath()
+//    let topic: Topic = ModelData().topics[0]
+//    DetailView(topicId: nil, topic: topic, path: $path)
 }

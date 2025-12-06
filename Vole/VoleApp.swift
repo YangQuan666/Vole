@@ -26,14 +26,14 @@ struct VoleApp: App {
     //    }()
 
     @AppStorage("appTheme") private var appTheme: AppTheme = .blue
-    @StateObject private var store = StoreKitManager.shared
+//    @StateObject private var store = StoreKitManager.shared
 
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .task {
-                    await store.loadProducts()
-                }
+//                .task {
+//                    await store.loadProducts()
+//                }
                 .tint(appTheme.color)
         }
         //        .modelContainer(sharedModelContainer)

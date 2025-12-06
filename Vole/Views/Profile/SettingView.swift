@@ -5,7 +5,7 @@ struct SettingView: View {
     @AppStorage("appTheme") private var selectedTheme: AppTheme = .blue
 
     @State private var showStore = false
-    @StateObject private var store = StoreKitManager.shared
+//    @StateObject private var store = StoreKitManager.shared
 
     // 获取 App 版本号
     private var appVersion: String {
@@ -125,9 +125,9 @@ struct SettingView: View {
         }
         .navigationTitle("设置")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showStore) {
-            CoffeeStoreView(products: store.products)
-        }
+//        .sheet(isPresented: $showStore) {
+//            CoffeeStoreView(products: store.products)
+//        }
     }
 }
 
