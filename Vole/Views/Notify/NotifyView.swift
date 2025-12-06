@@ -27,24 +27,22 @@ struct NotifyView: View {
                             .padding()
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let notifications, notifications.isEmpty {
+                    Text("暂无通知")
+                        .foregroundStyle(.secondary)
+                        .frame(
+                            maxWidth: .infinity,
+                            alignment: .center
+                        )
+                        .listRowSeparator(.hidden)
                 } else {
                     List {
                         Section {
-                            if let notifications, notifications.isEmpty {
-                                Text("暂无通知")
-                                    .foregroundStyle(.secondary)
-                                    .frame(
-                                        maxWidth: .infinity,
-                                        alignment: .center
+                            ForEach(notifications ?? [], id: \.id) { item in
+                                NotifyRowView(item: item) { topicId in
+                                    navManager.notifyPath.append(
+                                        Route.topicId(topicId)
                                     )
-                                    .listRowSeparator(.hidden)
-                            } else {
-                                ForEach(notifications ?? [], id: \.id) { item in
-                                    NotifyRowView(item: item) { topicId in
-                                        navManager.notifyPath.append(
-                                            Route.topicId(topicId)
-                                        )
-                                    }
                                 }
                             }
                         } header: {
@@ -76,9 +74,7 @@ struct NotifyView: View {
             }
             .navigationTitle("通知")
             .task {
-                if notifications == nil {
-                    await loadNotifications()
-                }
+                await loadNotifications()
             }
             .navigationDestination(for: Route.self) { route in
                 switch route {
