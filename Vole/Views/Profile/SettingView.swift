@@ -1,27 +1,11 @@
 import SwiftUI
 
-// 1. 定义应用主题色枚举
-enum AppTheme: String, CaseIterable, Identifiable {
-    case blue = "蓝色"
-    case purple = "紫色"
-    case orange = "橙色"
-    case green = "绿色"
-
-    var id: String { self.rawValue }
-
-    var color: Color {
-        switch self {
-        case .blue: return .blue
-        case .purple: return .purple
-        case .orange: return .orange
-        case .green: return .green
-        }
-    }
-}
-
 struct SettingView: View {
     // 主题色
     @AppStorage("appTheme") private var selectedTheme: AppTheme = .blue
+
+    @State private var showStore = false
+    @StateObject private var store = StoreKitManager.shared
 
     // 获取 App 版本号
     private var appVersion: String {
@@ -77,11 +61,18 @@ struct SettingView: View {
 
                 // 请喝咖啡
                 HStack {
-                    Label("请我喝咖啡", systemImage: "cup.and.saucer.fill")
-                    Spacer()
-                    Text("为爱发电感谢支持~")
-                        .foregroundColor(.secondary)
-                        .font(.caption)
+                    Button {
+                        showStore = true
+                    } label: {
+                        HStack {
+                            Label("请我喝咖啡", systemImage: "cup.and.saucer.fill")
+                            Spacer()
+                            Text("为爱发电感谢支持~")
+                                .foregroundColor(.secondary)
+                                .font(.caption)
+                        }
+                    }
+                    .buttonStyle(.plain)
                 }
             } header: {
                 Text("信息")
@@ -134,6 +125,9 @@ struct SettingView: View {
         }
         .navigationTitle("设置")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showStore) {
+            CoffeeStoreView(products: store.products)
+        }
     }
 }
 

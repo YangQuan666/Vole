@@ -75,8 +75,8 @@ struct SearchResultView: View {
             .presentationDetents([.medium, .large])  // 半屏 & 全屏
             .presentationDragIndicator(.visible)  // 上拉手柄
         }
-        .task(id: query) {
-            await performSearch()
+        .task {
+            if results.isEmpty { await performSearch() }
         }
     }
 
