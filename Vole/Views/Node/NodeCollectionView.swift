@@ -50,7 +50,7 @@ struct NodeCollectionView: View {
                                 .onTapGesture {
                                     if let node {
                                         path.append(Route.node(node))
-                                    }else {
+                                    } else {
                                         path.append(Route.nodeName(nodeName))
                                     }
                                 }
@@ -66,6 +66,9 @@ struct NodeCollectionView: View {
                 await loadTopics()
             }
         }
+        .refreshable {
+            await loadTopics()
+        }
     }
 
     // 并发加载所有节点的 topics
@@ -77,10 +80,9 @@ struct NodeCollectionView: View {
                 group.addTask {
                     do {
                         let response = try await V2exAPI().topics(
-                            nodeName: name,
-                            page: 1
+                            nodeName: name
                         )
-                        if let r = response, r.success, let topics = r.result {
+                        if let topics = response {
                             return topics.map { t -> Topic in
                                 var t = t
                                 if t.node == nil {
