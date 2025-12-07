@@ -50,8 +50,8 @@ Vole App 不针对 13 岁以下儿童，若发现有儿童提供个人信息，�
 
 如有任何隐私相关问题或建议，请通过以下方式联系我们：
 
-- 邮箱：`support@yourmail.com`  
-- Discord：`https://discord.gg/xxxxxx`  
+- 邮箱：`quark.yeung@icloud.com`  
+- Discord：`https://discord.gg/jUA5VYyZ`  
 
 ---
 
