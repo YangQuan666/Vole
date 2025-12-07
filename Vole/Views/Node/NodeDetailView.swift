@@ -16,8 +16,10 @@ struct NodeDetailView: View {
     @State private var pagination: Pagination? = nil
     @State private var currentPage = 1
     @State private var isLoading = false
-    @Environment(\.openURL) private var openURL
+
+    @ObservedObject private var userManager = UserManager.shared
     @StateObject private var nodeManager = NodeManager.shared
+    @Environment(\.openURL) private var openURL
     @Binding var path: NavigationPath
 
     var body: some View {
@@ -96,17 +98,8 @@ struct NodeDetailView: View {
                         .listRowBackground(Color.clear)
                     }
 
-                    Section("话题") {
-                        if topics.isEmpty && isLoading {
-                            // 初次加载动画
-                            HStack {
-                                Spacer()
-                                ProgressView("加载中…")
-                                Spacer()
-                            }
-                            .padding()
-                            .listRowSeparator(.hidden)
-                        } else {
+                    Section(header: Text("话题"), footer: footerView) {
+                        if !topics.isEmpty {
                             ForEach(topics) { topic in
                                 TopicRow(topic: topic) {
                                     path.append(topic.id)
@@ -117,24 +110,22 @@ struct NodeDetailView: View {
                                     }
                                 }
                             }
-
-                            // 底部加载更多动画
-                            if isLoading {
-                                HStack {
-                                    Spacer()
-                                    ProgressView("加载中…")
-                                    Spacer()
-                                }
-                                .listRowSeparator(.hidden)
-                            }
                         }
                     }
                 }
                 .task {
-                    await loadTopics(name: node.name, page: 1)
+                    if userManager.token != nil {
+                        await loadTopics(name: node.name, page: 1)
+                    } else {
+                        await loadTopicsV1(name: node.name)
+                    }
                 }
                 .refreshable {
-                    await loadTopics(name: node.name, page: 1)
+                    if userManager.token != nil {
+                        await loadTopics(name: node.name, page: 1)
+                    } else {
+                        await loadTopicsV1(name: node.name)
+                    }
                 }
             } else if let nodeName {
                 // 还没有加载到 topic
@@ -186,6 +177,23 @@ struct NodeDetailView: View {
         }
     }
 
+    @ViewBuilder
+    private var footerView: some View {
+        // 底部加载更多动画
+        if isLoading {
+            VStack {
+                ProgressView("加载中…")
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+            .listRowSeparator(.hidden)
+        } else if userManager.token == nil {
+            VStack {
+                Text("未登录仅展示前20条内容")
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+        }
+    }
+
     func loadNode(name: String) async {
         do {
             let response = try await V2exAPI().getNode(nodeName: name)
@@ -200,7 +208,28 @@ struct NodeDetailView: View {
         }
     }
 
-    // 分页加载话题
+    // 分页加载话题V1
+    func loadTopicsV1(name: String) async {
+        guard !isLoading else { return }
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            let response = try await V2exAPI().topics(
+                nodeName: name
+            )
+            if let t = response {
+                await MainActor.run {
+                    self.topics = t
+                }
+            }
+        } catch {
+            if error is CancellationError { return }
+            print("出错了: \(error)")
+        }
+    }
+
+    // 分页加载话题V2
     func loadTopics(name: String, page: Int) async {
         guard !isLoading else { return }
         isLoading = true
@@ -233,6 +262,7 @@ struct NodeDetailView: View {
         guard !isLoading else { return }
         guard let pagination = pagination else { return }
         guard currentPage < pagination.pages else { return }
+        guard userManager.token != nil else { return }
 
         if let node {
             await loadTopics(name: node.name, page: currentPage + 1)
