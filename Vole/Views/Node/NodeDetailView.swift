@@ -15,7 +15,8 @@ struct NodeDetailView: View {
     @State private var topics: [Topic] = []
     @State private var pagination: Pagination? = nil
     @State private var currentPage = 1
-    @State private var isLoading = false
+    @State private var isNodeLoading = false
+    @State private var isTopicLoading = false
 
     @ObservedObject private var userManager = UserManager.shared
     @StateObject private var nodeManager = NodeManager.shared
@@ -104,7 +105,7 @@ struct NodeDetailView: View {
                                 TopicRow(topic: topic) {
                                     if userManager.token != nil {
                                         path.append(Route.topicId(topic.id))
-                                    }else {
+                                    } else {
                                         path.append(Route.topic(topic))
                                     }
                                 }
@@ -131,13 +132,18 @@ struct NodeDetailView: View {
                         await loadTopicsV1(name: node.name)
                     }
                 }
-            } else if let nodeName {
+            } else if let nodeName, isNodeLoading {
                 // 还没有加载到 topic
                 ProgressView("加载中...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .task {
                         await loadNode(name: nodeName)
                     }
+            }else {
+                VStack {
+                    Text("节点不存在")
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
             }
         }
         .navigationDestination(for: Int.self) { topicId in
@@ -184,7 +190,7 @@ struct NodeDetailView: View {
     @ViewBuilder
     private var footerView: some View {
         // 底部加载更多动画
-        if isLoading {
+        if isTopicLoading {
             VStack {
                 ProgressView("加载中…")
             }
@@ -199,6 +205,9 @@ struct NodeDetailView: View {
     }
 
     func loadNode(name: String) async {
+        guard !isNodeLoading else { return }
+        isNodeLoading = true
+        defer { isNodeLoading = false }
         do {
             let response = try await V2exAPI().getNode(nodeName: name)
             if let r = response, r.success, let n = r.result {
@@ -214,9 +223,9 @@ struct NodeDetailView: View {
 
     // 分页加载话题V1
     func loadTopicsV1(name: String) async {
-        guard !isLoading else { return }
-        isLoading = true
-        defer { isLoading = false }
+        guard !isTopicLoading else { return }
+        isTopicLoading = true
+        defer { isTopicLoading = false }
 
         do {
             let response = try await V2exAPI().topics(
@@ -235,9 +244,9 @@ struct NodeDetailView: View {
 
     // 分页加载话题V2
     func loadTopics(name: String, page: Int) async {
-        guard !isLoading else { return }
-        isLoading = true
-        defer { isLoading = false }
+        guard !isTopicLoading else { return }
+        isTopicLoading = true
+        defer { isTopicLoading = false }
 
         do {
             let response = try await V2exAPI().topics(
@@ -263,7 +272,7 @@ struct NodeDetailView: View {
 
     // 分页加载逻辑
     func loadNextPageIfNeeded() async {
-        guard !isLoading else { return }
+        guard !isTopicLoading else { return }
         guard let pagination = pagination else { return }
         guard currentPage < pagination.pages else { return }
         guard userManager.token != nil else { return }
