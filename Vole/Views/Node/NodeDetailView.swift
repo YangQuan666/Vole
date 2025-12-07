@@ -139,9 +139,11 @@ struct NodeDetailView: View {
                     .task {
                         await loadNode(name: nodeName)
                     }
-            }else {
+            } else {
                 VStack {
-                    Text("节点不存在")
+                    Text("\(nodeName ?? "")节点获取失败")
+                        .font(.body)
+                        .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
             }
