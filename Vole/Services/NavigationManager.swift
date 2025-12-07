@@ -17,6 +17,7 @@ final class NavigationManager: ObservableObject {
 
 enum Route: Hashable {
     case topicId(Int)   // topicId
+    case topic(Topic)
     case node(Node)  // Node节点
     case nodeName(String)  // NodeName节点
     case nodeCollect(NodeCollection)  // 多个节点

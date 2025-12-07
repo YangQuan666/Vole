@@ -36,9 +36,15 @@ struct HomeView: View {
                     List {
                         ForEach(topics) { topic in
                             TopicRow(topic: topic) {
-                                navManager.homePath.append(
-                                    Route.topicId(topic.id)
-                                )
+                                if userManager.token != nil {
+                                    navManager.homePath.append(
+                                        Route.topicId(topic.id)
+                                    )
+                                } else {
+                                    navManager.homePath.append(
+                                        Route.topic(topic)
+                                    )
+                                }
                             }
                         }
                     }
@@ -58,6 +64,12 @@ struct HomeView: View {
                 switch route {
                 case .topicId(let topicId):
                     DetailView(topicId: topicId, path: $navManager.homePath)
+                case .topic(let topic):
+                    DetailView(
+                        topicId: nil,
+                        topic: topic,
+                        path: $navManager.homePath
+                    )
                 case .node(let node):
                     NodeDetailView(node: node, path: $navManager.homePath)
                 case .nodeName(let nodeName):

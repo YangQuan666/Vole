@@ -86,6 +86,8 @@ struct NodeView: View {
                 switch route {
                 case .topicId(let topicId):
                     DetailView(topicId: topicId, path: $navManager.nodePath)
+                case .topic(let topic):
+                    DetailView(topicId: nil, topic: topic, path: $navManager.nodePath)
                 case .node(let node):
                     NodeDetailView(node: node, path: $navManager.nodePath)
                 case .nodeName(let nodeName):
