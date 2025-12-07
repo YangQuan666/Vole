@@ -13,21 +13,10 @@ struct HomeView: View {
     @State private var selection: Category = .latest
     @State private var data: [Category: [Topic]] = [:]
     @State private var showProfile = false
+    @State private var isLoading = false
 
     @ObservedObject private var userManager = UserManager.shared
     @EnvironmentObject var navManager: NavigationManager
-
-    func loadTopics(for category: Category) async {
-        do {
-            let result = try await category.action()
-            await MainActor.run {
-                data[category] = result ?? []
-            }
-        } catch {
-            if error is CancellationError { return }
-            print("出错了: \(error)")
-        }
-    }
 
     var body: some View {
         NavigationStack(path: $navManager.homePath) {
@@ -52,11 +41,30 @@ struct HomeView: View {
                     .refreshable {
                         await loadTopics(for: selection)
                     }
-                } else {
+                } else if isLoading {
                     ZStack {
                         ProgressView("加载中…")
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    VStack {
+                        Button {
+                            Task {
+                                await loadTopics(for: selection)
+                            }
+                        } label: {
+                            Text("点击重试")
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 16)
+                                .background(Color.gray.opacity(0.15))
+                                .cornerRadius(8)
+                        }
+                    }
+                    .frame(
+                        maxWidth: .infinity,
+                        maxHeight: .infinity,
+                        alignment: .center
+                    )
                 }
             }
             .navigationTitle("首页")
@@ -157,6 +165,21 @@ struct HomeView: View {
                     await loadTopics(for: selection)
                 }
             }
+        }
+    }
+
+    func loadTopics(for category: Category) async {
+        guard !isLoading else { return }
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            let result = try await category.action()
+            await MainActor.run {
+                data[category] = result ?? []
+            }
+        } catch {
+            if error is CancellationError { return }
+            print("出错了: \(error)")
         }
     }
 }
