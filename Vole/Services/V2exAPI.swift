@@ -227,7 +227,6 @@ public struct V2exAPI {
                 "p": String(page)
             ],
             decodeClass: Response<[Topic]>.self,
-            //            useAuth: true
         )
     }
 
