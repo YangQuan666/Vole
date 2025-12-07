@@ -102,7 +102,11 @@ struct NodeDetailView: View {
                         if !topics.isEmpty {
                             ForEach(topics) { topic in
                                 TopicRow(topic: topic) {
-                                    path.append(topic.id)
+                                    if userManager.token != nil {
+                                        path.append(Route.topicId(topic.id))
+                                    }else {
+                                        path.append(Route.topic(topic))
+                                    }
                                 }
                                 .onAppear {
                                     if topic == topics.last {
