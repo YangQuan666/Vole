@@ -15,6 +15,7 @@ struct NodeCollectionView: View {
     @State private var isLoading = true
 
     @StateObject private var nodeManager = NodeManager.shared
+    @ObservedObject private var userManager = UserManager.shared
 
     var body: some View {
         List {
@@ -30,7 +31,11 @@ struct NodeCollectionView: View {
                 } else {
                     ForEach(topics) { topic in
                         TopicRow(topic: topic) {
-                            path.append(Route.topicId(topic.id))
+                            if userManager.token != nil {
+                                path.append(Route.topicId(topic.id))
+                            }else {
+                                path.append(Route.topic(topic))
+                            }
                         }
                     }
                 }
