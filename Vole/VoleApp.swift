@@ -12,30 +12,27 @@ import SwiftUI
 
 @main
 struct VoleApp: App {
-    //    var sharedModelContainer: ModelContainer = {
-    //        let schema = Schema([
-    //            Item.self,
-    //        ])
-    //        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-    //
-    //        do {
-    //            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-    //        } catch {
-    //            fatalError("Could not create ModelContainer: \(error)")
-    //        }
-    //    }()
 
     @AppStorage("appTheme") private var appTheme: AppTheme = .blue
-//    @StateObject private var store = StoreKitManager.shared
+    @AppStorage("hasLaunchedBefore") private var hasLaunchedBefore: Bool = false
+    @State private var showWelcome: Bool = false
 
     var body: some Scene {
         WindowGroup {
             ContentView()
-//                .task {
-//                    await store.loadProducts()
-//                }
                 .tint(appTheme.color)
+                .onAppear {
+                    // 首次启动
+                    if !hasLaunchedBefore {
+                        showWelcome = true
+                        hasLaunchedBefore = true
+                    }
+                }
+                .sheet(isPresented: $showWelcome) {
+                    WelcomePage {
+                        showWelcome = false
+                    }
+                }
         }
-        //        .modelContainer(sharedModelContainer)
     }
 }

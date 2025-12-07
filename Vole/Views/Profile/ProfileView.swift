@@ -19,19 +19,13 @@ struct ProfileView: View {
         {
             _step = State(initialValue: 3)
         } else {
-            _step = State(initialValue: 1)
+            _step = State(initialValue: 2)
         }
     }
 
     var body: some View {
         VStack {
-            if step == 1 {
-                WelcomePage {
-                    withAnimation {
-                        step = 2
-                    }
-                }
-            } else if step == 2 {
+            if step == 2 {
                 TokenInputPage(
                     token: $inputToken,
                     onValidate: validateToken,
