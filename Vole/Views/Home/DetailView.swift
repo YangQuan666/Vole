@@ -23,6 +23,8 @@ struct DetailView: View {
     @State private var safariURL: URL? = nil
     @State private var showUserInfo = false
     @State private var selectedUser: Member?
+    @State private var showAlert = false
+    @State private var alertMessage = ""
 
     @Environment(\.openURL) private var openURL
     @Environment(\.appOpenURL) private var appOpenURL
@@ -110,9 +112,13 @@ struct DetailView: View {
                                         .font(.subheadline)
                                         .foregroundColor(.primary)
                                     if let created = topic.created {
-                                        Text(DateConverter.relativeTimeString(created))
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
+                                        Text(
+                                            DateConverter.relativeTimeString(
+                                                created
+                                            )
+                                        )
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
                                     }
                                 }
                             }
@@ -122,7 +128,7 @@ struct DetailView: View {
                                 if let node = topic.node {
                                     if let n = nodeManager.getNode(node.id) {
                                         path.append(Route.node(n))
-                                    }else {
+                                    } else {
                                         path.append(Route.node(node))
                                     }
                                 }
@@ -195,9 +201,14 @@ struct DetailView: View {
                                                 .foregroundColor(.secondary)
                                             if let created = supplement.created
                                             {
-                                                Text(DateConverter.relativeTimeString(created))
-                                                    .font(.caption)
-                                                    .foregroundColor(.secondary)
+                                                Text(
+                                                    DateConverter
+                                                        .relativeTimeString(
+                                                            created
+                                                        )
+                                                )
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
                                             }
                                         }
 
@@ -209,7 +220,9 @@ struct DetailView: View {
                                                 case .mention(let username):
                                                     print("@\(username)")
                                                 case .topic(let id):
-                                                    path.append(Route.topicId(id))
+                                                    path.append(
+                                                        Route.topicId(id)
+                                                    )
                                                 default:
                                                     break
                                                 }
@@ -337,6 +350,12 @@ struct DetailView: View {
                             path.append(Route.node(node))
                         }
                     }
+                    Button("举报内容", systemImage: "exclamationmark.bubble") {
+                        Task {
+                            await reportTopic(topic: topic)
+                        }
+                    }
+
                     Button("复制链接", systemImage: "link") {
                         UIPasteboard.general.string = shareURL
                         let generator =
@@ -368,6 +387,9 @@ struct DetailView: View {
         .environment(\.appOpenURL) { url in
             safariURL = url
             showSafari = true
+        }
+        .alert(alertMessage, isPresented: $showAlert) {
+            Button("确定", role: .cancel) {}
         }
     }
     private func loadTopic() async {
@@ -431,10 +453,52 @@ struct DetailView: View {
             Range($0.range(at: 1), in: content).map { String(content[$0]) }
         }
     }
+
+    func reportTopic(topic: Topic?) async {
+        guard let topic else { return }
+        // 替换成你自己的 Webhook URL
+        guard
+            let url = URL(
+                string:
+                    "https://discord.com/api/webhooks/1448331694523547740/k8iex-uUHKlGVCu7FfZkxi05AcUXMYRsMpNz9XMCAuAmn4oC-8UIs0jHTh4WGjPbisCT"
+            )
+        else { return }
+
+        // Discord 消息格式
+        let payload: [String: Any] = [
+            "content": """
+            用户举报内容
+            ID: \(topic.id)
+            标题: \(topic.title ?? "未知")
+            作者: \(topic.member?.username ?? "")
+            举报用户: \(UserManager.shared.currentMember?.username ?? "未知")
+            """
+        ]
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONSerialization.data(
+            withJSONObject: payload,
+            options: []
+        )
+
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            if let http = response as? HTTPURLResponse, http.statusCode == 204 {
+                alertMessage = "举报成功"
+            } else {
+                alertMessage = "举报失败，请稍后重试"
+            }
+            showAlert = true
+        } catch {
+            print("❌ 网络错误: \(error)")
+        }
+    }
 }
 
 #Preview {
-//    @Previewable @State var path = NavigationPath()
-//    let topic: Topic = ModelData().topics[0]
-//    DetailView(topicId: nil, topic: topic, path: $path)
+    //    @Previewable @State var path = NavigationPath()
+    //    let topic: Topic = ModelData().topics[0]
+    //    DetailView(topicId: nil, topic: topic, path: $path)
 }
