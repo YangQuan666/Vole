@@ -17,7 +17,7 @@ struct DetailView: View {
     @StateObject private var replyVM = ReplyViewModel()
     @StateObject private var nodeManager = NodeManager.shared
     @State private var allMentions: [Int: [String]] = [:]
-    @State private var navTitle: String = "帖子"
+//    @State private var navTitle: String = "帖子"
     @State private var selectedReply: Reply? = nil
     @State private var showSafari = false
     @State private var safariURL: URL? = nil
@@ -70,7 +70,7 @@ struct DetailView: View {
                         .onTapGesture {
                             withAnimation(.spring(dampingFraction: 0.6)) {
                                 selectedReply = nil
-                                navTitle = "帖子"
+//                                navTitle = "帖子"
                             }
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -273,7 +273,7 @@ struct DetailView: View {
                                         .spring(dampingFraction: 0.6)
                                     ) {
                                         selectedReply = reply
-                                        navTitle = "对话"
+//                                        navTitle = "对话"
                                     }
                                 }
                                 .swipeActions(
@@ -336,7 +336,7 @@ struct DetailView: View {
                     }
             }
         }
-        .navigationTitle(navTitle)
+//        .navigationTitle(navTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
