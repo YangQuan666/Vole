@@ -14,12 +14,14 @@ struct ProfileView: View {
     @StateObject private var userManager = UserManager.shared
 
     init() {
-        if UserManager.shared.token != nil,
-            UserManager.shared.currentMember != nil
+        // 1. 在 init 中只做简单的状态判断，决定初始界面是 2 还是 3
+        // 直接访问 Singleton 的数据，而不是通过 userManager 包装器
+        if let t = UserManager.shared.token,
+            t.token != nil
         {
-            _step = State(initialValue: 3)
+            _step = State(initialValue: 3)  // 有 Token，直接去展示页
         } else {
-            _step = State(initialValue: 2)
+            _step = State(initialValue: 2)  // 无 Token，去输入页
         }
     }
 
@@ -47,8 +49,33 @@ struct ProfileView: View {
             }
         }
         .animation(.easeInOut, value: step)
+        // 2. 将异步检查和静默登录逻辑放在 .task 修饰符中
+        // 当 View 出现在屏幕上时，如果已有 Token 但没有用户信息，则自动刷新
+        .task {
+            await checkAndRefreshUser()
+        }
     }
 
+    // 把 init 里的逻辑抽离成这个方法
+    func checkAndRefreshUser() async {
+        // 检查是否需要静默登录：有 Token 但内存中没有 Member 数据
+        if let t = UserManager.shared.token,
+            let token = t.token,
+            userManager.currentMember == nil
+        {
+
+            print("🔄 检测到 Token，正在尝试静默登录...")
+            do {
+                try await loginWithToken(token)
+                print("✅ 静默登录成功")
+            } catch {
+                print("❌ 静默登录失败：", error)
+                // 可选：如果 Token 失效了，可以在这里退回到步骤 2
+                // withAnimation { step = 2 }
+            }
+        }
+    }
+    
     // 第一步：校验 Token 有效性
     func validateToken(_ token: String) async throws -> Token {
         let response = try await V2exAPI.shared.token(token: token)
@@ -86,7 +113,7 @@ struct ProfileView: View {
     private func logout() {
         userManager.clear()
         withAnimation {
-            step = 1
+            step = 2
         }
     }
 }
