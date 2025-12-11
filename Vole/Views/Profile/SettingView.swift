@@ -1,3 +1,4 @@
+import StoreKit
 import SwiftUI
 
 struct SettingView: View {
@@ -5,7 +6,8 @@ struct SettingView: View {
     @AppStorage("appTheme") private var selectedTheme: AppTheme = .blue
 
     @State private var showStore = false
-//    @StateObject private var store = StoreKitManager.shared
+    @State private var selectedProduct: Product?
+    @StateObject private var storeManager = StoreManager.shared
 
     // 获取 App 版本号
     private var appVersion: String {
@@ -74,19 +76,39 @@ struct SettingView: View {
                     }
                     .buttonStyle(.plain)
                 }
-            } header: {
-                Text("信息")
-            }
+                .confirmationDialog(
+                    "选择金额",
+                    isPresented: $showStore,
+                    titleVisibility: .visible
+                ) {
+                    ForEach(storeManager.products, id: \.id) { product in
+                        Button(
+                            "\(product.displayName) - \(product.displayPrice)"
+                        ) {
+                            Task {
+                                let success = await storeManager.purchase(
+                                    product
+                                )
+                                if success {
+                                    print("购买成功，可以更新本地余额或显示提示")
+                                } else {
+                                    print("购买失败或取消")
+                                }
+                            }
+                        }
+                    }
+                }
+                .task {
+                    await storeManager.loadProducts()
+                }
 
-            // 关于与法律
-            Section {
-                // 联系我们 (打开邮件)
+                // 联系我们
                 HStack {
                     Label("联系我们", systemImage: "envelope.fill")
                     Spacer()
                     Button {
                         let mailToString =
-                            "mailto:\(contactEmail)?subject=App反馈&body=你好，我想反馈..."
+                            "mailto:\(contactEmail)?subject=App反馈&body=你好，我想反馈"
                         if let mailUrl = URL(
                             string: mailToString.addingPercentEncoding(
                                 withAllowedCharacters: .urlQueryAllowed
@@ -104,6 +126,49 @@ struct SettingView: View {
                             .foregroundColor(.secondary)
                             .font(.caption)
                     }
+                }
+
+                // 问题反馈
+                HStack {
+                    HStack {
+                        Label(
+                            "问题反馈",
+                            systemImage:
+                                "bubble.left.and.exclamationmark.bubble.right.fill"
+                        )
+                        Spacer()
+                        Link(
+                            "Discord",
+                            destination: URL(
+                                string: "https://discord.gg/jUA5VYyZ"
+                            )!
+                        )
+                        .foregroundColor(.secondary)
+                        .font(.caption)
+                    }
+                }
+            } header: {
+                Text("信息")
+            }
+
+            // 关于与法律
+            Section {
+                // 项目地址
+                HStack {
+                    Label(
+                        "项目地址",
+                        systemImage:
+                            "folder.fill"
+                    )
+                    Spacer()
+                    Link(
+                        "YangQuan666/Vole",
+                        destination: URL(
+                            string: "https://github.com/YangQuan666/Vole"
+                        )!
+                    )
+                    .foregroundColor(.secondary)
+                    .font(.caption)
                 }
 
                 // 许可协议
@@ -125,9 +190,6 @@ struct SettingView: View {
         }
         .navigationTitle("设置")
         .navigationBarTitleDisplayMode(.inline)
-//        .sheet(isPresented: $showStore) {
-//            CoffeeStoreView(products: store.products)
-//        }
     }
 }
 
