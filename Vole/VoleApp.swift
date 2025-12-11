@@ -37,6 +37,7 @@ struct VoleApp: App {
                             showEULA = false
                         })
                     }
+                    .interactiveDismissDisabled(true)
                 }
         }
     }
