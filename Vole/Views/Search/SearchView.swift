@@ -20,10 +20,10 @@ struct SearchView: View {
         NavigationStack(path: $navManager.searchPath) {
             VStack(spacing: 0) {
                 // 逻辑分支：
-                // 1. 如果 submittedQuery 为空，或者用户修改了输入框内容且尚未提交 -> 显示历史/空状态
+                // 1. 如果 submittedQuery 为空 -> 显示历史/空状态
                 // 2. 否则 -> 显示结果页（结果页内部自己处理 Loading 和 数据）
 
-                if submittedQuery.isEmpty || searchText != submittedQuery {
+                if submittedQuery.isEmpty {
                     if history.keywords.isEmpty && searchText.isEmpty {
                         emptyStateView
                     } else {
@@ -33,8 +33,12 @@ struct SearchView: View {
                         )
                     }
                 } else {
-                    // ⭐️ 核心变化：只传递 query，逻辑全在内部
-                    SearchResultView(query: submittedQuery, path: $navManager.searchPath)
+                    // 只传递 query，逻辑全在内部
+                    SearchResultView(
+                        query: submittedQuery,
+                        path: $navManager.searchPath
+                    )
+                    .id(submittedQuery)
                 }
             }
             .navigationTitle("搜索")
