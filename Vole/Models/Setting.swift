@@ -8,7 +8,7 @@
 import Foundation
 import SwiftUI
 
-// 1. 定义应用主题色枚举
+// 定义应用主题色枚举
 enum AppTheme: String, CaseIterable, Identifiable {
     case blue = "蓝色"
     case purple = "紫色"
