@@ -17,9 +17,7 @@
 - 💰 免费：完全免费，无任何广告
 
 ## 截图
-<img src="./Images/screenshot01.PNG" height="600" />
-<img src="./Images/screenshot02.PNG" height="600" />
-<img src="./Images/screenshot03.PNG" height="600" />
+![Screenshot](./Images/screenshot.jpg)
 
 ## 下载
 
