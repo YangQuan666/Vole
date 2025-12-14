@@ -74,11 +74,13 @@ struct TopicRow: View {
                     .lineLimit(1)
                 Spacer()
                 if let created = topic.created {
-                    Text(
-                        DateConverter.relativeTimeString(created)
-                    )
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    TimelineView(.everyMinute) { _ in
+                        Text(
+                            DateConverter.relativeTimeString(created)
+                        )
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    }
                 }
                 if let replies = topic.replies {
                     HStack(spacing: 4) {  // 图标和文字间距

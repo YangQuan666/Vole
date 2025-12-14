@@ -9,7 +9,7 @@ import SwiftUI
 
 struct SearchRowView: View {
     let result: SoV2exHit
-    
+
     @StateObject private var nodeManager = NodeManager.shared
 
     var body: some View {
@@ -43,14 +43,15 @@ struct SearchRowView: View {
                 Spacer()
 
                 // 时间
-                Text(
-                    DateConverter.relativeTimeString(
-                        isoDateString: result.source.created
+                TimelineView(.everyMinute) { _ in
+                    Text(
+                        DateConverter.relativeTimeString(
+                            isoDateString: result.source.created
+                        )
                     )
-                )
-                .font(.caption)
-                .foregroundColor(.secondary)
-
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                }
                 // 评论数
                 HStack(spacing: 4) {
                     Image(systemName: "ellipsis.bubble")
@@ -67,7 +68,7 @@ struct SearchRowView: View {
 
 #Preview {
     let mockResult = SoV2exHit(
-        
+
         source: SoV2exTopic(
             id: 100000,
             title: "请教一个关于 Swift 结构化并发的问题",

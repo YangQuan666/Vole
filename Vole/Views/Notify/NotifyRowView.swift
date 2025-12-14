@@ -40,9 +40,11 @@ struct NotifyRowView: View {
                     .foregroundStyle(.secondary)
             }
             if let created = item.created {
-                Text(DateConverter.relativeTimeString(created))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                TimelineView(.everyMinute) { _ in
+                    Text(DateConverter.relativeTimeString(created))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
