@@ -2,6 +2,12 @@
 
 > 一款基于[V2exAPI](https://www.v2ex.com/help/api)开发的 __V2ex__ iOS 客户端
 
+![Swift](https://img.shields.io/badge/Swift-6.2-orange)
+![Platform](https://img.shields.io/badge/iOS-18+-blue)
+[![License](https://img.shields.io/github/license/YangQuan666/Vole)](https://github.com/YangQuan666/Vole/blob/main/LICENSE)
+[![V2EX](https://img.shields.io/badge/V2EX-Forum-blue?logo=googlechrome&logoColor=white)](https://www.v2ex.com/)
+[![Discord](https://img.shields.io/badge/Discord-Join%20Chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/eBdfMcJe)
+
 ## 特点
 
 - 🤩 美观：纯SwiftUI实现，体验上更符合iOS设计规范
