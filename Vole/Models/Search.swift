@@ -49,7 +49,7 @@ enum SearchSortType: String, CaseIterable, Identifiable {
 }
 
 struct SearchFilterOptions: Equatable {
-    var timeRange: SearchTimeRange = .all
+    var timeRange: SearchTimeRange = .oneMonth
     var nodeName: String = ""
     var sortType: SearchSortType = .weight
 }
