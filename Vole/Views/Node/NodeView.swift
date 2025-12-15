@@ -183,7 +183,8 @@ struct NodeView: View {
                     Text(group.root.title ?? "")
                         .font(.title3.bold())
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(.secondary)
                     Spacer()
                 }
             }
