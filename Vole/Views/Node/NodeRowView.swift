@@ -49,10 +49,10 @@ struct NodeRowView: View {
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
-
-            Spacer()
         }
-        .padding(8)
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
     }
 
     /// 构建完整 URL（支持相对路径）
@@ -78,7 +78,7 @@ struct NodeRowView: View {
 }
 
 #Preview {
-//    if let node = ModelData().topics[0].node {
-//        NodeRowView(node: node)
-//    }
+    //    if let node = ModelData().topics[0].node {
+    //        NodeRowView(node: node)
+    //    }
 }
