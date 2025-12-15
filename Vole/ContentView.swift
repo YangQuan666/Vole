@@ -17,25 +17,25 @@ struct ContentView: View {
         Group {
             if #available(iOS 26, *) {
                 TabView(selection: $selection) {
-                    Tab("Home", systemImage: "doc.text.image", value: .home) {
+                    Tab("主页", systemImage: "doc.text.image", value: .home) {
                         HomeView()
                     }
                     Tab(
-                        "Node",
+                        "节点",
                         systemImage: "square.grid.2x2.fill",
                         value: .node
                     ) {
                         NodeView()
                     }
                     Tab(
-                        "Notify",
+                        "通知",
                         systemImage: "tray.full.fill",
                         value: .notify
                     ) {
                         NotifyView()
                     }
                     Tab(
-                        "Search",
+                        "搜索",
                         systemImage: "magnifyingglass",
                         value: .search,
                         role: .search
@@ -46,25 +46,25 @@ struct ContentView: View {
                 .tabBarMinimizeBehavior(.onScrollDown)
             } else {
                 TabView(selection: $selection) {
-                    Tab("Home", systemImage: "doc.text.image", value: .home) {
+                    Tab("主页", systemImage: "doc.text.image", value: .home) {
                         HomeView()
                     }
                     Tab(
-                        "Node",
+                        "节点",
                         systemImage: "square.grid.2x2.fill",
                         value: .node
                     ) {
                         NodeView()
                     }
                     Tab(
-                        "Notify",
+                        "通知",
                         systemImage: "tray.full.fill",
                         value: .notify
                     ) {
                         NotifyView()
                     }
                     Tab(
-                        "Search",
+                        "搜索",
                         systemImage: "magnifyingglass",
                         value: .search,
                         role: .search
@@ -84,5 +84,5 @@ enum TabID: Hashable {
 
 #Preview {
     ContentView()
-//        .modelContainer(for: Item.self, inMemory: true)
+    //        .modelContainer(for: Item.self, inMemory: true)
 }
