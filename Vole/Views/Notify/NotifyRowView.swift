@@ -21,17 +21,17 @@ struct NotifyRowView: View {
             if let title = parsed?.topicTitle {
                 Text(title)
                     .font(.subheadline)
-                    .foregroundStyle(
-                        notifyManager.isRead(item.id) ? .secondary : .primary
-                    )
+                //                    .foregroundStyle(
+                //                        notifyManager.isRead(item.id) ? .secondary : .primary
+                //                    )
             }
 
             if let p = parsed {
                 (Text(p.username).foregroundColor(.accentColor).font(.headline)
                     + Text(p.action).font(.headline))
-                    .foregroundStyle(
-                        notifyManager.isRead(item.id) ? .secondary : .primary
-                    )
+                //                    .foregroundStyle(
+                //                        notifyManager.isRead(item.id) ? .secondary : .primary
+                //                    )
             }
 
             if let payload = item.payload {
@@ -47,7 +47,12 @@ struct NotifyRowView: View {
                 }
             }
         }
+        .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            notifyManager.isRead(item.id)
+                ? Color.clear : Color.accentColor.opacity(0.2)
+        )
         .contentShape(Rectangle())
         .onTapGesture {
             if let topicId = parsed?.topicId {

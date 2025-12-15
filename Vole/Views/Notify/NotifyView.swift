@@ -44,6 +44,7 @@ struct NotifyView: View {
                                         Route.topicId(topicId)
                                     )
                                 }
+                                .listRowInsets(EdgeInsets())
                             }
                         } header: {
                             if let notifications, !notifications.isEmpty {
