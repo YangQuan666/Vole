@@ -50,7 +50,6 @@ struct NodeRowView: View {
                     .lineLimit(1)
             }
         }
-        .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
     }

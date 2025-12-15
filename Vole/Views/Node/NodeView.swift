@@ -215,11 +215,12 @@ struct NodeView: View {
                                 } label: {
                                     NodeRowView(node: node)
                                         .frame(width: cardWidth)
+                                        .padding()
                                 }
                                 .buttonStyle(.plain)
 
                                 if j < columns[i].count - 1 {
-                                    Divider().padding(.leading, 16)
+                                    Divider().padding(.leading, 64)
                                 }
                             }
                         }
@@ -227,6 +228,7 @@ struct NodeView: View {
                         .scrollTargetLayout()
                     }
                 }
+                .padding(.horizontal)
             }
             .scrollTargetBehavior(.viewAligned)
         }
