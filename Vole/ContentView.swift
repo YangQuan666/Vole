@@ -11,6 +11,7 @@ import SwiftUI
 struct ContentView: View {
     @State private var selection: TabID = .home
     @StateObject private var navManager = NavigationManager()
+    @ObservedObject private var notifyManager = NotifyManager.shared
 
     var body: some View {
 
@@ -34,6 +35,10 @@ struct ContentView: View {
                     ) {
                         NotifyView()
                     }
+                    .badge(
+                        notifyManager.unreadCount > 0
+                            ? notifyManager.unreadCount : 0
+                    )
                     Tab(
                         "搜索",
                         systemImage: "magnifyingglass",
@@ -75,6 +80,9 @@ struct ContentView: View {
             }
         }
         .environmentObject(navManager)
+        .task {
+            await notifyManager.loadNotifications()
+        }
     }
 }
 
