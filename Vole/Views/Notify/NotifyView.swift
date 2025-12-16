@@ -47,30 +47,8 @@ struct NotifyView: View {
                                 }
                                 .listRowInsets(EdgeInsets())
                             }
-                        } header: {
-                            if !notifyManager.notifications.isEmpty {
-                                HStack {
-                                    Spacer()
-                                    Button {
-                                        notifyManager.markAllRead(
-                                            notifyManager.notifications.map {
-                                                $0.id
-                                            }
-                                        )
-                                    } label: {
-                                        HStack(spacing: 4) {
-                                            Image(
-                                                systemName: "checkmark.circle"
-                                            )
-                                            Text("一键已读")
-                                        }
-                                        .font(.subheadline)
-                                    }
-                                }
-                            }
                         }
                     }
-                    .listStyle(.plain)
                     .refreshable {
                         guard !isLoading else { return }
                         isLoading = true

@@ -14,7 +14,7 @@ final class NotifyManager: ObservableObject {
 
     // 存储所有的通知数据
     @Published var notifications: [Notification] = []
-
+    @Published var totalCount: Int = 0
     // 存储已读 ID
     @Published private(set) var readIds: Set<Int> = []
 
@@ -28,7 +28,9 @@ final class NotifyManager: ObservableObject {
 
     // 总通知 - 已读通知 = 未读通知
     var unreadCount: Int {
-        notifications.filter { !readIds.contains($0.id) }.count
+        // 防止本地累积的已读数超过服务端总数导致负数
+        let count = totalCount - readIds.count
+        return max(0, count)
     }
 
     func markRead(_ id: Int) {
@@ -60,12 +62,51 @@ final class NotifyManager: ObservableObject {
                 page: 1,
                 token: t.token ?? ""
             )
-            // 确保更新 UI 的操作在主线程
-            if let r = response, r.success, let n = r.result {
-                self.notifications = n
+            if let r = response, r.success {
+                // 1. 更新列表数据
+                if let n = r.result {
+                    self.notifications = n
+                }
+                // 2. 解析 total (例如 "Notifications 1-10/41" -> 41)
+                if let msg = r.message {
+                    self.parseMessage(msg)
+                }
             }
         } catch {
             print(error.localizedDescription)
+        }
+    }
+
+    /// 解析格式：Notifications {start}-{end}/{total}
+    /// 例如：Notifications 1-10/41 -> 提取 41
+    private func parseMessage(_ message: String) {
+        // 正则表达式解释：
+        // Notifications : 匹配字面量
+        // \s+           : 匹配一个或多个空格
+        // \d+-\d+       : 匹配 "数字-数字" (即 1-10)
+        // /             : 匹配斜杠
+        // (\d+)         : 捕获组，匹配最后的总数数字
+        let pattern = #"Notifications\s+\d+-\d+/(\d+)"#
+
+        do {
+            let regex = try NSRegularExpression(pattern: pattern, options: [])
+            let nsString = message as NSString
+            let results = regex.matches(
+                in: message,
+                options: [],
+                range: NSRange(location: 0, length: nsString.length)
+            )
+
+            if let match = results.first, match.numberOfRanges >= 2 {
+                // 获取第一个捕获组的内容 (即 total 部分)
+                let totalString = nsString.substring(with: match.range(at: 1))
+                if let count = Int(totalString) {
+                    self.totalCount = count
+                    return
+                }
+            }
+        } catch {
+            print("正则解析出错: \(error)")
         }
     }
 }

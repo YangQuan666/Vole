@@ -220,7 +220,7 @@ struct NodeView: View {
                                 .buttonStyle(.plain)
 
                                 if j < columns[i].count - 1 {
-                                    Divider().padding(.leading, 64)
+                                    Divider().padding(.leading, 60)
                                 }
                             }
                         }
