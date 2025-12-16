@@ -5,6 +5,7 @@
 //  Created by 杨权 on 11/19/25.
 //
 
+import Combine
 import Foundation
 import SwiftUI
 
@@ -12,13 +13,17 @@ import SwiftUI
 final class NotifyManager: ObservableObject {
     static let shared = NotifyManager()
 
-    // 存储所有的通知数据
     @Published var notifications: [Notification] = []
     @Published var totalCount: Int = 0
-    // 存储已读 ID
     @Published private(set) var readIds: Set<Int> = []
 
+    // --- 分页状态属性 ---
+    @Published var currentPage: Int = 1
+    @Published var endIndex: Int = 0  // 当前加载到的末尾索引 (即 10 或 20)
+    @Published var isLoading: Bool = false  // 是否正在加载中，用于防止重复请求
+
     private let key = "read_notification_ids"
+    private let pageSize = 10
 
     private init() {
         if let stored = UserDefaults.standard.array(forKey: key) as? [Int] {
@@ -26,22 +31,16 @@ final class NotifyManager: ObservableObject {
         }
     }
 
-    // 总通知 - 已读通知 = 未读通知
     var unreadCount: Int {
-        // 防止本地累积的已读数超过服务端总数导致负数
         let count = totalCount - readIds.count
         return max(0, count)
     }
 
     func markRead(_ id: Int) {
-        readIds.insert(id)
-        save()
-        // 此时 readIds 变了，unreadCount 会自动重新计算，UI 也会自动刷新
-    }
-
-    func markAllRead(_ ids: [Int]) {
-        readIds.formUnion(ids)
-        save()
+        if !readIds.contains(id) {
+            readIds.insert(id)
+            save()
+        }
     }
 
     func isRead(_ id: Int) -> Bool {
@@ -52,41 +51,81 @@ final class NotifyManager: ObservableObject {
         UserDefaults.standard.set(Array(readIds), forKey: key)
     }
 
-    // 4. 修改：加载数据并存储到自身
-    func loadNotifications() async {
-        guard let t = UserManager.shared.token else {
-            return
-        }
+    // 是否还有下一页数据
+    var hasNextPage: Bool {
+        // 如果当前加载到的末尾索引小于总数，则有下一页
+        // 且 totalCount 必须大于 0
+        return totalCount > 0 && endIndex < totalCount
+    }
+
+    // 分页加载函数
+    /// - Parameter page: 要加载的页码。
+    /// - Parameter isRefresh: 是否是刷新（加载第一页）。
+    func loadNotifications(page: Int, isRefresh: Bool) async {
+        guard let t = UserManager.shared.token, !isLoading else { return }
+
+        isLoading = true
+
         do {
             let response = try await V2exAPI().notifications(
-                page: 1,
+                page: page,
                 token: t.token ?? ""
             )
-            if let r = response, r.success {
-                // 1. 更新列表数据
-                if let n = r.result {
-                    self.notifications = n
-                }
-                // 2. 解析 total (例如 "Notifications 1-10/41" -> 41)
-                if let msg = r.message {
-                    self.parseMessage(msg)
+
+            await MainActor.run {
+                isLoading = false
+
+                if let r = response, r.success {
+                    if let newNotifications = r.result {
+                        if isRefresh {
+                            self.notifications = newNotifications
+                        } else {
+                            self.notifications.append(
+                                contentsOf: newNotifications
+                            )
+                        }
+                    }
+
+                    // 1. 解析 message 并更新 totalCount 和 endNotificationIndex
+                    if let msg = r.message {
+                        self.parseMessage(msg)
+                    }
+
+                    // 2. 更新页码
+                    self.currentPage = page
+
+                    // 3. hasNextPage 属性会自动根据 endNotificationIndex 和 totalCount 重新计算
                 }
             }
         } catch {
-            print(error.localizedDescription)
+            await MainActor.run {
+                isLoading = false
+                print("加载通知失败: \(error.localizedDescription)")
+            }
         }
     }
 
-    /// 解析格式：Notifications {start}-{end}/{total}
-    /// 例如：Notifications 1-10/41 -> 提取 41
+    func loadNextPage() async {
+        guard hasNextPage else { return }
+        await loadNotifications(page: currentPage + 1, isRefresh: false)
+    }
+
+    func refresh() async {
+        // 刷新时重置状态，保证从第一页开始加载
+        self.currentPage = 1
+        self.endIndex = 0
+        self.totalCount = 0
+        await loadNotifications(page: 1, isRefresh: true)
+    }
+
+    // MARK: - 正则解析逻辑（与之前版本保持一致）
     private func parseMessage(_ message: String) {
         // 正则表达式解释：
-        // Notifications : 匹配字面量
-        // \s+           : 匹配一个或多个空格
-        // \d+-\d+       : 匹配 "数字-数字" (即 1-10)
-        // /             : 匹配斜杠
-        // (\d+)         : 捕获组，匹配最后的总数数字
-        let pattern = #"Notifications\s+\d+-\d+/(\d+)"#
+        // (\d+)-(\d+)\/(\d+) :
+        // 捕获组 1 (\d+): Start
+        // 捕获组 2 (\d+): End
+        // 捕获组 3 (\d+): Total
+        let pattern = #"Notifications\s+(\d+)-(\d+)\/(\d+)"#
 
         do {
             let regex = try NSRegularExpression(pattern: pattern, options: [])
@@ -97,12 +136,18 @@ final class NotifyManager: ObservableObject {
                 range: NSRange(location: 0, length: nsString.length)
             )
 
-            if let match = results.first, match.numberOfRanges >= 2 {
-                // 获取第一个捕获组的内容 (即 total 部分)
-                let totalString = nsString.substring(with: match.range(at: 1))
-                if let count = Int(totalString) {
-                    self.totalCount = count
-                    return
+            if let match = results.first, match.numberOfRanges >= 4 {
+
+                // 提取 End
+                let endString = nsString.substring(with: match.range(at: 2))
+                if let endCount = Int(endString) {
+                    self.endIndex = endCount
+                }
+
+                // 提取 Total
+                let totalString = nsString.substring(with: match.range(at: 3))
+                if let totalCount = Int(totalString) {
+                    self.totalCount = totalCount
                 }
             }
         } catch {

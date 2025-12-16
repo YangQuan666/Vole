@@ -11,7 +11,6 @@ import SwiftUI
 
 struct NotifyView: View {
 
-    @State private var isLoading = false
     @State private var showProfile = false
     @ObservedObject private var userManager = UserManager.shared
     @ObservedObject private var notifyManager = NotifyManager.shared
@@ -20,14 +19,7 @@ struct NotifyView: View {
     var body: some View {
         NavigationStack(path: $navManager.notifyPath) {
             Group {
-                if isLoading {
-                    VStack {
-                        ProgressView("加载中…")
-                            .progressViewStyle(.circular)
-                            .padding()
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if notifyManager.notifications.isEmpty {
+                if notifyManager.notifications.isEmpty {
                     Text("暂无通知")
                         .foregroundStyle(.secondary)
                         .frame(
@@ -46,14 +38,20 @@ struct NotifyView: View {
                                     )
                                 }
                                 .listRowInsets(EdgeInsets())
+                                .onAppear {
+                                    if item.id
+                                        == notifyManager.notifications.last?.id
+                                    {
+                                        Task {
+                                            await notifyManager.loadNextPage()
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
                     .refreshable {
-                        guard !isLoading else { return }
-                        isLoading = true
-                        defer { isLoading = false }
-                        await notifyManager.loadNotifications()
+                        await notifyManager.refresh()
                     }
                 }
             }

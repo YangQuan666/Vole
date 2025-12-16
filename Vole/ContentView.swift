@@ -81,7 +81,7 @@ struct ContentView: View {
         }
         .environmentObject(navManager)
         .task {
-            await notifyManager.loadNotifications()
+            await notifyManager.refresh()
         }
     }
 }
