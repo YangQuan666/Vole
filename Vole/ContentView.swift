@@ -68,6 +68,10 @@ struct ContentView: View {
                     ) {
                         NotifyView()
                     }
+                    .badge(
+                        notifyManager.unreadCount > 0
+                            ? notifyManager.unreadCount : 0
+                    )
                     Tab(
                         "搜索",
                         systemImage: "magnifyingglass",
