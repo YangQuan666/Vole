@@ -23,12 +23,59 @@ final class NotifyManager: ObservableObject {
     @Published var isLoading: Bool = false  // 是否正在加载中，用于防止重复请求
 
     private let key = "read_notification_ids"
-    private let pageSize = 10
+    private var timer: Timer?
+    private var cancellables = Set<AnyCancellable>()  // 用于存放订阅对象
 
     private init() {
         if let stored = UserDefaults.standard.array(forKey: key) as? [Int] {
             readIds = Set(stored)
         }
+        setupAuthListener()
+    }
+
+    private func setupAuthListener() {
+        UserManager.shared.$currentMember
+            .receive(on: RunLoop.main)
+            .sink { [weak self] member in
+                if member != nil {
+                    // 1. 用户登录了：启动定时器，并立即刷新一次数据
+                    print("NotifyManager: 检测到登录，启动服务")
+                    self?.startTimer()
+                    Task {
+                        await self?.refresh()
+                    }
+                } else {
+                    // 2. 用户登出了：停止定时器，清空旧数据
+                    print("NotifyManager: 检测到登出，清理数据")
+                    self?.stopTimer()
+                    self?.notifications = []
+                    self?.totalCount = 0
+                }
+            }
+            .store(in: &cancellables)
+    }
+
+    // 启动定时器
+    func startTimer() {
+        // 先停止旧的，防止重复
+        stopTimer()
+
+        // 前置判断：如果用户未登录，直接返回，不启动定时器
+        guard UserManager.shared.currentMember != nil else { return }
+        // 每 60 秒执行一次
+        timer = Timer.scheduledTimer(withTimeInterval: 60.0, repeats: true) {
+            [weak self] _ in
+            Task { @MainActor in
+                // 定时刷新通常只刷新第一页
+                await self?.refresh()
+            }
+        }
+    }
+
+    // 停止定时器
+    func stopTimer() {
+        timer?.invalidate()
+        timer = nil
     }
 
     var unreadCount: Int {
@@ -65,43 +112,29 @@ final class NotifyManager: ObservableObject {
         guard let t = UserManager.shared.token, !isLoading else { return }
 
         isLoading = true
-
         do {
             let response = try await V2exAPI().notifications(
                 page: page,
                 token: t.token ?? ""
             )
+            isLoading = false
 
-            await MainActor.run {
-                isLoading = false
-
-                if let r = response, r.success {
-                    if let newNotifications = r.result {
-                        if isRefresh {
-                            self.notifications = newNotifications
-                        } else {
-                            self.notifications.append(
-                                contentsOf: newNotifications
-                            )
-                        }
+            if let r = response, r.success {
+                if let newNotifications = r.result {
+                    if isRefresh {
+                        self.notifications = newNotifications
+                    } else {
+                        self.notifications.append(contentsOf: newNotifications)
                     }
-
-                    // 1. 解析 message 并更新 totalCount 和 endNotificationIndex
-                    if let msg = r.message {
-                        self.parseMessage(msg)
-                    }
-
-                    // 2. 更新页码
-                    self.currentPage = page
-
-                    // 3. hasNextPage 属性会自动根据 endNotificationIndex 和 totalCount 重新计算
                 }
+                if let msg = r.message {
+                    self.parseMessage(msg)
+                }
+                self.currentPage = page
             }
         } catch {
-            await MainActor.run {
-                isLoading = false
-                print("加载通知失败: \(error.localizedDescription)")
-            }
+            isLoading = false
+            print("加载通知失败: \(error)")
         }
     }
 

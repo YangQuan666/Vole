@@ -29,7 +29,7 @@ struct NotifyView: View {
                         .listRowSeparator(.hidden)
                 } else {
                     List {
-                        Section {
+                        Section(footer: footerView) {
                             ForEach(notifyManager.notifications, id: \.id) {
                                 item in
                                 NotifyRowView(item: item) { topicId in
@@ -123,6 +123,18 @@ struct NotifyView: View {
             .sheet(isPresented: $showProfile) {
                 ProfileView()
             }
+        }
+    }
+    
+    @ViewBuilder
+    private var footerView: some View {
+        // 底部加载更多动画
+        if notifyManager.isLoading {
+            VStack {
+                ProgressView("加载中…")
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+            .listRowSeparator(.hidden)
         }
     }
 }
