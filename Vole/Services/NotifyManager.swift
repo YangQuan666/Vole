@@ -90,6 +90,11 @@ final class NotifyManager: ObservableObject {
         }
     }
 
+    func markAllRead(_ ids: [Int]) {
+        readIds.formUnion(ids)
+        save()
+    }
+
     func isRead(_ id: Int) -> Bool {
         readIds.contains(id)
     }

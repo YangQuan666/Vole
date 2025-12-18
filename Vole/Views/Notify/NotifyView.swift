@@ -29,7 +29,7 @@ struct NotifyView: View {
                         .listRowSeparator(.hidden)
                 } else {
                     List {
-                        Section {
+                        Section(footer: footerView) {
                             ForEach(notifyManager.notifications, id: \.id) {
                                 item in
                                 NotifyRowView(item: item) { topicId in
@@ -38,26 +38,14 @@ struct NotifyView: View {
                                     )
                                 }
                                 .listRowInsets(EdgeInsets())
-                            }
-                        }
-                        // 2. 底部加载指示器
-                        if notifyManager.hasNextPage {
-                            HStack {
-                                Spacer()
-                                ProgressView()
-                                    .id("bottom_loader")  // 给个 ID 避免视图复用问题
-                                Text("加载中...")
-                                    .foregroundStyle(.secondary)
-                                    .font(.subheadline)
-                                Spacer()
-                            }
-                            .listRowSeparator(.hidden)
-                            .listRowBackground(Color.clear)
-                            .padding(.vertical, 8)
-                            // 3. 关键：当这个加载条出现时，触发下一页
-                            .onAppear {
-                                Task {
-                                    await notifyManager.loadNextPage()
+                                .onAppear {
+                                    if item.id
+                                        == notifyManager.notifications.last?.id
+                                    {
+                                        Task {
+                                            await notifyManager.loadNextPage()
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -135,6 +123,23 @@ struct NotifyView: View {
             .sheet(isPresented: $showProfile) {
                 ProfileView()
             }
+        }
+    }
+
+    @ViewBuilder
+    private var footerView: some View {
+        // 底部加载更多动画
+        if notifyManager.hasNextPage {
+            VStack {
+                ProgressView("加载中…")
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+            .listRowSeparator(.hidden)
+        } else if notifyManager.totalCount > 0 {
+            VStack {
+                Text("已加载全部\(notifyManager.totalCount)条通知")
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
         }
     }
 }
