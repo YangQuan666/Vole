@@ -91,7 +91,7 @@ struct HomeView: View {
             }
             .toolbar {
                 if #available(iOS 26, *) {
-                    ToolbarItem(placement: .automatic) {
+                    ToolbarItem(placement: .principal) {
                         Picker("category", selection: $selection) {
                             ForEach(Category.allCases, id: \.self) { item in
                                 Text(item.rawValue).tag(item)
