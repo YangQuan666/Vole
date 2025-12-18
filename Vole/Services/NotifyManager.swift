@@ -149,10 +149,9 @@ final class NotifyManager: ObservableObject {
     }
 
     func refresh() async {
-        // 刷新时重置状态，保证从第一页开始加载
+        guard !isLoading else { return }
         self.currentPage = 1
         self.endIndex = 0
-        self.totalCount = 0
         await loadNotifications(page: 1, isRefresh: true)
     }
 
