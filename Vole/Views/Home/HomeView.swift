@@ -90,35 +90,17 @@ struct HomeView: View {
                 }
             }
             .toolbar {
-                if #available(iOS 26, *) {
-                    ToolbarItem(placement: .principal) {
-                        Picker("category", selection: $selection) {
-                            ForEach(Category.allCases, id: \.self) { item in
-                                Text(item.rawValue).tag(item)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                    }
-                    .sharedBackgroundVisibility(.hidden)
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        AvatarView {
-                            showProfile = true
+                ToolbarItem(placement: .principal) {
+                    Picker("category", selection: $selection) {
+                        ForEach(Category.allCases, id: \.self) { item in
+                            Text(item.rawValue).tag(item)
                         }
                     }
-                    .sharedBackgroundVisibility(.hidden)
-                } else {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Picker("category", selection: $selection) {
-                            ForEach(Category.allCases, id: \.self) { item in
-                                Text(item.rawValue).tag(item)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                    }
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        AvatarView {
-                            showProfile = true
-                        }
+                    .pickerStyle(.segmented)
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    AvatarView {
+                        showProfile = true
                     }
                 }
             }

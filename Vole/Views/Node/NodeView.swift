@@ -123,18 +123,9 @@ struct NodeView: View {
                 }
             }
             .toolbar {
-                if #available(iOS 26, *) {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        AvatarView {
-                            showProfile = true
-                        }
-                    }
-                    .sharedBackgroundVisibility(.hidden)
-                } else {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        AvatarView {
-                            showProfile = true
-                        }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    AvatarView {
+                        showProfile = true
                     }
                 }
             }

@@ -10,7 +10,7 @@ import SwiftUI
 
 struct AvatarView: View {
     var action: () -> Void
-    var size: CGFloat = 32  // 建议在 Toolbar 里稍微加大到 34 或 36 来抵消视觉差
+    var size: CGFloat = 36
     @ObservedObject var userManager: UserManager = .shared
 
     var body: some View {
@@ -22,14 +22,14 @@ struct AvatarView: View {
             {
                 KFImage(url)
                     .resizable()
-                    .scaledToFill()  // 填满
-                    .frame(width: size + 8, height: size + 8)  // 【关键】直接强制 KFImage 的尺寸
+                    .scaledToFill()
+                    .frame(width: size, height: size)
                     .clipShape(Circle())
             } else {
                 Image(systemName: "person.crop.circle.fill")
                     .resizable()
                     .foregroundStyle(.blue)
-                    .frame(width: size, height: size)  // 同样显式限制系统图标
+                    .frame(width: size, height: size)
                     .clipShape(Circle())
             }
         }
