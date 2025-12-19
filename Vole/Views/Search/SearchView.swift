@@ -63,49 +63,15 @@ struct SearchView: View {
             .toolbar {
                 if #available(iOS 26, *) {
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        Button {
+                        AvatarView {
                             showProfile = true
-                        } label: {
-                            if let memeber = userManager.currentMember,
-                                let avatarURL =
-                                    memeber.getHighestQualityAvatar(),
-                                let url = URL(string: avatarURL)
-                            {
-                                KFImage(url)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 64, height: 64)
-                                    .clipShape(Circle())
-                            } else {
-                                Image(systemName: "person.crop.circle.fill")
-                                    .resizable()
-                                    .frame(width: 32, height: 32)
-                                    .foregroundStyle(.blue)
-                            }
                         }
                     }
                     .sharedBackgroundVisibility(.hidden)
                 } else {
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        Button {
+                        AvatarView {
                             showProfile = true
-                        } label: {
-                            if let memeber = userManager.currentMember,
-                                let avatarURL =
-                                    memeber.getHighestQualityAvatar(),
-                                let url = URL(string: avatarURL)
-                            {
-                                KFImage(url)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 64, height: 64)
-                                    .clipShape(Circle())
-                            } else {
-                                Image(systemName: "person.crop.circle.fill")
-                                    .resizable()
-                                    .frame(width: 32, height: 32)
-                                    .foregroundStyle(.blue)
-                            }
                         }
                     }
                 }

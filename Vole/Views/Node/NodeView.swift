@@ -87,7 +87,11 @@ struct NodeView: View {
                 case .topicId(let topicId):
                     DetailView(topicId: topicId, path: $navManager.nodePath)
                 case .topic(let topic):
-                    DetailView(topicId: nil, topic: topic, path: $navManager.nodePath)
+                    DetailView(
+                        topicId: nil,
+                        topic: topic,
+                        path: $navManager.nodePath
+                    )
                 case .node(let node):
                     NodeDetailView(node: node, path: $navManager.nodePath)
                 case .nodeName(let nodeName):
@@ -121,49 +125,15 @@ struct NodeView: View {
             .toolbar {
                 if #available(iOS 26, *) {
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        Button {
+                        AvatarView {
                             showProfile = true
-                        } label: {
-                            if let memeber = userManager.currentMember,
-                                let avatarURL =
-                                    memeber.getHighestQualityAvatar(),
-                                let url = URL(string: avatarURL)
-                            {
-                                KFImage(url)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 64, height: 64)
-                                    .clipShape(Circle())
-                            } else {
-                                Image(systemName: "person.crop.circle.fill")
-                                    .resizable()
-                                    .frame(width: 32, height: 32)
-                                    .foregroundStyle(.blue)
-                            }
                         }
                     }
                     .sharedBackgroundVisibility(.hidden)
                 } else {
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        Button {
+                        AvatarView {
                             showProfile = true
-                        } label: {
-                            if let memeber = userManager.currentMember,
-                                let avatarURL =
-                                    memeber.getHighestQualityAvatar(),
-                                let url = URL(string: avatarURL)
-                            {
-                                KFImage(url)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 64, height: 64)
-                                    .clipShape(Circle())
-                            } else {
-                                Image(systemName: "person.crop.circle.fill")
-                                    .resizable()
-                                    .frame(width: 32, height: 32)
-                                    .foregroundStyle(.blue)
-                            }
                         }
                     }
                 }
