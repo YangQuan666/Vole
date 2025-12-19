@@ -140,7 +140,7 @@ struct SettingView: View {
                         Link(
                             "Discord",
                             destination: URL(
-                                string: "https://discord.gg/jUA5VYyZ"
+                                string: "https://discord.gg/4vnEBzrW3d"
                             )!
                         )
                         .foregroundColor(.secondary)
