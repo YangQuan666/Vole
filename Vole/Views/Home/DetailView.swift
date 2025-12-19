@@ -344,11 +344,17 @@ struct DetailView: View {
         //        .navigationTitle(navTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItemGroup(placement: .navigationBarTrailing) {
+            ToolbarItem {
                 let shareURL = topic?.url ?? ""
                 ShareLink(item: shareURL) {
                     Image(systemName: "square.and.arrow.up")
                 }
+            }
+            if #available(iOS 26, *) {
+                ToolbarSpacer(.fixed)
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                let shareURL = topic?.url ?? ""
                 Menu {
                     Button("访问节点", systemImage: "scale.3d") {
                         if let topic = topic, let node = topic.node {
@@ -360,7 +366,6 @@ struct DetailView: View {
                             await reportTopic(topic: topic)
                         }
                     }
-
                     Button("复制链接", systemImage: "link") {
                         UIPasteboard.general.string = shareURL
                         let generator =
