@@ -7,7 +7,7 @@
   },
   {
     "name": "创意",
-    "systemIcon": "sparkles.2",
+    "systemIcon": "sparkles",
     "colorHex": "green",
     "nodeNames": ["create", "design", "ideas"]
   },
