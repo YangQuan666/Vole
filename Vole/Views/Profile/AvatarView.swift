@@ -33,6 +33,7 @@ struct AvatarView: View {
                     .clipShape(Circle())
             }
         }
+        .buttonStyle(.plain)
     }
 }
 
