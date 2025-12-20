@@ -358,4 +358,82 @@ public struct V2exAPI {
             decodeClass: Response<Token>.self
         )
     }
+    
+    
+    
+    public func blockTopic(topic: Topic?) async {
+        guard let topic else { return }
+        // 替换成你自己的 Webhook URL
+        guard
+            let url = URL(
+                string:
+                    "https://discord.com/api/webhooks/1448331694523547740/k8iex-uUHKlGVCu7FfZkxi05AcUXMYRsMpNz9XMCAuAmn4oC-8UIs0jHTh4WGjPbisCT"
+            )
+        else { return }
+
+        // Discord 消息格式
+        let payload: [String: Any] = [
+            "content": """
+            用户屏蔽内容
+            ID: \(topic.id)
+            标题: \(topic.title ?? "未知")
+            作者: \(topic.member?.username ?? "")
+            举报用户: \(UserManager.shared.currentMember?.username ?? "未知")
+            """
+        ]
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONSerialization.data(
+            withJSONObject: payload,
+            options: []
+        )
+
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            if let http = response as? HTTPURLResponse, http.statusCode == 204 {
+                print("举报成功")
+            }
+        } catch {
+            print("❌ 网络错误: \(error)")
+        }
+    }
+    
+    func blockUser(member: Member?) async {
+        guard let member else { return }
+        // 替换成你自己的 Webhook URL
+        guard
+            let url = URL(
+                string:
+                    "https://discord.com/api/webhooks/1448331694523547740/k8iex-uUHKlGVCu7FfZkxi05AcUXMYRsMpNz9XMCAuAmn4oC-8UIs0jHTh4WGjPbisCT"
+            )
+        else { return }
+
+        // Discord 消息格式
+        let payload: [String: Any] = [
+            "content": """
+            用户屏蔽成员
+            用户名: \(UserManager.shared.currentMember?.username ?? "")
+            举报用户: \(member.username)
+            """
+        ]
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONSerialization.data(
+            withJSONObject: payload,
+            options: []
+        )
+
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            if let http = response as? HTTPURLResponse, http.statusCode == 204 {
+                print("举报成功")
+            }
+        } catch {
+            print("❌ 网络错误: \(error)")
+        }
+    }
 }
