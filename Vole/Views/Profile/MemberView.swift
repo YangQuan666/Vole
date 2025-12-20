@@ -9,11 +9,15 @@ import Kingfisher
 import SwiftUI
 
 struct MemberView: View {
-    @ObservedObject private var userManager = UserManager.shared
+    @ObservedObject private var userManager :UserManager = .shared
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     var member: Member?
-    var admin: Bool = false
+//    var admin: Bool = false
+    
+    var mine: Bool {
+        userManager.currentMember?.username == member?.username
+    }
     var onLogout: (() -> Void)?
 
     var body: some View {
@@ -165,7 +169,10 @@ struct MemberView: View {
                                     .contextMenu {
                                         Button("在浏览器中打开", systemImage: "safari")
                                         {
-                                            if let url = URL(string: "https://x.com/\(twitter)") {
+                                            if let url = URL(
+                                                string:
+                                                    "https://x.com/\(twitter)"
+                                            ) {
                                                 openURL(url)
                                             }
                                         }
@@ -184,7 +191,10 @@ struct MemberView: View {
                                     .contextMenu {
                                         Button("在浏览器中打开", systemImage: "safari")
                                         {
-                                            if let url = URL(string: "https://psnprofiles.com/\(psn)") {
+                                            if let url = URL(
+                                                string:
+                                                    "https://psnprofiles.com/\(psn)"
+                                            ) {
                                                 openURL(url)
                                             }
                                         }
@@ -194,7 +204,7 @@ struct MemberView: View {
                     }
 
                     // 是当前登录用户
-                    if admin {
+                    if mine {
                         if let token = userManager.token,
                             let tokenStr = token.token
                         {
@@ -284,11 +294,24 @@ struct MemberView: View {
             .navigationBarTitleDisplayMode(.inline)
             // 2. 添加完成按钮
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("完成") {
-                        dismiss()
+                if !mine {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button(role: .destructive) {
+                            dismiss()
+                        } label: {
+                            Image(systemName: "person.slash")
+                                .foregroundStyle(.red)
+                        }
                     }
-                    .buttonStyle(.borderless)
+                }
+
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .foregroundColor(.primary)
+                    }
                 }
             }
         }
@@ -304,5 +327,5 @@ struct MemberView: View {
         bio: "我是一名爱打游戏，爱编程、喜欢打羽毛球的INTP人格",
         created: 1
     )
-    MemberView(member: member, admin: false)
+    MemberView(member: member)
 }
