@@ -15,7 +15,6 @@ struct AvatarView: View {
 
     var body: some View {
         Button(action: action) {
-            // 不再使用 Group 包裹 Frame，而是直接分别控制
             if let member = userManager.currentMember,
                 let avatarURL = member.getHighestQualityAvatar(),
                 let url = URL(string: avatarURL)
