@@ -9,11 +9,11 @@ import Kingfisher
 import SwiftUI
 
 struct MemberView: View {
+    @State private var showAlert = false
     @ObservedObject private var userManager :UserManager = .shared
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     var member: Member?
-//    var admin: Bool = false
     
     var mine: Bool {
         userManager.currentMember?.username == member?.username
@@ -297,7 +297,7 @@ struct MemberView: View {
                 if !mine {
                     ToolbarItem(placement: .navigationBarLeading) {
                         Button(role: .destructive) {
-                            dismiss()
+                            showAlert = true
                         } label: {
                             Image(systemName: "person.slash")
                                 .foregroundStyle(.red)
@@ -313,6 +313,14 @@ struct MemberView: View {
                             .foregroundColor(.primary)
                     }
                 }
+            }
+            .alert("确定要屏蔽该用户吗？", isPresented: $showAlert) {
+                Button("确认屏蔽", role: .destructive) {
+                    Task {
+                        await V2exAPI.shared.blockUser(member: member)
+                    }
+                }
+                Button("取消", role: .cancel) {}
             }
         }
     }
