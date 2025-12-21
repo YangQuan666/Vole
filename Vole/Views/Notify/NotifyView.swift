@@ -33,7 +33,6 @@ struct NotifyView: View {
                             ForEach(notifyManager.notifications, id: \.id) {
                                 item in
                                 NotifyRowView(item: item) { topicId in
-                                    //
                                     navManager.notifyPath.append(
                                         Route.topicId(topicId)
                                     )
@@ -105,6 +104,8 @@ struct NotifyView: View {
 struct ParsedNotification {
     let username: String
     let action: String
+    let icon: String
+    let color: Color
     let topicTitle: String?
     let topicId: Int?
 }
