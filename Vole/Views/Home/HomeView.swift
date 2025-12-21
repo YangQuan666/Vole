@@ -90,13 +90,20 @@ struct HomeView: View {
                 }
             }
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Picker("category", selection: $selection) {
-                        ForEach(Category.allCases, id: \.self) { item in
-                            Text(item.rawValue).tag(item)
-                        }
+                let picker = Picker("category", selection: $selection) {
+                    ForEach(Category.allCases, id: \.self) { item in
+                        Text(item.rawValue).tag(item)
                     }
-                    .pickerStyle(.segmented)
+                }
+                .pickerStyle(.segmented)
+                if #available(iOS 26, *) {
+                    ToolbarItem(placement: .principal) {
+                        picker
+                    }
+                } else {
+                    ToolbarItem(placement: .topBarLeading) {
+                        picker
+                    }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     AvatarView {
