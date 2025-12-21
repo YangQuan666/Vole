@@ -12,6 +12,7 @@ import SwiftUI
 struct NotifyView: View {
 
     @State private var showProfile = false
+    @State private var showAlert = false
     @ObservedObject private var userManager = UserManager.shared
     @ObservedObject private var notifyManager = NotifyManager.shared
     @EnvironmentObject var navManager: NavigationManager
@@ -71,11 +72,29 @@ struct NotifyView: View {
                 }
             }
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                if notifyManager.unreadCount > 0 {
+                    ToolbarItem {
+                        Button {
+                            showAlert = true
+                        } label: {
+                            Image(systemName: "tray.and.arrow.down")
+                        }
+                    }
+                    if #available(iOS 26.0, *) {
+                        ToolbarSpacer(.fixed)
+                    }
+                }
+                ToolbarItem {
                     AvatarView {
                         showProfile = true
                     }
                 }
+            }
+            .alert("一键已读所有通知？", isPresented: $showAlert) {
+                Button("确认", role: .destructive) {
+                    notifyManager.markAllRead()
+                }
+                Button("取消", role: .cancel) {}
             }
             .sheet(isPresented: $showProfile) {
                 ProfileView()

@@ -17,19 +17,35 @@ final class NotifyManager: ObservableObject {
     @Published var totalCount: Int = 0
     @Published private(set) var readIds: Set<Int> = []
 
+    // 一键已读时的水位线 ID 和 当时的总数
+    @Published private(set) var lastReadAllId: Int = 0
+    @Published private(set) var allReadTotalCount: Int = 0
+
     // --- 分页状态属性 ---
     @Published var currentPage: Int = 1
     @Published var endIndex: Int = 0  // 当前加载到的末尾索引 (即 10 或 20)
     @Published var isLoading: Bool = false  // 是否正在加载中，用于防止重复请求
 
-    private let key = "read_notification_ids"
+    private let keyReadIds = "read_notification_ids"
+    private let keyLastReadId = "last_read_all_id"
+    private let keyAllReadTotal = "all_read_total_count"
+
     private var timer: Timer?
     private var cancellables = Set<AnyCancellable>()  // 用于存放订阅对象
 
     private init() {
-        if let stored = UserDefaults.standard.array(forKey: key) as? [Int] {
+        // 读取已读集合
+        if let stored = UserDefaults.standard.array(forKey: keyReadIds)
+            as? [Int]
+        {
             readIds = Set(stored)
         }
+        // 读取水位线
+        lastReadAllId = UserDefaults.standard.integer(forKey: keyLastReadId)
+        allReadTotalCount = UserDefaults.standard.integer(
+            forKey: keyAllReadTotal
+        )
+
         setupAuthListener()
     }
 
@@ -79,28 +95,51 @@ final class NotifyManager: ObservableObject {
     }
 
     var unreadCount: Int {
-        let count = totalCount - readIds.count
-        return max(0, count)
+        // 1. 先算出一键已读后，新产生了多少条通知
+        let newCountSinceAllRead = totalCount - allReadTotalCount
+
+        // 2. 算出一键已读后，用户手动单条点读的数量
+        // 注意：只有那些 ID 比水位线大的点读才算有效（水位线下的本来就是已读）
+        let manualReadCount = readIds.filter { $0 > lastReadAllId }.count
+
+        // 3. 最终未读 = 差值 - 单点
+        return max(0, newCountSinceAllRead - manualReadCount)
     }
 
+    // 单条已读
     func markRead(_ id: Int) {
+        // 如果 ID 已经在水位线以下，没必要记录
+        guard id > lastReadAllId else { return }
         if !readIds.contains(id) {
             readIds.insert(id)
             save()
         }
     }
 
-    func markAllRead(_ ids: [Int]) {
-        readIds.formUnion(ids)
+    // 一键已读
+    func markAllRead() {
+        // 1. 记录当前最顶部的 ID 作为水位线
+        if let latestId = notifications.first?.id {
+            lastReadAllId = latestId
+        }
+
+        // 2. 记录当前服务器给出的总数
+        allReadTotalCount = totalCount
+
+        // 3. 清空旧的单点已读集合（因为它们已经都在 allReadTotalCount 范围里了）
+        readIds.removeAll()
+
         save()
     }
 
     func isRead(_ id: Int) -> Bool {
-        readIds.contains(id)
+        return id <= lastReadAllId || readIds.contains(id)
     }
 
     private func save() {
-        UserDefaults.standard.set(Array(readIds), forKey: key)
+        UserDefaults.standard.set(Array(readIds), forKey: keyReadIds)
+        UserDefaults.standard.set(lastReadAllId, forKey: keyLastReadId)
+        UserDefaults.standard.set(allReadTotalCount, forKey: keyAllReadTotal)
     }
 
     // 是否还有下一页数据
@@ -144,7 +183,7 @@ final class NotifyManager: ObservableObject {
     }
 
     func loadNextPage() async {
-        guard hasNextPage else { return }
+        guard hasNextPage && !isLoading else { return }
         await loadNotifications(page: currentPage + 1, isRefresh: false)
     }
 
