@@ -241,7 +241,9 @@ struct DetailView: View {
                     }
 
                     // 评论区
-                    Section(header: Text("评论").font(.headline)) {
+                    let count = replyVM.replies?.count ?? 0
+                    let headerTxt = count == 0 ? "评论" : "评论(\(count))"
+                    Section(header: Text(headerTxt).font(.headline)) {
                         if replyVM.isLoading {
                             ProgressView()
                                 .frame(maxWidth: .infinity)
