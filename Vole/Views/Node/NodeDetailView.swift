@@ -152,11 +152,17 @@ struct NodeDetailView: View {
             DetailView(topicId: topicId, path: $path)
         }
         .toolbar {
-            ToolbarItemGroup(placement: .navigationBarTrailing) {
+            ToolbarItem {
                 let shareURL = node?.url ?? ""
                 ShareLink(item: shareURL) {
                     Image(systemName: "square.and.arrow.up")
                 }
+            }
+            if #available(iOS 26, *) {
+                ToolbarSpacer(.fixed)
+            }
+            ToolbarItem {
+                let shareURL = node?.url ?? ""
                 Menu {
                     if let node, let parentNodeName = node.parentNodeName,
                         !parentNodeName.isEmpty

@@ -352,7 +352,7 @@ struct DetailView: View {
             if #available(iOS 26, *) {
                 ToolbarSpacer(.fixed)
             }
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItem {
                 let shareURL = topic?.url ?? ""
                 Menu {
                     Button("访问节点", systemImage: "scale.3d") {
