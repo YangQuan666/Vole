@@ -67,7 +67,7 @@ struct HomeView: View {
                     )
                 }
             }
-            .navigationTitle("首页")
+            .navigationTitle("主页")
             .navigationDestination(for: Route.self) { route in
                 switch route {
                 case .topicId(let topicId):
