@@ -26,11 +26,33 @@ public struct Node: Identifiable, Codable, Hashable {
     public let parentNodeName: String?
 
     enum CodingKeys: String, CodingKey {
-        case name, stars, aliases, root, id, title, url, topics, footer, header, avatar
+        case name, stars, aliases, root, id, title, url, topics, footer, header,
+            avatar
         case titleAlternative = "title_alternative"
         case avatarMini = "avatar_mini"
         case avatarNormal = "avatar_normal"
         case avatarLarge = "avatar_large"
         case parentNodeName = "parent_node_name"
+    }
+
+    static func createVirtual(name: String, title: String? = nil) -> Node {
+        Node(
+            id: nil,  // ID 为 nil 是识别虚拟节点的标志
+            name: name,
+            title: title ?? name.capitalized,
+            url: nil,
+            topics: 0,
+            footer: nil,
+            header: nil,
+            titleAlternative: nil,
+            avatar: nil,
+            avatarMini: nil,
+            avatarNormal: nil,
+            avatarLarge: nil,
+            stars: nil,
+            aliases: nil,
+            root: true,
+            parentNodeName: nil,
+        )
     }
 }

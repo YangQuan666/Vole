@@ -69,8 +69,7 @@ class NodeManager: ObservableObject {
         }
     }
 
-    // MARK: - 加载节点（网络 + 本地缓存）
-
+    // 加载节点（网络 + 本地缓存）
     private func loadNodes() async -> [Node] {
         guard !isLoading else { return [] }
         isLoading = true
@@ -103,13 +102,23 @@ class NodeManager: ObservableObject {
 
     // 构建分组
     func buildGroups(from nodes: [Node]) -> [NodeGroup] {
-
+        // 1. 基础映射
         var nameMap: [String: Node] = [:]
+        for n in nodes { nameMap[n.name] = n }
+
+        // 2. 识别并创建虚拟父节点
+        var virtualParents: [String: Node] = [:]
         for n in nodes {
-            nameMap[n.name] = n
+            if let parentName = n.parentNodeName, nameMap[parentName] == nil {
+                if virtualParents[parentName] == nil {
+                    virtualParents[parentName] = Node.createVirtual(
+                        name: parentName
+                    )
+                }
+            }
         }
 
-        // 建立 children 映射
+        // 3. 建立子节点关系映射
         var childrenMap: [String: [Node]] = [:]
         for n in nodes {
             if let parent = n.parentNodeName {
@@ -117,14 +126,17 @@ class NodeManager: ObservableObject {
             }
         }
 
-        // 找根节点
-        let roots: [Node] = nodes.filter {
-            $0.parentNodeName == nil || $0.name == "v2ex"
-                || nameMap[$0.parentNodeName ?? ""] == nil
-        }
+        // 4. 确定所有的根（原始根 + 虚拟根）
+        let roots: [Node] =
+            nodes.filter { node in
+                let isParentEmpty =
+                    node.parentNodeName == nil
+                    || node.parentNodeName?.isEmpty == true
+                return isParentEmpty || node.name == "v2ex"
+            } + Array(virtualParents.values)
 
-        // BFS 展平
-        func collectDescendantsBFS(of root: Node) -> [Node] {
+        // BFS 展平函数（只收集真实存在的节点）
+        func collectRealNodesBFS(of root: Node) -> [Node] {
             var result: [Node] = []
             var visited: Set<String> = []
             var queue: [Node] = [root]
@@ -133,59 +145,69 @@ class NodeManager: ObservableObject {
                 let node = queue.removeFirst()
                 guard !visited.contains(node.name) else { continue }
                 visited.insert(node.name)
-                result.append(node)
-                queue.append(contentsOf: childrenMap[node.name] ?? [])
+
+                // 关键：只有带 ID 的才是真实节点（排除掉我们伪造的虚拟父节点）
+                if node.id != nil {
+                    result.append(node)
+                }
+
+                if let children = childrenMap[node.name] {
+                    queue.append(contentsOf: children)
+                }
             }
             return result
         }
 
-        var groups: [NodeGroup] = []
-        var singles: [Node] = []
+        var finalGroups: [NodeGroup] = []
+        var singles: [Node] = []  // 用来存放那些“势单力薄”的单点节点
+        var processedNames: Set<String> = []
 
+        // 5. 开始构建分组
         for root in roots {
-            let flat = collectDescendantsBFS(of: root)
-            if flat.isEmpty { continue }
+            let flatNodes = collectRealNodesBFS(of: root)
 
-            if flat.count == 1 {
-                singles.append(flat[0])
-                continue
+            // 过滤掉已经在其他组处理过的节点（防止环路或交叉引用）
+            let uniqueNodes = flatNodes.filter {
+                !processedNames.contains($0.name)
             }
+            if uniqueNodes.isEmpty { continue }
+            uniqueNodes.forEach { processedNames.insert($0.name) }
 
-            let sorted = flat.sorted { ($0.topics ?? 0) > ($1.topics ?? 0) }
-            let weight = sorted.reduce(0) { $0 + ($1.topics ?? 0) }
-
-            groups.append(NodeGroup(root: root, nodes: sorted, weight: weight))
+            // --- 核心逻辑判断 ---
+            if uniqueNodes.count > 2 {
+                // 如果节点数多于 1，形成独立分组
+                let sorted = uniqueNodes.sorted {
+                    ($0.topics ?? 0) > ($1.topics ?? 0)
+                }
+                let weight = sorted.reduce(0) { $0 + ($1.topics ?? 0) }
+                finalGroups.append(
+                    NodeGroup(root: root, nodes: sorted, weight: weight)
+                )
+            } else {
+                // 如果只有 1 个节点，暂存到 singles
+                singles.append(contentsOf: uniqueNodes)
+            }
         }
 
-        // 单节点打包 other
+        // 6. 处理所有的单点节点，打包成“其他”
         if !singles.isEmpty {
-            let sorted = singles.sorted { ($0.topics ?? 0) > ($1.topics ?? 0) }
-            let total = sorted.reduce(0) { $0 + ($1.topics ?? 0) }
+            let sortedSingles = singles.sorted {
+                ($0.topics ?? 0) > ($1.topics ?? 0)
+            }
+            let totalWeight = sortedSingles.reduce(0) { $0 + ($1.topics ?? 0) }
 
-            let otherRoot = Node(
-                id: nil,
-                name: "other",
-                title: "其他",
-                url: nil,
-                topics: total,
-                footer: nil,
-                header: nil,
-                titleAlternative: nil,
-                avatar: nil,
-                avatarMini: nil,
-                avatarNormal: nil,
-                avatarLarge: nil,
-                stars: nil,
-                aliases: nil,
-                root: true,
-                parentNodeName: nil
-            )
-
-            groups.append(
-                NodeGroup(root: otherRoot, nodes: sorted, weight: total)
+            let otherRoot = Node.createVirtual(name: "other", title: "其他")
+            finalGroups.append(
+                NodeGroup(
+                    root: otherRoot,
+                    nodes: sortedSingles,
+                    weight: totalWeight
+                )
             )
         }
 
-        return groups.sorted { $0.weight > $1.weight }
+        // 7. 最后根据权重（活跃度）全局排序
+        return finalGroups.sorted { $0.weight > $1.weight }
     }
+
 }
