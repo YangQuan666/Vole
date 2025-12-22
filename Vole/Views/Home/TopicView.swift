@@ -21,7 +21,7 @@ struct TopicRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // 头像 + 昵称
+            // 头像 + 昵称 + 节点
             HStack {
                 if let member = topic.member {
 
@@ -41,12 +41,25 @@ struct TopicRow: View {
                             .fill(Color.gray)
                             .frame(width: 24, height: 24)
                     }
-
                     Text(member.username)
                         .font(.subheadline)
                         .foregroundColor(.primary)
-
                     Spacer()
+                    Text(topic.node?.title ?? "")
+                        .font(.callout)
+                        .foregroundColor(.accentColor)
+                        .lineLimit(1)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            RoundedRectangle(
+                                cornerRadius: 8,
+                                style: .continuous
+                            )
+                            .fill(
+                                Color.accentColor.opacity(0.15)
+                            )
+                        )
                 }
             }
 
@@ -66,13 +79,8 @@ struct TopicRow: View {
                     .lineLimit(3)
             }
 
-            // 节点+发布时间 + 评论数量
+            // 发布时间 + 评论数量
             HStack {
-                Text(topic.node?.title ?? "")
-                    .font(.subheadline)
-                    .foregroundColor(.accentColor)
-                    .lineLimit(1)
-                Spacer()
                 if let created = topic.created {
                     TimelineView(.everyMinute) { _ in
                         Text(
@@ -82,6 +90,7 @@ struct TopicRow: View {
                         .foregroundColor(.secondary)
                     }
                 }
+                Spacer()
                 if let replies = topic.replies {
                     HStack(spacing: 4) {  // 图标和文字间距
                         Image(systemName: "ellipsis.bubble")
@@ -124,8 +133,8 @@ struct TopicRow: View {
 }
 
 #Preview {
-//    let topic = ModelData().topics[0]
-//    TopicRow(topic: topic) {
-//
-//    }
+    //    let topic = ModelData().topics[0]
+    //    TopicRow(topic: topic) {
+    //
+    //    }
 }
