@@ -148,9 +148,6 @@ struct NodeDetailView: View {
                 .frame(maxWidth: .infinity, alignment: .center)
             }
         }
-        .navigationDestination(for: Int.self) { topicId in
-            DetailView(topicId: topicId, path: $path)
-        }
         .toolbar {
             ToolbarItem {
                 let shareURL = node?.url ?? ""
@@ -165,16 +162,10 @@ struct NodeDetailView: View {
                 let shareURL = node?.url ?? ""
                 Menu {
                     if let node, let parentNodeName = node.parentNodeName,
-                        !parentNodeName.isEmpty
+                        let n = nodeManager.getNode(parentNodeName)
                     {
                         Button("父节点", systemImage: "scale.3d") {
-
-                            if let n = nodeManager.getNode(parentNodeName) {
-                                path.append(Route.node(n))
-                            } else {
-                                path.append(Route.nodeName(parentNodeName))
-                            }
-
+                            path.append(Route.node(n))
                         }
                     }
                     Button("复制链接", systemImage: "link") {
