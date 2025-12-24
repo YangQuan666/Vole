@@ -186,11 +186,11 @@ struct NodeView: View {
                             }
                         }
                         .frame(width: cardWidth)
-                        .scrollTargetLayout()
                     }
                 }
-                .padding(.horizontal)
+                .scrollTargetLayout()
             }
+            .safeAreaPadding(.horizontal, 16)
             .scrollTargetBehavior(.viewAligned)
         }
     }
