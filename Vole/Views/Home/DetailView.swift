@@ -24,6 +24,7 @@ struct DetailView: View {
     @State private var showUserInfo = false
     @State private var selectedUser: Member?
     @State private var showAlert = false
+    @State private var showReportDialog = false
 
     @Environment(\.openURL) private var openURL
     @Environment(\.appOpenURL) private var appOpenURL
@@ -241,67 +242,72 @@ struct DetailView: View {
                     }
 
                     // 评论区
-                    let count = replyVM.replies?.count ?? 0
-                    let headerTxt = count == 0 ? "评论" : "评论(\(count))"
-                    Section(header: Text(headerTxt).font(.headline)) {
+                    Section {
                         if replyVM.isLoading {
                             ProgressView()
                                 .frame(maxWidth: .infinity)
                                 .padding()
                                 .listRowSeparator(.hidden)
-                        } else if replyVM.replies?.isEmpty ?? true {
-                            Text("暂无评论，快来抢沙发吧~")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 20)
-                                .listRowSeparator(.hidden)
-                        } else {
-                            ForEach(
-                                Array((replyVM.replies ?? []).enumerated()),
-                                id: \.1.id
-                            ) { index, reply in
-                                ReplyRowView(
-                                    path: $path,
-                                    topic: topic,
-                                    reply: reply,
-                                    floor: index
-                                )
-                                .matchedGeometryEffect(
-                                    id: reply.id,
-                                    in: ns,
-                                    isSource: selectedReply == nil
-                                )
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    withAnimation(
-                                        .spring(dampingFraction: 0.6)
+                        } else if let replies = replyVM.replies {
+                            if replies.isEmpty {
+                                Text("暂无评论，快来抢沙发吧~")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.center)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 20)
+                                    .listRowSeparator(.hidden)
+                            } else {
+                                Text(replies.count > 0 ? "评论(\(replies.count))" : "评论")
+                                    .font(.headline)
+                                    .foregroundColor(.secondary)
+                                    .listRowSeparator(.hidden)
+                                
+                                ForEach(
+                                    Array((replies).enumerated()),
+                                    id: \.1.id
+                                ) { index, reply in
+                                    ReplyRowView(
+                                        path: $path,
+                                        topic: topic,
+                                        reply: reply,
+                                        floor: index
+                                    )
+                                    .matchedGeometryEffect(
+                                        id: reply.id,
+                                        in: ns,
+                                        isSource: selectedReply == nil
+                                    )
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        withAnimation(
+                                            .spring(dampingFraction: 0.6)
+                                        ) {
+                                            selectedReply = reply
+                                            // navTitle = "对话"
+                                        }
+                                    }
+                                    .swipeActions(
+                                        edge: .trailing,
+                                        allowsFullSwipe: true
                                     ) {
-                                        selectedReply = reply
-                                        //                                        navTitle = "对话"
-                                    }
-                                }
-                                .swipeActions(
-                                    edge: .trailing,
-                                    allowsFullSwipe: true
-                                ) {
-                                    Button {
-                                        UIPasteboard.general.string =
-                                            replyVM.replies![index].content
+                                        Button {
+                                            UIPasteboard.general.string =
+                                                replies[index].content
 
-                                        let generator =
-                                            UINotificationFeedbackGenerator()
-                                        generator.notificationOccurred(
-                                            .success
-                                        )
-                                    } label: {
-                                        Label(
-                                            "复制",
-                                            systemImage: "doc.on.doc"
-                                        )
+                                            let generator =
+                                                UINotificationFeedbackGenerator()
+                                            generator.notificationOccurred(
+                                                .success
+                                            )
+                                        } label: {
+                                            Label(
+                                                "复制",
+                                                systemImage: "doc.on.doc"
+                                            )
+                                        }
+                                        .tint(.accentColor)
                                     }
-                                    .tint(.accentColor)
                                 }
                             }
                         }
@@ -314,10 +320,8 @@ struct DetailView: View {
                         group.addTask {
                             await loadTopic()
                         }
-                        if replyVM.replies == nil {
-                            group.addTask {
-                                await replyVM.load(topicId: topic.id)
-                            }
+                        group.addTask {
+                            await replyVM.load(topicId: topic.id)
                         }
                     }
                 }
@@ -326,10 +330,9 @@ struct DetailView: View {
                         group.addTask {
                             await loadTopic()
                         }
-                        if replyVM.replies == nil {
-                            group.addTask {
-                                await replyVM.load(topicId: topic.id)
-                            }
+
+                        group.addTask {
+                            await replyVM.load(topicId: topic.id)
                         }
                     }
                 }
@@ -365,11 +368,8 @@ struct DetailView: View {
                     Button("屏蔽内容", systemImage: "text.page.slash") {
                         showAlert = true
                     }
-                    Button("复制链接", systemImage: "link") {
-                        UIPasteboard.general.string = shareURL
-                        let generator =
-                            UINotificationFeedbackGenerator()
-                        generator.notificationOccurred(.success)
+                    Button("举报内容", systemImage: "exclamationmark.bubble") {
+                        showReportDialog = true
                     }
                     Button("在浏览器中打开", systemImage: "safari") {
                         if let url = URL(string: shareURL) {
@@ -405,9 +405,53 @@ struct DetailView: View {
             }
             Button("取消", role: .cancel) {}
         }
+        .confirmationDialog(
+            "选择举报原因",
+            isPresented: $showReportDialog,
+            titleVisibility: .visible
+        ) {
+            Button("垃圾广告", role: .destructive) {
+                Task {
+                    await V2exAPI.shared.report(topic: topic, reason: "垃圾广告")
+                }
+            }
+            Button("色情或低俗内容", role: .destructive) {
+                Task {
+                    await V2exAPI.shared.report(topic: topic, reason: "色情或低俗内容")
+                }
+            }
+            Button("人身攻击 / 仇恨言论", role: .destructive) {
+                Task {
+                    await V2exAPI.shared.report(
+                        topic: topic,
+                        reason: "人身攻击 / 仇恨言论"
+                    )
+                }
+            }
+            Button("违法或不当内容", role: .destructive) {
+                Task {
+                    await V2exAPI.shared.report(topic: topic, reason: "违法或不当内容")
+                }
+            }
+            Button("其他原因", role: .destructive) {
+                Task {
+                    await V2exAPI.shared.report(topic: topic, reason: "其他原因")
+                }
+            }
+            Button("取消", role: .cancel) {}
+        }
     }
+
+    private var listHeaderView: some View {
+        if let count = replyVM.replies?.count {
+            return Text("评论(\(count))").font(.headline)
+        }
+        return Text("评论").font(.headline)
+    }
+
     private func loadTopic() async {
-        guard let id = topic?.id ?? topicId else { return }
+        guard topic == nil else { return }
+        guard let id = topicId else { return }
         do {
             let response = try await V2exAPI.shared.topic(topicId: id)
             if let r = response, r.success, let newTopic = r.result {

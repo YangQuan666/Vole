@@ -14,6 +14,7 @@ class ReplyViewModel: ObservableObject {
     @Published var isLoading = false
 
     func load(topicId: Int) async {
+        guard replies == nil else { return }
         isLoading = true
         defer { isLoading = false }
         do {
