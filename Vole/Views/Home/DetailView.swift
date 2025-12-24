@@ -14,10 +14,7 @@ struct DetailView: View {
     let topicId: Int?
     @State var topic: Topic?
 
-    @StateObject private var replyVM = ReplyViewModel()
-    @StateObject private var nodeManager = NodeManager.shared
     @State private var allMentions: [Int: [String]] = [:]
-    //    @State private var navTitle: String = "帖子"
     @State private var selectedReply: Reply? = nil
     @State private var showSafari = false
     @State private var safariURL: URL? = nil
@@ -25,6 +22,16 @@ struct DetailView: View {
     @State private var selectedUser: Member?
     @State private var showAlert = false
     @State private var showReportDialog = false
+
+    @StateObject private var nodeManager = NodeManager.shared
+    @ObservedObject var blockManager = BlockManager.shared
+    
+    @State private var replies: [Reply]? = nil
+    @State var isLoading = false
+    var filteredReplies: [Reply]? {
+        guard let r = replies else { return nil }
+        return r.filter { !blockManager.isBlocked($0.member.username) }
+    }
 
     @Environment(\.openURL) private var openURL
     @Environment(\.appOpenURL) private var appOpenURL
@@ -70,7 +77,6 @@ struct DetailView: View {
                         .onTapGesture {
                             withAnimation(.spring(dampingFraction: 0.6)) {
                                 selectedReply = nil
-                                //                                navTitle = "帖子"
                             }
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -243,12 +249,12 @@ struct DetailView: View {
 
                     // 评论区
                     Section {
-                        if replyVM.isLoading {
+                        if isLoading {
                             ProgressView()
                                 .frame(maxWidth: .infinity)
                                 .padding()
                                 .listRowSeparator(.hidden)
-                        } else if let replies = replyVM.replies {
+                        } else if let replies = filteredReplies {
                             if replies.isEmpty {
                                 Text("暂无评论，快来抢沙发吧~")
                                     .font(.subheadline)
@@ -321,7 +327,7 @@ struct DetailView: View {
                             await loadTopic()
                         }
                         group.addTask {
-                            await replyVM.load(topicId: topic.id)
+                            await loadReply(topicId: topic.id)
                         }
                     }
                 }
@@ -332,7 +338,7 @@ struct DetailView: View {
                         }
 
                         group.addTask {
-                            await replyVM.load(topicId: topic.id)
+                            await loadReply(topicId: topic.id)
                         }
                     }
                 }
@@ -345,7 +351,6 @@ struct DetailView: View {
                     }
             }
         }
-        //        .navigationTitle(navTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem {
@@ -442,13 +447,6 @@ struct DetailView: View {
         }
     }
 
-    private var listHeaderView: some View {
-        if let count = replyVM.replies?.count {
-            return Text("评论(\(count))").font(.headline)
-        }
-        return Text("评论").font(.headline)
-    }
-
     private func loadTopic() async {
         guard topic == nil else { return }
         guard let id = topicId else { return }
@@ -464,7 +462,7 @@ struct DetailView: View {
 
     // 获取当前点击回复的对话列表，并返回实际楼层
     private func conversation(for reply: Reply) -> [(Reply, Int)] {
-        guard let replies = replyVM.replies else { return [] }
+        guard let replies = filteredReplies else { return [] }
         guard let idx = replies.firstIndex(where: { $0.id == reply.id }) else {
             return [(reply, 0)]
         }
@@ -509,6 +507,22 @@ struct DetailView: View {
         )
         return matches.compactMap {
             Range($0.range(at: 1), in: content).map { String(content[$0]) }
+        }
+    }
+    
+    
+
+    func loadReply(topicId: Int) async {
+        guard replies == nil else { return }
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            let r = try await V2exAPI.shared.repliesAll(topicId: topicId)
+            replies = r
+        } catch {
+            if (error as? URLError)?.code != .cancelled {
+                print("真正的错误: \(error)")
+            }
         }
     }
 }

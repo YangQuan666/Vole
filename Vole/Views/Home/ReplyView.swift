@@ -8,28 +8,6 @@
 import Kingfisher
 import SwiftUI
 
-@MainActor
-class ReplyViewModel: ObservableObject {
-    @Published var replies: [Reply]? = nil
-    @Published var isLoading = false
-
-    func load(topicId: Int) async {
-        guard replies == nil else { return }
-        isLoading = true
-        defer { isLoading = false }
-        do {
-            let replies = try await V2exAPI.shared.repliesAll(topicId: topicId)
-            await MainActor.run {
-                self.replies = replies
-            }
-        } catch {
-            if (error as? URLError)?.code != .cancelled {
-                print("真正的错误: \(error)")
-            }
-        }
-    }
-}
-
 struct ReplyRowView: View {
     @State private var showUserInfo = false
     @State private var selectedUser: Member?

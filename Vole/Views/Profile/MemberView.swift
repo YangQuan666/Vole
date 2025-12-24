@@ -323,8 +323,12 @@ struct MemberView: View {
             }
             .alert("确定要屏蔽该用户吗？", isPresented: $showAlert) {
                 Button("确认屏蔽", role: .destructive) {
-                    Task {
-                        await V2exAPI.shared.blockUser(member: member)
+                    dismiss()
+                    if let username = member?.username {
+                        // 使用 withAnimation 包裹，这样父界面的 List 渲染数据变化时会产生动画
+                        withAnimation(.spring()) {
+                            BlockManager.shared.block(username)
+                        }
                     }
                 }
                 Button("取消", role: .cancel) {}
