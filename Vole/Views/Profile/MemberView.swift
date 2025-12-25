@@ -19,6 +19,17 @@ struct MemberView: View {
         userManager.currentMember?.username == member?.username
     }
     var onLogout: (() -> Void)?
+    var onBlock: (() -> Void)?  // 屏蔽成功后的回调
+
+    init(
+        member: Member?,
+        onLogout: (() -> Void)? = nil,
+        onBlock: (() -> Void)? = nil
+    ) {
+        self.member = member
+        self.onLogout = onLogout
+        self.onBlock = onBlock
+    }
 
     var body: some View {
         NavigationView {
@@ -323,13 +334,16 @@ struct MemberView: View {
             }
             .alert("确定要屏蔽该用户吗？", isPresented: $showAlert) {
                 Button("确认屏蔽", role: .destructive) {
-                    dismiss()
                     if let username = member?.username {
                         // 使用 withAnimation 包裹，这样父界面的 List 渲染数据变化时会产生动画
                         withAnimation(.spring()) {
                             BlockManager.shared.block(username)
                         }
                     }
+                    // 先执行传入的屏蔽回调（比如关闭父级页面）
+                    onBlock?()
+                    // 再关闭当前的 MemberView 弹窗
+                    dismiss()
                 }
                 Button("取消", role: .cancel) {}
             }

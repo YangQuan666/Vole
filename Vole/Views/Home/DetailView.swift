@@ -25,7 +25,7 @@ struct DetailView: View {
 
     @StateObject private var nodeManager = NodeManager.shared
     @ObservedObject var blockManager = BlockManager.shared
-    
+
     @State private var replies: [Reply]? = nil
     @State var isLoading = false
     var filteredReplies: [Reply]? {
@@ -35,6 +35,7 @@ struct DetailView: View {
 
     @Environment(\.openURL) private var openURL
     @Environment(\.appOpenURL) private var appOpenURL
+    @Environment(\.dismiss) private var dismissTopic
     @Binding var path: NavigationPath
 
     var body: some View {
@@ -264,11 +265,14 @@ struct DetailView: View {
                                     .padding(.vertical, 20)
                                     .listRowSeparator(.hidden)
                             } else {
-                                Text(replies.count > 0 ? "评论(\(replies.count))" : "评论")
-                                    .font(.headline)
-                                    .foregroundColor(.secondary)
-                                    .listRowSeparator(.hidden)
-                                
+                                Text(
+                                    replies.count > 0
+                                        ? "评论(\(replies.count))" : "评论"
+                                )
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                                .listRowSeparator(.hidden)
+
                                 ForEach(
                                     Array((replies).enumerated()),
                                     id: \.1.id
@@ -394,9 +398,16 @@ struct DetailView: View {
             }
         }
         .sheet(isPresented: $showUserInfo) {
-            MemberView(member: selectedUser)
-                .presentationDetents([.medium, .large])  // 半屏 & 全屏
-                .presentationDragIndicator(.visible)  // 上拉手柄
+            MemberView(
+                member: selectedUser,
+                onBlock: {
+                    if selectedUser == topic?.member {
+                        dismissTopic()
+                    }
+                }
+            )
+            .presentationDetents([.medium, .large])  // 半屏 & 全屏
+            .presentationDragIndicator(.visible)  // 上拉手柄
         }
         .environment(\.appOpenURL) { url in
             safariURL = url
@@ -509,8 +520,6 @@ struct DetailView: View {
             Range($0.range(at: 1), in: content).map { String(content[$0]) }
         }
     }
-    
-    
 
     func loadReply(topicId: Int) async {
         guard replies == nil else { return }
