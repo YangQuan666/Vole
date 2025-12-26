@@ -69,8 +69,8 @@ struct DetailView: View {
                                         in: ns,
                                         isSource: selectedReply != nil
                                     )
+                                    .padding()
                                     Divider()
-                                        .padding(.leading, 48)
                                 }
                             }
                             .padding()
@@ -162,117 +162,106 @@ struct DetailView: View {
                         }
                         .listRowSeparator(.hidden)
 
-                        VStack(alignment: .leading) {
-                            // 标题
-                            if let title = topic.title {
-                                Button {
-                                    if let url = URL(string: topic.url ?? "") {
-                                        safariURL = url
-                                        showSafari = true
-                                    }
-                                } label: {
-                                    Text(title)
-                                        .font(.title)
-                                        .bold()
-                                        .textSelection(.enabled)
+                        // 标题
+                        if let title = topic.title {
+                            Button {
+                                if let url = URL(string: topic.url ?? "") {
+                                    safariURL = url
+                                    showSafari = true
                                 }
-                                .buttonStyle(.plain)  // 避免整行高亮
+                            } label: {
+                                Text(title)
+                                    .font(.title)
+                                    .bold()
+                                    .textSelection(.enabled)
                             }
-                            // 内容
-                            if let content = topic.content, !content.isEmpty {
-                                Divider()
-                                MarkdownView(
-                                    content: content,
-                                    onMentionsChanged: nil,
-                                    onLinkAction: { action in
-                                        switch action {
-                                        case .mention(let username):
-                                            print("@\(username)")
-                                        case .topic(let id):
-                                            path.append(Route.topicId(id))
-                                        default:
-                                            break
+                            .buttonStyle(.plain)  // 避免整行高亮
+                        }
+                        // 内容
+                        if let content = topic.content, !content.isEmpty {
+                            MarkdownView(
+                                content: content,
+                                onMentionsChanged: nil,
+                                onLinkAction: { action in
+                                    switch action {
+                                    case .mention(let username):
+                                        print("@\(username)")
+                                    case .topic(let id):
+                                        path.append(Route.topicId(id))
+                                    default:
+                                        break
+                                    }
+                                }
+                            )
+                        }
+                    }
+
+                    if let supplements = topic.supplements,
+                        !supplements.isEmpty
+                    {
+                        ForEach(supplements.indices, id: \.self) {
+                            idx in
+                            let supplement = supplements[idx]
+                            Section(
+                                header: HStack {
+                                    Text("第 \(idx + 1)条附言")
+                                    if let created = supplement.created {
+                                        TimelineView(.everyMinute) {
+                                            _ in
+                                            Text(
+                                                DateConverter
+                                                    .relativeTimeString(
+                                                        created
+                                                    )
+                                            )
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
                                         }
                                     }
-                                )
-                            }
-                            if let supplements = topic.supplements,
-                                !supplements.isEmpty
-                            {
-                                ForEach(supplements.indices, id: \.self) {
-                                    idx in
-                                    let supplement = supplements[idx]
-
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Divider()
-                                        HStack(alignment: .bottom) {
-                                            Text("第 \(idx + 1)条附言")
-                                                .foregroundColor(.secondary)
-                                            if let created = supplement.created
-                                            {
-                                                TimelineView(.everyMinute) {
-                                                    _ in
-                                                    Text(
-                                                        DateConverter
-                                                            .relativeTimeString(
-                                                                created
-                                                            )
-                                                    )
-                                                    .font(.caption)
-                                                    .foregroundColor(.secondary)
-                                                }
+                                }
+                            ) {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    MarkdownView(
+                                        content: supplement.content ?? "",
+                                        onMentionsChanged: nil,
+                                        onLinkAction: { action in
+                                            switch action {
+                                            case .mention(let username):
+                                                print("@\(username)")
+                                            case .topic(let id):
+                                                path.append(
+                                                    Route.topicId(id)
+                                                )
+                                            default:
+                                                break
                                             }
                                         }
-
-                                        MarkdownView(
-                                            content: supplement.content ?? "",
-                                            onMentionsChanged: nil,
-                                            onLinkAction: { action in
-                                                switch action {
-                                                case .mention(let username):
-                                                    print("@\(username)")
-                                                case .topic(let id):
-                                                    path.append(
-                                                        Route.topicId(id)
-                                                    )
-                                                default:
-                                                    break
-                                                }
-                                            }
-                                        )
-                                    }
-                                    .padding(.top, 4)
+                                    )
                                 }
                             }
                         }
-                        .listRowSeparator(.hidden)
                     }
-
                     // 评论区
-                    Section {
-                        if isLoading {
-                            ProgressView()
+                    if isLoading {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                    } else if let replies = filteredReplies {
+                        if replies.isEmpty {
+                            Text("暂无评论，快来抢沙发吧~")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
                                 .frame(maxWidth: .infinity)
-                                .padding()
-                                .listRowSeparator(.hidden)
-                        } else if let replies = filteredReplies {
-                            if replies.isEmpty {
-                                Text("暂无评论，快来抢沙发吧~")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.center)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 20)
-                                    .listRowSeparator(.hidden)
-                            } else {
-                                Text(
+                        } else {
+                            Section(
+                                header: Text(
                                     replies.count > 0
                                         ? "评论(\(replies.count))" : "评论"
                                 )
                                 .font(.headline)
                                 .foregroundColor(.secondary)
-                                .listRowSeparator(.hidden)
-
+                            ) {
                                 ForEach(
                                     Array((replies).enumerated()),
                                     id: \.1.id
@@ -294,7 +283,6 @@ struct DetailView: View {
                                             .spring(dampingFraction: 0.6)
                                         ) {
                                             selectedReply = reply
-                                            // navTitle = "对话"
                                         }
                                     }
                                     .swipeActions(
@@ -322,9 +310,9 @@ struct DetailView: View {
                             }
                         }
                     }
+
                 }
                 .disabled(selectedReply != nil)
-                .listStyle(.plain)
                 .refreshable {
                     await withTaskGroup(of: Void.self) { group in
                         group.addTask {

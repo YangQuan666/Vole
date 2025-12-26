@@ -51,6 +51,7 @@ struct ReplyRowView: View {
                     let username = reply.member.username
                     Text(username)
                         .font(.subheadline)
+                        .foregroundColor(.secondary)
                         .bold()
                     if topic.member?.username == username {
                         Image(systemName: "star.circle.fill")
