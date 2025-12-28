@@ -88,94 +88,111 @@ struct DetailView: View {
 
                 List {
                     // 帖子详情部分
-                    Section {
-                        // 头像 + 昵称
-                        HStack {
-                            Button {
-                                selectedUser = topic.member
-                                showUserInfo = true
-                            } label: {
-                                HStack {
-                                    if let avatarURL = topic.member?
-                                        .avatarNormal
-                                        ?? topic.member?.avatar,
-                                        let url = URL(string: avatarURL)
-                                    {
-                                        KFImage(url)
-                                            .placeholder {
-                                                Color.gray
-                                            }
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: 24, height: 24)
-                                            .clipShape(Circle())
-                                    } else {
-                                        Circle()
-                                            .fill(Color.gray)
-                                            .frame(width: 24, height: 24)
-                                    }
-
-                                    Text(topic.member?.username ?? "")
-                                        .font(.subheadline)
-                                        .foregroundColor(.primary)
-                                    if let created = topic.created {
-                                        TimelineView(.everyMinute) { _ in
-                                            Text(
-                                                DateConverter.relativeTimeString(
-                                                    created
+                    Section(
+                        header:
+                            // 头像 + 昵称
+                            HStack {
+                                Button {
+                                    selectedUser = topic.member
+                                    showUserInfo = true
+                                } label: {
+                                    HStack {
+                                        if let avatarURL = topic.member?
+                                            .avatarNormal
+                                            ?? topic.member?.avatar,
+                                            let url = URL(string: avatarURL)
+                                        {
+                                            KFImage(url)
+                                                .placeholder {
+                                                    Color.gray
+                                                }
+                                                .resizable()
+                                                .scaledToFill()
+                                                .frame(
+                                                    width: 36,
+                                                    height: 36
                                                 )
-                                            )
-                                            .font(.caption)
+                                                .clipShape(Circle())
+                                        } else {
+                                            Circle()
+                                                .fill(Color.gray)
+                                                .frame(
+                                                    width: 36,
+                                                    height: 36
+                                                )
+                                        }
+
+                                        Text(topic.member?.username ?? "")
+                                            .font(.subheadline)
                                             .foregroundColor(.secondary)
+                                            .bold()
+                                        if let created = topic.created {
+                                            TimelineView(.everyMinute) {
+                                                _ in
+                                                Text(
+                                                    DateConverter
+                                                        .relativeTimeString(
+                                                            created
+                                                        )
+                                                )
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            .buttonStyle(.borderless)
-                            Spacer()
-                            Button {
-                                if let node = topic.node {
-                                    if let n = nodeManager.getNode(node.id) {
-                                        path.append(Route.node(n))
-                                    } else {
-                                        path.append(Route.node(node))
+                                .buttonStyle(.borderless)
+                                Spacer()
+                                Button {
+                                    if let node = topic.node {
+                                        if let n = nodeManager.getNode(
+                                            node.id
+                                        ) {
+                                            path.append(Route.node(n))
+                                        } else {
+                                            path.append(Route.node(node))
+                                        }
                                     }
+                                } label: {
+                                    Text(topic.node?.title ?? "")
+                                        .font(.callout)
+                                        .lineLimit(1)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(
+                                            RoundedRectangle(
+                                                cornerRadius: 8,
+                                                style: .continuous
+                                            )
+                                            .fill(
+                                                Color.accentColor.opacity(
+                                                    0.15
+                                                )
+                                            )
+                                        )
+                                        .foregroundColor(.accentColor)
                                 }
-                            } label: {
-                                Text(topic.node?.title ?? "")
-                                    .font(.callout)
-                                    .lineLimit(1)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(
-                                        RoundedRectangle(
-                                            cornerRadius: 8,
-                                            style: .continuous
-                                        )
-                                        .fill(
-                                            Color.accentColor.opacity(0.15)
-                                        )
-                                    )
-                                    .foregroundColor(.accentColor)
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
-                        }
-                        .listRowSeparator(.hidden)
-
+                            .textCase(nil)
+                    ) {
                         // 标题
                         if let title = topic.title {
                             Button {
-                                if let url = URL(string: topic.url ?? "") {
+                                if let url = URL(
+                                    string: topic.url ?? ""
+                                ) {
                                     safariURL = url
                                     showSafari = true
                                 }
                             } label: {
                                 Text(title)
-                                    .font(.title)
+                                    .font(.title3)
                                     .bold()
-                                    .textSelection(.enabled)
+                                    .foregroundColor(.primary)
+                                    .padding(.vertical, 4)
                             }
-                            .buttonStyle(.plain)  // 避免整行高亮
+                            .buttonStyle(.plain)
                         }
                         // 内容
                         if let content = topic.content, !content.isEmpty {
