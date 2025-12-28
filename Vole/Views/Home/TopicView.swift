@@ -43,7 +43,8 @@ struct TopicRow: View {
                     }
                     Text(member.username)
                         .font(.subheadline)
-                        .foregroundColor(.primary)
+                        .foregroundColor(.secondary)
+                        .bold()
                     Spacer()
                     Text(topic.node?.title ?? "")
                         .font(.callout)
