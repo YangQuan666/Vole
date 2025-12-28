@@ -190,7 +190,6 @@ struct DetailView: View {
                                     .font(.title3)
                                     .bold()
                                     .foregroundColor(.primary)
-                                    .padding(.vertical, 4)
                             }
                             .buttonStyle(.plain)
                         }
