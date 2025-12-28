@@ -43,47 +43,7 @@ struct DetailView: View {
             if let topic = topic {
                 // 浮层对话视图
                 if let reply = selectedReply {
-                    ZStack {
-                        // 全屏背景模糊
-                        Color.clear
-                            .background(.ultraThinMaterial)
-                            .ignoresSafeArea()
-
-                        // 浮层内容
-                        ScrollView {
-                            LazyVStack(spacing: 0) {
-                                ForEach(
-                                    conversation(for: reply),
-                                    id: \.0.id
-                                ) {
-                                    r,
-                                    floor in
-                                    ReplyRowView(
-                                        path: $path,
-                                        topic: topic,
-                                        reply: r,
-                                        floor: floor
-                                    )
-                                    .matchedGeometryEffect(
-                                        id: r.id,
-                                        in: ns,
-                                        isSource: selectedReply != nil
-                                    )
-                                    .padding()
-                                    Divider()
-                                }
-                            }
-                            .padding()
-                        }
-                        .onTapGesture {
-                            withAnimation(.spring(dampingFraction: 0.6)) {
-                                selectedReply = nil
-                            }
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
-                    .transition(.opacity)
-                    .zIndex(1)
+                    conversationView(reply, topic)
                 }
 
                 List {
@@ -259,16 +219,21 @@ struct DetailView: View {
                     }
                     // 评论区
                     if isLoading {
-                        ProgressView()
-                            .frame(maxWidth: .infinity)
-                            .padding()
+                        HStack {
+                            Spacer()
+                            ProgressView("评论加载中")
+                            Spacer()
+                        }
+                        .listRowBackground(Color.clear)
                     } else if let replies = filteredReplies {
                         if replies.isEmpty {
-                            Text("暂无评论，快来抢沙发吧~")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
-                                .frame(maxWidth: .infinity)
+                            VStack {
+                                Text("暂无评论，快来抢沙发吧~")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .listRowBackground(Color.clear)
                         } else {
                             Section(
                                 header: Text(
@@ -460,6 +425,52 @@ struct DetailView: View {
             }
             Button("取消", role: .cancel) {}
         }
+    }
+    
+    // 回话视图
+    @ViewBuilder
+    private func conversationView(_ reply: Reply, _ topic: Topic) -> some View {
+        ZStack {
+            // 全屏背景模糊
+            Color.clear
+                .background(.ultraThinMaterial)
+                .ignoresSafeArea()
+
+            // 浮层内容
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(
+                        conversation(for: reply),
+                        id: \.0.id
+                    ) {
+                        r,
+                        floor in
+                        ReplyRowView(
+                            path: $path,
+                            topic: topic,
+                            reply: r,
+                            floor: floor
+                        )
+                        .matchedGeometryEffect(
+                            id: r.id,
+                            in: ns,
+                            isSource: selectedReply != nil
+                        )
+                        .padding()
+                        Divider()
+                    }
+                }
+                .padding()
+            }
+            .onTapGesture {
+                withAnimation(.spring(dampingFraction: 0.6)) {
+                    selectedReply = nil
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .transition(.opacity)
+        .zIndex(1)
     }
 
     private func loadTopic() async {
