@@ -102,111 +102,123 @@ class NodeManager: ObservableObject {
 
     // 构建分组
     func buildGroups(from nodes: [Node]) -> [NodeGroup] {
-        // 1. 基础映射
-        var nameMap: [String: Node] = [:]
-        for n in nodes { nameMap[n.name] = n }
+        // --- 1. 基础字典映射 ---
+        var allNodesDict: [String: Node] = [:]
+        for n in nodes { allNodesDict[n.name] = n }
 
-        // 2. 识别并创建虚拟父节点
-        var virtualParents: [String: Node] = [:]
+        // --- 2. 补全缺失的父节点 (跳过自引用) ---
         for n in nodes {
-            if let parentName = n.parentNodeName, nameMap[parentName] == nil {
-                if virtualParents[parentName] == nil {
-                    virtualParents[parentName] = Node.createVirtual(
-                        name: parentName
-                    )
-                }
+            if let pName = n.parentNodeName, !pName.isEmpty,
+                pName != n.name,  // 只有父亲不是自己时，才去补全
+                allNodesDict[pName] == nil
+            {
+                allNodesDict[pName] = Node.createVirtual(name: pName)
             }
         }
 
-        // 3. 建立子节点关系映射
+        // --- 3. 建立子节点查找表 (排除自引用，防止死循环) ---
         var childrenMap: [String: [Node]] = [:]
-        for n in nodes {
-            if let parent = n.parentNodeName {
-                childrenMap[parent, default: []].append(n)
+        for n in allNodesDict.values {
+            if let pName = n.parentNodeName, !pName.isEmpty, pName != n.name {
+                childrenMap[pName, default: []].append(n)
             }
         }
 
-        // 4. 确定所有的根（原始根 + 虚拟根）
-        let roots: [Node] =
-            nodes.filter { node in
-                let isParentEmpty =
-                    node.parentNodeName == nil
-                    || node.parentNodeName?.isEmpty == true
-                return isParentEmpty || node.name == "v2ex"
-            } + Array(virtualParents.values)
-
-        // BFS 展平函数（只收集真实存在的节点）
-        func collectRealNodesBFS(of root: Node) -> [Node] {
-            var result: [Node] = []
-            var visited: Set<String> = []
-            var queue: [Node] = [root]
-
-            while !queue.isEmpty {
-                let node = queue.removeFirst()
-                guard !visited.contains(node.name) else { continue }
-                visited.insert(node.name)
-
-                // 关键：只有带 ID 的才是真实节点（排除掉我们伪造的虚拟父节点）
-                if node.id != nil {
-                    result.append(node)
-                }
-
-                if let children = childrenMap[node.name] {
-                    queue.append(contentsOf: children)
-                }
-            }
-            return result
+        // --- 4. 确定顶级根节点 ---
+        let rootNodes = allNodesDict.values.filter { node in
+            let pName = node.parentNodeName ?? ""
+            // 根节点的条件：
+            // 1. 没有父亲
+            // 2. 父亲是自己 (处理 v2ex -> v2ex 的情况)
+            // 3. 父亲在字典里找不到 (这种其实在 Step 2 补全后几乎不存在了)
+            return pName.isEmpty || pName == node.name
+                || allNodesDict[pName] == nil
         }
 
         var finalGroups: [NodeGroup] = []
-        var singles: [Node] = []  // 用来存放那些“势单力薄”的单点节点
+        var otherNodes: [Node] = []
         var processedNames: Set<String> = []
 
-        // 5. 开始构建分组
-        for root in roots {
-            let flatNodes = collectRealNodesBFS(of: root)
+        // --- 5. 递归函数 (后序遍历) ---
+        @discardableResult
+        func process(u: Node) -> [Node] {
+            var currentCluster: [Node] = []
 
-            // 过滤掉已经在其他组处理过的节点（防止环路或交叉引用）
-            let uniqueNodes = flatNodes.filter {
-                !processedNames.contains($0.name)
+            // A. 递归处理真正的子节点
+            if let children = childrenMap[u.name] {
+                for child in children {
+                    // 再次防御：防止任何形式的循环引用
+                    if child.name == u.name { continue }
+
+                    let leftover = process(u: child)
+                    currentCluster.append(contentsOf: leftover)
+                }
             }
-            if uniqueNodes.isEmpty { continue }
-            uniqueNodes.forEach { processedNames.insert($0.name) }
 
-            // --- 核心逻辑判断 ---
-            if uniqueNodes.count > 2 {
-                // 如果节点数多于 1，形成独立分组
-                let sorted = uniqueNodes.sorted {
+            // B. 处理当前节点自己 (只有真实节点才计入数量)
+            if u.id != nil && !processedNames.contains(u.name) {
+                currentCluster.append(u)
+            }
+
+            // C. 超过 18 个拆分策略
+            if currentCluster.count > 18 {
+                let sorted = currentCluster.sorted {
+                    ($0.topics ?? 0) > ($1.topics ?? 0)
+                }
+                let weight = sorted.reduce(0) { $0 + ($1.topics ?? 0) }
+                finalGroups.append(
+                    NodeGroup(root: u, nodes: sorted, weight: weight)
+                )
+
+                currentCluster.forEach { processedNames.insert($0.name) }
+                return []
+            }
+
+            return currentCluster
+        }
+
+        // --- 6. 遍历根节点执行 ---
+        for root in rootNodes {
+            // 如果这个根节点已经在之前的递归中被作为子节点处理了，就跳过
+            if processedNames.contains(root.name) { continue }
+
+            let remaining = process(u: root)
+            if remaining.isEmpty { continue }
+
+            // --- 7. 合并“其他”逻辑 (< 3) ---
+            if remaining.count < 3 {
+                otherNodes.append(contentsOf: remaining)
+            } else {
+                let sorted = remaining.sorted {
                     ($0.topics ?? 0) > ($1.topics ?? 0)
                 }
                 let weight = sorted.reduce(0) { $0 + ($1.topics ?? 0) }
                 finalGroups.append(
                     NodeGroup(root: root, nodes: sorted, weight: weight)
                 )
-            } else {
-                // 如果只有 1 个节点，暂存到 singles
-                singles.append(contentsOf: uniqueNodes)
+                remaining.forEach { processedNames.insert($0.name) }
             }
         }
 
-        // 6. 处理所有的单点节点，打包成“其他”
-        if !singles.isEmpty {
-            let sortedSingles = singles.sorted {
+        // --- 8. 安全汇总所有漏掉的节点 ---
+        let allProcessed = Set(finalGroups.flatMap { $0.nodes.map { $0.name } })
+        let missed = nodes.filter {
+            !allProcessed.contains($0.name) && !otherNodes.contains($0)
+        }
+        otherNodes.append(contentsOf: missed)
+
+        if !otherNodes.isEmpty {
+            let uniqueOthers = Array(Set(otherNodes))
+            let otherRoot = Node.createVirtual(name: "other", title: "其他")
+            let sorted = uniqueOthers.sorted {
                 ($0.topics ?? 0) > ($1.topics ?? 0)
             }
-            let totalWeight = sortedSingles.reduce(0) { $0 + ($1.topics ?? 0) }
-
-            let otherRoot = Node.createVirtual(name: "other", title: "其他")
+            let weight = sorted.reduce(0) { $0 + ($1.topics ?? 0) }
             finalGroups.append(
-                NodeGroup(
-                    root: otherRoot,
-                    nodes: sortedSingles,
-                    weight: totalWeight
-                )
+                NodeGroup(root: otherRoot, nodes: sorted, weight: weight)
             )
         }
 
-        // 7. 最后根据权重（活跃度）全局排序
         return finalGroups.sorted { $0.weight > $1.weight }
     }
 
