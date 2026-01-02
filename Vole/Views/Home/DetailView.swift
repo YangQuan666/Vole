@@ -147,7 +147,7 @@ struct DetailView: View {
                                 }
                             } label: {
                                 Text(title)
-                                    .font(.title3)
+                                    .font(.title)
                                     .bold()
                                     .foregroundColor(.primary)
                             }
