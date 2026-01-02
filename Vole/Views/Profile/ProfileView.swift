@@ -175,7 +175,7 @@ struct TokenInputPage: View {
                 // 获取 token 提示
                 Label {
                     Text(
-                        "了解如何获取 [Personal Access Token](https://www.v2ex.com/help/personal-access-token)"
+                        "如何免费获取 [Personal Access Token](https://www.v2ex.com/help/personal-access-token)（用于登录）"
                     )
                     .font(.footnote)
                     .foregroundColor(.secondary)
