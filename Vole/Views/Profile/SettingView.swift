@@ -19,8 +19,8 @@ struct SettingView: View {
         return "v\(version) (\(build))"
     }
 
-    // App Store ID (请替换为你真实的 App ID)
-    private let appID = "123456789"
+    // App Store ID
+    private let appID = "6756212194"
     private let contactEmail = "quark.yeung@icloud.com"
 
     var body: some View {
@@ -52,7 +52,7 @@ struct SettingView: View {
                     Button {
                         if let url = URL(
                             string:
-                                "itms-apps://itunes.apple.com/app/id\(appID)"
+                                "itms-apps://apps.apple.com/app/id\(appID)"
                         ) {
                             UIApplication.shared.open(url)
                         }
