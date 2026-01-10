@@ -107,110 +107,100 @@ struct MemberView: View {
                         }
 
                         if let website = member.website, !website.isEmpty {
-                            HStack {
-                                Label("个人网站", systemImage: "house")
-                                Spacer()
-                                Text(website)
-                                    .lineLimit(1)
-                                    .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.trailing)
-                                    .contextMenu {
-                                        Button("在浏览器中打开", systemImage: "safari")
-                                        {
-                                            if let url = URL(string: website) {
-                                                openURL(url)
-                                            }
-                                        }
-                                    }
+                            Button {
+                                if let url = URL(string: website) {
+                                    openURL(url)
+                                }
+                            } label: {
+                                HStack {
+                                    Label("个人网站", systemImage: "house")
+                                    Spacer()
+                                    Text(website)
+                                        .lineLimit(1)
+                                        .foregroundColor(.secondary)
+                                        .multilineTextAlignment(.trailing)
+                                }
                             }
+                            .buttonStyle(.plain)
                         }
 
                         if let btc = member.btc, !btc.isEmpty {
-                            HStack {
-                                Label(
-                                    "BTC",
-                                    systemImage: "bitcoinsign.ring.dashed"
-                                )
-                                Spacer()
-                                Text(btc)
-                                    .lineLimit(1)
-                                    .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.trailing)
-                                    .contextMenu {
-                                        Button("在浏览器中打开", systemImage: "safari")
-                                        {
-                                            if let url = URL(string: btc) {
-                                                openURL(url)
-                                            }
-                                        }
-                                    }
+                            Button {
+                                if let url = URL(string: btc) {
+                                    openURL(url)
+                                }
+                            } label: {
+                                HStack {
+                                    Label(
+                                        "BTC",
+                                        systemImage: "bitcoinsign.ring.dashed"
+                                    )
+                                    Spacer()
+                                    Text(btc)
+                                        .lineLimit(1)
+                                        .foregroundColor(.secondary)
+                                        .multilineTextAlignment(.trailing)
+                                }
                             }
+                            .buttonStyle(.plain)
                         }
 
                         if let github = member.github, !github.isEmpty {
-                            HStack {
-                                Label("GitHub", systemImage: "network")
-                                Spacer()
-                                Text(github)
-                                    .lineLimit(1)
-                                    .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.trailing)
-                                    .contextMenu {
-                                        Button("在浏览器中打开", systemImage: "safari")
-                                        {
-                                            if let url = URL(
-                                                string:
-                                                    "https://github.com/\(github)"
-                                            ) {
-                                                openURL(url)
-                                            }
-                                        }
-                                    }
+                            Button {
+                                if let url = URL(string: "https://github.com/\(github)") {
+                                    openURL(url)
+                                }
+                            } label: {
+                                HStack {
+                                    Label("GitHub", systemImage: "network")
+                                    Spacer()
+                                    Text(github)
+                                        .lineLimit(1)
+                                        .foregroundColor(.secondary)
+                                        .multilineTextAlignment(.trailing)
+                                }
                             }
+                            .buttonStyle(.plain)
                         }
 
                         if let twitter = member.twitter, !twitter.isEmpty {
-                            HStack {
-                                Label("Twitter", systemImage: "network")
-                                Spacer()
-                                Text(twitter)
-                                    .lineLimit(1)
-                                    .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.trailing)
-                                    .contextMenu {
-                                        Button("在浏览器中打开", systemImage: "safari")
-                                        {
-                                            if let url = URL(
-                                                string:
-                                                    "https://x.com/\(twitter)"
-                                            ) {
-                                                openURL(url)
-                                            }
-                                        }
-                                    }
+                            Button {
+                                if let url = URL(
+                                    string: "https://x.com/\(twitter)"
+                                ) {
+                                    openURL(url)
+                                }
+                            } label: {
+                                HStack {
+                                    Label("Twitter", systemImage: "network")
+                                    Spacer()
+                                    Text(twitter)
+                                        .lineLimit(1)
+                                        .foregroundColor(.secondary)
+                                        .multilineTextAlignment(.trailing)
+                                }
                             }
+                            .buttonStyle(.plain)
                         }
 
                         if let psn = member.psn, !psn.isEmpty {
-                            HStack {
-                                Label("Twitter", systemImage: "network")
-                                Spacer()
-                                Text(psn)
-                                    .lineLimit(1)
-                                    .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.trailing)
-                                    .contextMenu {
-                                        Button("在浏览器中打开", systemImage: "safari")
-                                        {
-                                            if let url = URL(
-                                                string:
-                                                    "https://psnprofiles.com/\(psn)"
-                                            ) {
-                                                openURL(url)
-                                            }
-                                        }
-                                    }
+                            Button {
+                                if let url = URL(
+                                    string: "https://psnprofiles.com/\(psn)"
+                                ) {
+                                    openURL(url)
+                                }
+                            } label: {
+                                HStack {
+                                    Label("Twitter", systemImage: "network")
+                                    Spacer()
+                                    Text(psn)
+                                        .lineLimit(1)
+                                        .foregroundColor(.secondary)
+                                        .multilineTextAlignment(.trailing)
+                                }
                             }
+                            .buttonStyle(.plain)
                         }
                     }
 
