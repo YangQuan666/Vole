@@ -107,7 +107,7 @@ struct SearchView: View {
         case .topicId(let topicId):
             DetailView(topicId: topicId, path: $navManager.searchPath)
         case .nodeName(let nodeName):
-            NodeDetailView(nodeName: nodeName, path: $navManager.nodePath)
+            NodeDetailView(nodeName: nodeName, path: $navManager.searchPath)
         case .node(let node):
             NodeDetailView(node: node, path: $navManager.searchPath)
         default: EmptyView()

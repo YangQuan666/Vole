@@ -29,6 +29,7 @@ struct SearchResultView: View {
     @State private var users: [Member] = []
 
     @ObservedObject private var nodeManager = NodeManager.shared
+    @ObservedObject private var userManager = UserManager.shared
 
     // 筛选状态
     @State private var filterOptions = SearchFilterOptions()
@@ -120,14 +121,13 @@ struct SearchResultView: View {
             ForEach(nodes) { node in
                 NodeRowView(node: node)
                     .onTapGesture {
-                        print("点击了\(node.name)")
                         path.append(Route.nodeName(node.name))
                     }
             }
 
         case .user:
             ForEach(users) { member in
-                MemberView(member: member)
+                MemberRowView(member: member)
             }
         }
     }
@@ -153,12 +153,25 @@ struct SearchResultView: View {
             .padding(.top, 4)
 
             HStack {
-                if selectedCategory == .topic,
-                    let total = pagingState.totalResults
-                {
-                    Text("共 \(total) 条结果")
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
+                switch selectedCategory {
+                case .topic:
+                    if !results.isEmpty {
+                        Text("共 \(results.count) 条结果")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                    }
+                case .node:
+                    if !nodes.isEmpty {
+                        Text("共 \(nodes.count) 个匹配节点")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                    }
+                case .user:
+                    if !users.isEmpty {
+                        Text("共 \(users.count) 位相关用户")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                    }
                 }
 
                 Spacer()
@@ -190,42 +203,27 @@ struct SearchResultView: View {
         if isPagingLoading {
             // 当大菊花正在转时，底部保持空白，避免视觉干扰
             EmptyView()
-        } else {
-            switch selectedCategory {
-            case .topic:
-                // 话题支持分页，逻辑最复杂
-                if isPagingLoading {
-                    HStack(spacing: 8) {
-                        Spacer()
-                        ProgressView()
-                            .controlSize(.small)
-                        Text("正在加载更多...")
-                            .font(.footnote)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                    }
-                    .padding(.vertical, 12)
-                } else if let total = pagingState.totalResults, !results.isEmpty
-                {
-                    if results.count >= total {
-                        footerText("已加载全部 \(results.count) 条结果")
-                    } else {
-                        footerText("上滑加载更多 (已展示 \(results.count) 条)")
-                    }
+        } else if selectedCategory == .topic {
+            // 话题支持分页，逻辑最复杂
+            if isPagingLoading {
+                HStack(spacing: 8) {
+                    Spacer()
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("正在加载更多...")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                    Spacer()
                 }
-
-            case .node:
-                // 节点通常是本地搜索，一次性出结果
-                if !nodes.isEmpty {
-                    footerText("共找到 \(nodes.count) 个匹配节点")
-                }
-
-            case .user:
-                // 用户搜索
-                if !users.isEmpty {
-                    footerText("共找到 \(users.count) 位相关用户")
+                .padding(.vertical, 12)
+            } else if let total = pagingState.totalResults, !results.isEmpty {
+                if results.count >= total {
+                    footerText("已加载全部 \(results.count) 条结果")
+                } else {
+                    footerText("上滑加载更多 (已展示 \(results.count) 条)")
                 }
             }
+
         }
     }
 
@@ -355,10 +353,9 @@ struct SearchResultView: View {
 
     // 3. 用户搜索逻辑
     private func performUserSearch() async {
-        // TODO: 真正的用户 API
-        try? await Task.sleep(nanoseconds: 300_000_000)
+        let members = await userManager.search(name: query)
         await MainActor.run {
-            self.users = []
+            self.users = members
         }
     }
 

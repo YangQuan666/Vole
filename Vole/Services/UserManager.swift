@@ -46,4 +46,19 @@ class UserManager: ObservableObject {
         self.token = nil
         self.currentMember = nil
     }
+    
+    func search(name: String) async -> [Member] {
+        guard !name.isEmpty else { return [] }
+        let keyword = name.lowercased()
+        do {
+            let member = try await V2exAPI.shared.memberShow(username: keyword)
+            if let m = member {
+                return [m]
+            }
+            return []
+        } catch {
+            print("❌ 加载用户失败:", error)
+            return []
+        }
+    }
 }
