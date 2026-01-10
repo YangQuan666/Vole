@@ -132,7 +132,7 @@ struct NodeDetailView: View {
                         await loadTopicsV1(name: node.name)
                     }
                 }
-            } else if let nodeName, isNodeLoading {
+            } else if let nodeName {
                 // 还没有加载到 topic
                 ProgressView("加载中...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
