@@ -10,7 +10,8 @@ import SwiftUI
 struct SearchHistoryView: View {
     // 动作回调：当用户点击历史记录时，告诉父视图执行搜索
     let onKeywordTapped: (String) -> Void
-    
+    // 删除历史记录的弹窗
+    @State private var showAlert = false
     // 数据源：搜索历史（使用 ObservedObject 接收 SearchHistory.shared）
     @ObservedObject var history: SearchHistory
     
@@ -41,12 +42,18 @@ struct SearchHistoryView: View {
                     Spacer()
                     if !history.keywords.isEmpty {
                         Button("清除") {
-                            history.clear()
+                            showAlert = true
                         }
                         .font(.subheadline)
                     }
                 }
             }
+        }
+        .alert("清除所有搜索历史？", isPresented: $showAlert) {
+            Button("清除搜索", role: .destructive) {
+                history.clear()
+            }
+            Button("取消", role: .cancel) {}
         }
         .listStyle(.insetGrouped)
     }
