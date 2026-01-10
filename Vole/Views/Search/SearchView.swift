@@ -110,6 +110,8 @@ struct SearchView: View {
             NodeDetailView(nodeName: nodeName, path: $navManager.searchPath)
         case .node(let node):
             NodeDetailView(node: node, path: $navManager.searchPath)
+        case .member(let member):
+            MemberDetailView(member: member)
         default: EmptyView()
         }
     }

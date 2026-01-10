@@ -120,6 +120,7 @@ struct NodeView: View {
                     .listStyle(.plain)
                     .navigationTitle(group.root.title ?? group.root.name)
                     .navigationBarTitleDisplayMode(.inline)
+                default: EmptyView()
                 }
             }
             .toolbar {

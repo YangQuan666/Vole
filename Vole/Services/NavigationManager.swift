@@ -22,4 +22,5 @@ enum Route: Hashable {
     case nodeName(String)  // NodeName节点
     case nodeCollect(NodeCollection)  // 多个节点
     case moreNode(NodeGroup)  // 分组
+    case member(Member) // 用户
 }

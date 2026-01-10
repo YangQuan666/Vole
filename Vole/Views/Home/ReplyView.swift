@@ -85,7 +85,7 @@ struct ReplyRowView: View {
                         case .mention(let username):
                             print("@\(username)")
                         case .topic(let id):
-                            path.append(id)
+                            path.append(Route.topicId(id))
                         default:
                             break
                         }

@@ -127,6 +127,7 @@ struct SearchResultView: View {
         case .user:
             ForEach(users) { member in
                 MemberRowView(member: member)
+                    .onTapGesture { path.append(Route.member(member)) }
             }
         }
     }
