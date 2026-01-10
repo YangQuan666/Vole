@@ -120,15 +120,6 @@ struct NotifyView: View {
     }
 }
 
-struct ParsedNotification {
-    let username: String
-    let action: String
-    let icon: String
-    let color: Color
-    let topicTitle: String?
-    let topicId: Int?
-}
-
 #Preview {
     @Previewable var navManager = NavigationManager()
     NotifyView().environmentObject(navManager)
