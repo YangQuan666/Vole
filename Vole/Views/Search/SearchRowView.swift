@@ -62,6 +62,7 @@ struct SearchRowView: View {
                 }
             }
         }
+        .contentShape(Rectangle())
 
     }
 }
