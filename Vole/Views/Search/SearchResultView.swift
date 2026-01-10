@@ -106,15 +106,14 @@ struct SearchResultView: View {
     private func renderSearchResults() -> some View {
         switch selectedCategory {
         case .topic:
-            ForEach(results.indices, id: \.self) { index in
-                let res = results[index]
+            ForEach(results) { res in
                 SearchRowView(result: res)
-                    .onTapGesture { path.append(Route.topicId(res.source.id)) }
                     .onAppear {
-                        if index == results.count - 1 {
+                        if res.id == results.last?.id {
                             Task { await loadNextPage() }
                         }
                     }
+                    .onTapGesture { path.append(Route.topicId(res.source.id)) }
             }
 
         case .node:
@@ -200,10 +199,7 @@ struct SearchResultView: View {
     // 2. 列表底部加载栏
     @ViewBuilder
     private var footerView: some View {
-        if isPagingLoading {
-            // 当大菊花正在转时，底部保持空白，避免视觉干扰
-            EmptyView()
-        } else if selectedCategory == .topic {
+        if selectedCategory == .topic {
             // 话题支持分页，逻辑最复杂
             if isPagingLoading {
                 HStack(spacing: 8) {
