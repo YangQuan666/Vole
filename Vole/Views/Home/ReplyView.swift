@@ -47,7 +47,7 @@ struct ReplyRowView: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 // 用户名 + 时间 + 楼层
-                HStack {
+                HStack(alignment: .firstTextBaseline) {
                     let username = reply.member.username
                     Text(username)
                         .font(.subheadline)
