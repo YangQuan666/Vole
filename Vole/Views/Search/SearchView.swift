@@ -12,9 +12,13 @@ struct SearchView: View {
     @State private var searchText = ""
     @State private var submittedQuery = ""  // 只有当用户点击确认/回车时才更新此值
     @State private var showProfile = false
+    @State private var showAlert = false
+
     @ObservedObject private var userManager = UserManager.shared
     @StateObject private var history = SearchHistory.shared
     @EnvironmentObject var navManager: NavigationManager
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         NavigationStack(path: $navManager.searchPath) {
@@ -111,8 +115,55 @@ struct SearchView: View {
         case .node(let node):
             NodeDetailView(node: node, path: $navManager.searchPath)
         case .member(let member):
-            MemberDetailView(member: member)
+            memberDetailView(for: member)
         default: EmptyView()
         }
+    }
+
+    @ViewBuilder
+    private func memberDetailView(for member: Member) -> some View {
+        let shareURL = member.url ?? ""
+
+        MemberDetailView(member: member)
+            .toolbar {
+                // 分享按钮
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    ShareLink(item: shareURL) {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                }
+
+                // iOS 26 专属间距
+                if #available(iOS 26, *) {
+                    ToolbarSpacer(.fixed)
+                }
+
+                // 更多操作菜单
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Menu {
+                        Button("屏蔽用户", systemImage: "person.slash") {
+                            showAlert = true
+                        }
+                        .tint(.red)
+
+                        Button("在浏览器中打开", systemImage: "safari") {
+                            if let url = URL(string: shareURL) {
+                                openURL(url)
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                }
+            }
+            .alert("确定要屏蔽该用户吗？", isPresented: $showAlert) {
+                Button("确认屏蔽", role: .destructive) {
+                    BlockManager.shared.block(member.username)
+                    if !navManager.searchPath.isEmpty {
+                        navManager.searchPath.removeLast()
+                    }
+                }
+                Button("取消", role: .cancel) {}
+            }
     }
 }
