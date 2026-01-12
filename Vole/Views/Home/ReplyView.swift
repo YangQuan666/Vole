@@ -9,7 +9,7 @@ import Kingfisher
 import SwiftUI
 
 struct ReplyRowView: View {
-    @State private var showUserInfo = false
+    @State private var showAlert = false
     @State private var selectedUser: Member?
     @Binding var path: NavigationPath
     let topic: Topic
@@ -25,7 +25,6 @@ struct ReplyRowView: View {
             {
                 Button {
                     selectedUser = reply.member
-                    showUserInfo = true
                 } label: {
                     KFImage(url)
                         .placeholder {
@@ -94,11 +93,56 @@ struct ReplyRowView: View {
             }
         }
         .sheet(item: $selectedUser) { member in
-            MemberView(member: member)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
+            NavigationStack {
+                memberDetailView(for: member)
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
         }
-        .padding(.vertical, 8)
+    }
+
+    @ViewBuilder
+    private func memberDetailView(for member: Member) -> some View {
+        List {
+            MemberDetailView(member: member)
+        }
+        .navigationTitle(member.username)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(role: .destructive) {
+                    showAlert = true
+                } label: {
+                    Image(systemName: "person.slash")
+                        .foregroundStyle(.red)
+                }
+            }
+
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    selectedUser = nil
+                } label: {
+                    if #available(iOS 26.0, *) {
+                        Image(systemName: "xmark")
+                            .foregroundColor(.primary)
+                    } else {
+                        Image(systemName: "xmark.circle.fill")
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(.secondary)
+                            .font(.title)
+                    }
+                }
+            }
+        }
+        .alert("确定要屏蔽该用户吗？", isPresented: $showAlert) {
+            Button("确认屏蔽", role: .destructive) {
+                withAnimation(.spring()) {
+                    BlockManager.shared.block(member.username)
+                }
+                selectedUser = nil
+            }
+            Button("取消", role: .cancel) {}
+        }
     }
 }
 

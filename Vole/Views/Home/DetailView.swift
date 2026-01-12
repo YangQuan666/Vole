@@ -35,7 +35,6 @@ struct DetailView: View {
 
     @Environment(\.openURL) private var openURL
     @Environment(\.appOpenURL) private var appOpenURL
-    @Environment(\.dismiss) private var dismissTopic
     @Binding var path: NavigationPath
 
     var body: some View {
@@ -205,9 +204,7 @@ struct DetailView: View {
                                             case .mention(let username):
                                                 print("@\(username)")
                                             case .topic(let id):
-                                                path.append(
-                                                    Route.topicId(id)
-                                                )
+                                                path.append(Route.topicId(id))
                                             default:
                                                 break
                                             }
@@ -366,17 +363,12 @@ struct DetailView: View {
                     .interactiveDismissDisabled(true)
             }
         }
-        .sheet(isPresented: $showUserInfo) {
-            MemberView(
-                member: selectedUser,
-                onBlock: {
-                    if selectedUser == topic?.member {
-                        dismissTopic()
-                    }
-                }
-            )
-            .presentationDetents([.medium, .large])  // 半屏 & 全屏
-            .presentationDragIndicator(.visible)  // 上拉手柄
+        .sheet(item: $selectedUser) { member in
+            NavigationStack {
+                memberDetailView(for: member)
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
         }
         .environment(\.appOpenURL) { url in
             safariURL = url
@@ -426,7 +418,7 @@ struct DetailView: View {
             Button("取消", role: .cancel) {}
         }
     }
-    
+
     // 回话视图
     @ViewBuilder
     private func conversationView(_ reply: Reply, _ topic: Topic) -> some View {
@@ -471,6 +463,50 @@ struct DetailView: View {
         }
         .transition(.opacity)
         .zIndex(1)
+    }
+
+    @ViewBuilder
+    private func memberDetailView(for member: Member) -> some View {
+        List {
+            MemberDetailView(member: member)
+        }
+        .navigationTitle(member.username)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(role: .destructive) {
+                    showAlert = true
+                } label: {
+                    Image(systemName: "person.slash")
+                        .foregroundStyle(.red)
+                }
+            }
+
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    selectedUser = nil
+                } label: {
+                    if #available(iOS 26.0, *) {
+                        Image(systemName: "xmark")
+                            .foregroundColor(.primary)
+                    } else {
+                        Image(systemName: "xmark.circle.fill")
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(.secondary)
+                            .font(.title)
+                    }
+                }
+            }
+        }
+        .alert("确定要屏蔽该用户吗？", isPresented: $showAlert) {
+            Button("确认屏蔽", role: .destructive) {
+                withAnimation(.spring()) {
+                    BlockManager.shared.block(member.username)
+                }
+                selectedUser = nil
+            }
+            Button("取消", role: .cancel) {}
+        }
     }
 
     private func loadTopic() async {

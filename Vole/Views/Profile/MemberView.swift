@@ -15,297 +15,91 @@ struct MemberView: View {
     @Environment(\.openURL) private var openURL
     var member: Member?
 
-    var mine: Bool {
-        userManager.currentMember?.username == member?.username
-    }
     var onLogout: (() -> Void)?
-    var onBlock: (() -> Void)?  // 屏蔽成功后的回调
-
-    init(
-        member: Member?,
-        onLogout: (() -> Void)? = nil,
-        onBlock: (() -> Void)? = nil
-    ) {
-        self.member = member
-        self.onLogout = onLogout
-        self.onBlock = onBlock
-    }
 
     var body: some View {
         NavigationView {
             List {
-                if let member = member {
-                    // 顶部用户信息
+                // 顶部用户信息
+                MemberDetailView(member: member)
+
+                // token管理
+                if let token = userManager.token,
+                    let tokenStr = token.token
+                {
                     Section {
-                        HStack(spacing: 8) {
-                            if let avatarURL = member.getHighestQualityAvatar(),
-                                let url = URL(string: avatarURL)
-                            {
-                                KFImage(url)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 128, height: 128)
-                                    .clipShape(Circle())
-                                    .padding(.top, 8)
-                            } else {
-                                Circle()
-                                    .fill(Color.gray.opacity(0.4))
-                                    .frame(width: 128, height: 128)
-                                    .padding(.top, 8)
-                            }
-                            VStack(spacing: 8) {
-                                Text(member.username)
-                                    .font(.title3)
-                                    .fontWeight(.semibold)
-
-                                if let id = member.id {
-                                    Text("第 \(id) 位会员")
-                                        .foregroundColor(.secondary)
-                                        .font(.subheadline)
-                                }
-
-                                if let tagline = member.tagline,
-                                    !tagline.isEmpty
-                                {
-                                    Text("\"\(tagline)\"")
-                                        .foregroundColor(.secondary)
-                                        .font(.subheadline)
-                                }
-                            }
-                            .frame(maxWidth: .infinity, alignment: .center)
-                        }
-                        .listRowSeparator(.hidden)
-
-                        if let bio = member.bio, !bio.isEmpty {
-                            Text(bio)
-                                .font(.subheadline)
-                                .frame(maxWidth: .infinity, alignment: .center)
-                        }
-                    }
-
-                    // 账户信息
-                    Section {
-
-                        if let created = member.created {
-                            HStack {
-                                Label("创建日期", systemImage: "calendar")
-                                Spacer()
-                                Text(formatDate(created))
-                                    .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.trailing)
-                            }
-                        }
-
-                        if let location = member.location, !location.isEmpty {
-                            HStack {
-                                Label("所在地区", systemImage: "mappin.and.ellipse")
-                                Spacer()
-                                Text(location)
-                                    .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.trailing)
-                            }
-                        }
-
-                        if let website = member.website, !website.isEmpty {
-                            Button {
-                                if let url = URL(string: website) {
-                                    openURL(url)
-                                }
-                            } label: {
-                                HStack {
-                                    Label("个人网站", systemImage: "house")
-                                    Spacer()
-                                    Text(website)
-                                        .lineLimit(1)
-                                        .foregroundColor(.secondary)
-                                        .multilineTextAlignment(.trailing)
-                                }
-                            }
-                            .buttonStyle(.plain)
-                        }
-
-                        if let btc = member.btc, !btc.isEmpty {
-                            Button {
-                                if let url = URL(string: btc) {
-                                    openURL(url)
-                                }
-                            } label: {
+                        HStack {
+                            // 续期按钮
+                            NavigationLink(
+                                destination: TokenRenewPage(
+                                    currentToken: token
+                                )
+                            ) {
                                 HStack {
                                     Label(
-                                        "BTC",
-                                        systemImage: "bitcoinsign.ring.dashed"
+                                        "Token",
+                                        systemImage: "key.viewfinder"
                                     )
                                     Spacer()
-                                    Text(btc)
-                                        .lineLimit(1)
+                                    Text(maskedToken(tokenStr))
                                         .foregroundColor(.secondary)
-                                        .multilineTextAlignment(.trailing)
-                                }
-                            }
-                            .buttonStyle(.plain)
-                        }
-
-                        if let github = member.github, !github.isEmpty {
-                            Button {
-                                if let url = URL(string: "https://github.com/\(github)") {
-                                    openURL(url)
-                                }
-                            } label: {
-                                HStack {
-                                    Label("GitHub", systemImage: "network")
-                                    Spacer()
-                                    Text(github)
-                                        .lineLimit(1)
-                                        .foregroundColor(.secondary)
-                                        .multilineTextAlignment(.trailing)
-                                }
-                            }
-                            .buttonStyle(.plain)
-                        }
-
-                        if let twitter = member.twitter, !twitter.isEmpty {
-                            Button {
-                                if let url = URL(
-                                    string: "https://x.com/\(twitter)"
-                                ) {
-                                    openURL(url)
-                                }
-                            } label: {
-                                HStack {
-                                    Label("Twitter", systemImage: "network")
-                                    Spacer()
-                                    Text(twitter)
-                                        .lineLimit(1)
-                                        .foregroundColor(.secondary)
-                                        .multilineTextAlignment(.trailing)
-                                }
-                            }
-                            .buttonStyle(.plain)
-                        }
-
-                        if let psn = member.psn, !psn.isEmpty {
-                            Button {
-                                if let url = URL(
-                                    string: "https://psnprofiles.com/\(psn)"
-                                ) {
-                                    openURL(url)
-                                }
-                            } label: {
-                                HStack {
-                                    Label("Twitter", systemImage: "network")
-                                    Spacer()
-                                    Text(psn)
-                                        .lineLimit(1)
-                                        .foregroundColor(.secondary)
-                                        .multilineTextAlignment(.trailing)
-                                }
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-
-                    // 是当前登录用户
-                    if mine {
-                        if let token = userManager.token,
-                            let tokenStr = token.token
-                        {
-                            Section {
-                                HStack {
-                                    // 续期按钮
-                                    NavigationLink(
-                                        destination: TokenRenewPage(
-                                            currentToken: token
+                                        .multilineTextAlignment(
+                                            .trailing
                                         )
-                                    ) {
-                                        HStack {
-                                            Label(
-                                                "Token",
-                                                systemImage: "key.viewfinder"
-                                            )
-                                            Spacer()
-                                            Text(maskedToken(tokenStr))
-                                                .foregroundColor(.secondary)
-                                                .multilineTextAlignment(
-                                                    .trailing
-                                                )
-                                                .contextMenu {
-                                                    Button(
-                                                        "复制原始 Token",
-                                                        systemImage:
-                                                            "document.on.document"
-                                                    ) {
-                                                        UIPasteboard.general
-                                                            .string = tokenStr
-                                                    }
-                                                }
+                                        .contextMenu {
+                                            Button(
+                                                "复制原始 Token",
+                                                systemImage:
+                                                    "document.on.document"
+                                            ) {
+                                                UIPasteboard.general
+                                                    .string = tokenStr
+                                            }
                                         }
-                                    }
-                                    .buttonStyle(.borderless)
                                 }
                             }
+                            .buttonStyle(.borderless)
                         }
-
-                        Section {
-                            HStack {
-                                NavigationLink(
-                                    destination: SettingView()
-                                ) {
-                                    HStack {
-                                        Label(
-                                            "应用设置",
-                                            systemImage: "gear"
-                                        )
-                                        Spacer()
-                                    }
-                                }
-                                .buttonStyle(.borderless)
-                            }
-                        }
-
-                        // 退出登录
-                        Section {
-                            Button(role: .destructive) {
-                                onLogout?()
-                            } label: {
-                                HStack {
-                                    Spacer()
-                                    Text("退出登录")
-                                        .fontWeight(.semibold)
-                                    Spacer()
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    Section {
-                        VStack(spacing: 8) {
-                            Image(systemName: "person.crop.circle.badge.exclam")
-                                .font(.system(size: 50))
-                                .foregroundColor(.gray)
-                            Text("未找到用户信息")
-                                .foregroundColor(.red)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding()
                     }
                 }
+
+                Section {
+                    HStack {
+                        NavigationLink(
+                            destination: SettingView()
+                        ) {
+                            HStack {
+                                Label(
+                                    "应用设置",
+                                    systemImage: "gear"
+                                )
+                                Spacer()
+                            }
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                }
+
+                // 退出登录
+                Section {
+                    Button(role: .destructive) {
+                        onLogout?()
+                    } label: {
+                        HStack {
+                            Spacer()
+                            Text("退出登录")
+                                .fontWeight(.semibold)
+                            Spacer()
+                        }
+                    }
+                }
+
             }
             .listStyle(.insetGrouped)
-            .navigationTitle("用户信息")
+            .navigationTitle("我的信息")
             .navigationBarTitleDisplayMode(.inline)
             // 2. 添加完成按钮
             .toolbar {
-                if !mine {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button(role: .destructive) {
-                            showAlert = true
-                        } label: {
-                            Image(systemName: "person.slash")
-                                .foregroundStyle(.red)
-                        }
-                    }
-                }
-
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         dismiss()
@@ -321,21 +115,6 @@ struct MemberView: View {
                         }
                     }
                 }
-            }
-            .alert("确定要屏蔽该用户吗？", isPresented: $showAlert) {
-                Button("确认屏蔽", role: .destructive) {
-                    if let username = member?.username {
-                        // 使用 withAnimation 包裹，这样父界面的 List 渲染数据变化时会产生动画
-                        withAnimation(.spring()) {
-                            BlockManager.shared.block(username)
-                        }
-                    }
-                    // 先执行传入的屏蔽回调（比如关闭父级页面）
-                    onBlock?()
-                    // 再关闭当前的 MemberView 弹窗
-                    dismiss()
-                }
-                Button("取消", role: .cancel) {}
             }
         }
     }

@@ -82,5 +82,5 @@ struct MemberRowView: View {
         bio: "我是一名爱打游戏，爱编程、喜欢打羽毛球的INTP人格",
         created: 1
     )
-    MemberView(member: member)
+    MemberRowView(member: member)
 }
