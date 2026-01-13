@@ -124,46 +124,48 @@ struct SearchView: View {
     private func memberDetailView(for member: Member) -> some View {
         let shareURL = member.url ?? ""
 
-        MemberDetailView(member: member)
-            .toolbar {
-                // 分享按钮
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    ShareLink(item: shareURL) {
-                        Image(systemName: "square.and.arrow.up")
-                    }
-                }
-
-                // iOS 26 专属间距
-                if #available(iOS 26, *) {
-                    ToolbarSpacer(.fixed)
-                }
-
-                // 更多操作菜单
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Menu {
-                        Button("屏蔽用户", systemImage: "person.slash") {
-                            showAlert = true
-                        }
-                        .tint(.red)
-
-                        Button("在浏览器中打开", systemImage: "safari") {
-                            if let url = URL(string: shareURL) {
-                                openURL(url)
-                            }
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                    }
+        List {
+            MemberDetailView(member: member)
+        }
+        .toolbar {
+            // 分享按钮
+            ToolbarItem {
+                ShareLink(item: shareURL) {
+                    Image(systemName: "square.and.arrow.up")
                 }
             }
-            .alert("确定要屏蔽该用户吗？", isPresented: $showAlert) {
-                Button("确认屏蔽", role: .destructive) {
-                    BlockManager.shared.block(member.username)
-                    if !navManager.searchPath.isEmpty {
-                        navManager.searchPath.removeLast()
-                    }
-                }
-                Button("取消", role: .cancel) {}
+
+            // iOS 26 专属间距
+            if #available(iOS 26, *) {
+                ToolbarSpacer(.fixed)
             }
+
+            // 更多操作菜单
+            ToolbarItem {
+                Menu {
+                    Button("屏蔽用户", systemImage: "person.slash") {
+                        showAlert = true
+                    }
+                    .tint(.red)
+
+                    Button("在浏览器中打开", systemImage: "safari") {
+                        if let url = URL(string: shareURL) {
+                            openURL(url)
+                        }
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+            }
+        }
+        .alert("确定要屏蔽该用户吗？", isPresented: $showAlert) {
+            Button("确认屏蔽", role: .destructive) {
+                BlockManager.shared.block(member.username)
+                if !navManager.searchPath.isEmpty {
+                    navManager.searchPath.removeLast()
+                }
+            }
+            Button("取消", role: .cancel) {}
+        }
     }
 }

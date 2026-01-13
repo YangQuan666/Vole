@@ -9,13 +9,11 @@ import Kingfisher
 import SwiftUI
 
 struct MemberDetailView: View {
-    @State private var showAlert = false
     @ObservedObject private var userManager: UserManager = .shared
     @Environment(\.openURL) private var openURL
     var member: Member?
 
     var body: some View {
-        //        List {
         if let member = member {
             // 顶部用户信息
             Section {
@@ -201,53 +199,6 @@ struct MemberDetailView: View {
             }
         }
     }
-    //        .listStyle(.insetGrouped)
-    //        .navigationTitle("用户信息")
-    //        .navigationBarTitleDisplayMode(.inline)
-    //            // 2. 添加完成按钮
-    //            .toolbar {
-    //                ToolbarItem(placement: .navigationBarLeading) {
-    //                    Button(role: .destructive) {
-    //                        showAlert = true
-    //                    } label: {
-    //                        Image(systemName: "person.slash")
-    //                            .foregroundStyle(.red)
-    //                    }
-    //                }
-    //
-    //                ToolbarItem(placement: .navigationBarTrailing) {
-    //                    Button {
-    //                        dismiss()
-    //                    } label: {
-    //                        if #available(iOS 26.0, *) {
-    //                            Image(systemName: "xmark")
-    //                                .foregroundColor(.primary)
-    //                        } else {
-    //                            Image(systemName: "xmark.circle.fill")
-    //                                .symbolRenderingMode(.hierarchical)
-    //                                .foregroundStyle(.secondary)
-    //                                .font(.title)
-    //                        }
-    //                    }
-    //                }
-    //            }
-    //            .alert("确定要屏蔽该用户吗？", isPresented: $showAlert) {
-    //                Button("确认屏蔽", role: .destructive) {
-    //                    if let username = member?.username {
-    //                        // 使用 withAnimation 包裹，这样父界面的 List 渲染数据变化时会产生动画
-    //                        withAnimation(.spring()) {
-    //                            BlockManager.shared.block(username)
-    //                        }
-    //                    }
-    //                    // 先执行传入的屏蔽回调（比如关闭父级页面）
-    //                    onBlock?()
-    //                    // 再关闭当前的 MemberView 弹窗
-    //                    dismiss()
-    //                }
-    //                Button("取消", role: .cancel) {}
-    //            }
-
-    //    }
 }
 
 #Preview {
