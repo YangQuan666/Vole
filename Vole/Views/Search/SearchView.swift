@@ -15,6 +15,7 @@ struct SearchView: View {
     @State private var showAlert = false
 
     @ObservedObject private var userManager = UserManager.shared
+    @ObservedObject private var blockManager = BlockManager.shared
     @StateObject private var history = SearchHistory.shared
     @EnvironmentObject var navManager: NavigationManager
     @Environment(\.dismiss) private var dismiss
@@ -49,7 +50,7 @@ struct SearchView: View {
             .searchable(
                 text: $searchText,
                 placement: .navigationBarDrawer(displayMode: .automatic),
-                prompt: "搜索 V2EX 主题"
+                prompt: "搜索 主题、节点、用户"
             )
             .onSubmit(of: .search) {
                 handleSubmit(searchText)
@@ -143,10 +144,17 @@ struct SearchView: View {
             // 更多操作菜单
             ToolbarItem {
                 Menu {
-                    Button("屏蔽用户", systemImage: "person.slash") {
-                        showAlert = true
+                    if blockManager.isBlocked(member.username) {
+                        Button("取消屏蔽用户", systemImage: "person") {
+                            blockManager.unblock(member.username)
+                        }
+                        .tint(.red)
+                    } else {
+                        Button("屏蔽用户", systemImage: "person.slash") {
+                            showAlert = true
+                        }
+                        .tint(.red)
                     }
-                    .tint(.red)
 
                     Button("在浏览器中打开", systemImage: "safari") {
                         if let url = URL(string: shareURL) {
@@ -160,7 +168,7 @@ struct SearchView: View {
         }
         .alert("确定要屏蔽该用户吗？", isPresented: $showAlert) {
             Button("确认屏蔽", role: .destructive) {
-                BlockManager.shared.block(member.username)
+                blockManager.block(member.username)
                 if !navManager.searchPath.isEmpty {
                     navManager.searchPath.removeLast()
                 }

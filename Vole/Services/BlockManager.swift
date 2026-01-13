@@ -10,7 +10,7 @@ import Foundation
 @MainActor
 class BlockManager: ObservableObject {
     static let shared = BlockManager()
-    
+
     @Published private(set) var blockedUsernames: Set<String> = []
     private let storageKey = "app_blocked_usernames"
 
@@ -23,10 +23,11 @@ class BlockManager: ObservableObject {
     func block(_ username: String) {
         blockedUsernames.insert(username)
         UserDefaults.standard.set(Array(blockedUsernames), forKey: storageKey)
-        // 这里的 objectWillChange 会触发 UI 刷新
-        objectWillChange.send()
     }
-    
+    func unblock(_ username: String) {
+        blockedUsernames.remove(username)
+        UserDefaults.standard.set(Array(blockedUsernames), forKey: storageKey)
+    }
     func isBlocked(_ username: String) -> Bool {
         blockedUsernames.contains(username)
     }
