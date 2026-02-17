@@ -292,23 +292,24 @@ struct DetailView: View {
                 }
                 .disabled(selectedReply != nil)
                 .refreshable {
+                    let id =  topic.id
                     await withTaskGroup(of: Void.self) { group in
                         group.addTask {
                             await loadTopic()
                         }
                         group.addTask {
-                            await loadReply(topicId: topic.id)
+                            await loadReply(topicId: id)
                         }
                     }
                 }
                 .task(id: topic.id) {
+                    let id =  topic.id
                     await withTaskGroup(of: Void.self) { group in
                         group.addTask {
                             await loadTopic()
                         }
-
                         group.addTask {
-                            await loadReply(topicId: topic.id)
+                            await loadReply(topicId: id)
                         }
                     }
                 }
