@@ -9,45 +9,34 @@ import Kingfisher
 import SwiftUI
 
 struct ProfileView: View {
-    @State private var step: Int
     @State private var inputToken: String = ""
+    @State private var showLogin = false
     @StateObject private var userManager = UserManager.shared
 
-    init() {
-        // 1. 在 init 中只做简单的状态判断，决定初始界面是 2 还是 3
-        // 直接访问 Singleton 的数据，而不是通过 userManager 包装器
-        if let t = UserManager.shared.token,
-            t.token != nil
-        {
-            _step = State(initialValue: 3)  // 有 Token，直接去展示页
-        } else {
-            _step = State(initialValue: 2)  // 无 Token，去输入页
-        }
-    }
-
     var body: some View {
-        VStack {
-            if step == 2 {
-                TokenInputPage(
-                    token: $inputToken,
-                    onValidate: validateToken,
-                    onLogin: { token in
-                        try await loginWithToken(token)
-                        withAnimation {
-                            step = 3
-                        }
-                    }
-                )
-            } else if step == 3 {
-                MemberView(
-                    member: userManager.currentMember,
-                    onLogout: {
-                        logout()
-                    }
-                )
+        MemberView(
+            member: userManager.currentMember,
+            onLogin: {
+                inputToken = ""
+                showLogin = true
+            },
+            onLogout: {
+                logout()
             }
+        )
+        .sheet(isPresented: $showLogin) {
+            TokenInputPage(
+                token: $inputToken,
+                onValidate: validateToken,
+                onLogin: { token in
+                    try await loginWithToken(token)
+                    await MainActor.run {
+                        showLogin = false
+                        inputToken = ""
+                    }
+                }
+            )
         }
-        .animation(.easeInOut, value: step)
         // 2. 将异步检查和静默登录逻辑放在 .task 修饰符中
         // 当 View 出现在屏幕上时，如果已有 Token 但没有用户信息，则自动刷新
         .task {
@@ -111,9 +100,6 @@ struct ProfileView: View {
 
     private func logout() {
         userManager.clear()
-        withAnimation {
-            step = 2
-        }
     }
 }
 

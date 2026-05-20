@@ -188,11 +188,16 @@ struct MemberDetailView: View {
         } else {
             Section {
                 VStack(spacing: 8) {
-                    Image(systemName: "person.crop.circle.badge.exclam")
+                    Image(systemName: "person.crop.circle")
                         .font(.system(size: 50))
                         .foregroundColor(.gray)
-                    Text("未找到用户信息")
-                        .foregroundColor(.red)
+                    Text("未登录")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                    Text("登录后可查看账户资料、Token 状态和个人信息")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
                 .padding()

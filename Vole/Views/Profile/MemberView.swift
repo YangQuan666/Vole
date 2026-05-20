@@ -15,6 +15,7 @@ struct MemberView: View {
     @Environment(\.openURL) private var openURL
     var member: Member?
 
+    var onLogin: (() -> Void)?
     var onLogout: (() -> Void)?
 
     var body: some View {
@@ -23,10 +24,10 @@ struct MemberView: View {
                 // 顶部用户信息
                 MemberDetailView(member: member)
 
-                // token管理
                 if let token = userManager.token,
                     let tokenStr = token.token
                 {
+                    // token管理
                     Section {
                         HStack {
                             // 续期按钮
@@ -61,22 +62,34 @@ struct MemberView: View {
                             .buttonStyle(.borderless)
                         }
                     }
-                }
 
-                // 退出登录
-                Section {
-                    Button(role: .destructive) {
-                        onLogout?()
-                    } label: {
-                        HStack {
-                            Spacer()
-                            Text("退出登录")
-                                .fontWeight(.semibold)
-                            Spacer()
+                    // 退出登录
+                    Section {
+                        Button(role: .destructive) {
+                            onLogout?()
+                        } label: {
+                            HStack {
+                                Spacer()
+                                Text("退出登录")
+                                    .fontWeight(.semibold)
+                                Spacer()
+                            }
+                        }
+                    }
+                } else {
+                    Section {
+                        Button {
+                            onLogin?()
+                        } label: {
+                            HStack {
+                                Spacer()
+                                Label("登录", systemImage: "person.crop.circle.badge.plus")
+                                    .fontWeight(.semibold)
+                                Spacer()
+                            }
                         }
                     }
                 }
-
             }
             .listStyle(.insetGrouped)
             .navigationTitle("我的信息")
