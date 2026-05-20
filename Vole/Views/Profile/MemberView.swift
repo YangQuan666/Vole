@@ -63,23 +63,6 @@ struct MemberView: View {
                     }
                 }
 
-                Section {
-                    HStack {
-                        NavigationLink(
-                            destination: SettingView()
-                        ) {
-                            HStack {
-                                Label(
-                                    "应用设置",
-                                    systemImage: "gear"
-                                )
-                                Spacer()
-                            }
-                        }
-                        .buttonStyle(.borderless)
-                    }
-                }
-
                 // 退出登录
                 Section {
                     Button(role: .destructive) {
@@ -100,6 +83,15 @@ struct MemberView: View {
             .navigationBarTitleDisplayMode(.inline)
             // 2. 添加完成按钮
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    NavigationLink {
+                        SettingView()
+                    } label: {
+                        Image(systemName: "gearshape")
+                            .foregroundColor(.primary)
+                    }
+                }
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         dismiss()
