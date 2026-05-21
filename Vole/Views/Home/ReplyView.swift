@@ -74,7 +74,7 @@ struct ReplyRowView: View {
                 }
 
                 // 评论内容
-                MarkdownView(
+                VoleMarkdownView(
                     content: reply.content,
                     onMentionsChanged: { mentions in
                         onMentionsChanged?(mentions)

@@ -1,7 +1,7 @@
 [
     {
-        "name": "MarkdownUI",
-        "url": "https://github.com/gonzalezreal/swift-markdown-ui"
+        "name": "MarkdownView",
+        "url": "https://github.com/LiYanan2004/MarkdownView"
     },
     {
         "name": "SwiftSoup",

@@ -154,7 +154,7 @@ struct DetailView: View {
                         }
                         // 内容
                         if let content = topic.content, !content.isEmpty {
-                            MarkdownView(
+                            VoleMarkdownView(
                                 content: content,
                                 onMentionsChanged: nil,
                                 onLinkAction: { action in
@@ -196,7 +196,7 @@ struct DetailView: View {
                                 }
                             ) {
                                 VStack(alignment: .leading, spacing: 8) {
-                                    MarkdownView(
+                                    VoleMarkdownView(
                                         content: supplement.content ?? "",
                                         onMentionsChanged: nil,
                                         onLinkAction: { action in

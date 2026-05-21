@@ -20,7 +20,7 @@ struct EULAView: View {
                     .padding()
             } else if let content {
                 ScrollView {
-                    MarkdownView(content: content)
+                    VoleMarkdownView(content: content)
                         .padding()
                 }
                 Button("我已阅读并同意") {

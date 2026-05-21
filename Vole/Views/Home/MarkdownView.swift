@@ -5,8 +5,7 @@
 //  Created by 杨权 on 8/23/25.
 //
 
-import Kingfisher
-import MarkdownUI
+import MarkdownView
 import SwiftUI
 
 enum LinkAction {
@@ -15,9 +14,8 @@ enum LinkAction {
     case node(id: Int)
 }
 
-struct MarkdownView: View {
+struct VoleMarkdownView: View {
     @State var content: String
-    @State private var isRendering = true
 
     var onMentionsChanged: (([String]) -> Void)?
     var onLinkAction: ((LinkAction) -> Void)?  // 统一处理链接事件
@@ -27,15 +25,8 @@ struct MarkdownView: View {
     var body: some View {
         let (md, mentions) = makeMarkdown(content)
 
-        Markdown(md)
-            .markdownInlineImageProvider(KFInlineImageProvider())
-            .markdownImageProvider(.lazyImage(aspectRatio: 4 / 3))
+        MarkdownView(md)
             .textSelection(.enabled)
-            .markdownTheme(.basic)
-            .markdownTextStyle(\.link) {
-                ForegroundColor(.accentColor)
-                FontWeight(.semibold)
-            }
             // 把 mention 列表回调给外部
             .task(id: content) { @MainActor in
                 onMentionsChanged?(mentions)
@@ -165,44 +156,6 @@ struct MarkdownView: View {
     }
 }
 
-struct KFInlineImageProvider: InlineImageProvider {
-    func image(with url: URL, label: String) async throws -> Image {
-
-        // 先加载原图（或缓存中的）
-        let result = try await KingfisherManager.shared.retrieveImage(
-            with: url,
-            options: [.cacheOriginalImage]
-        )
-
-        let uiImage = result.image
-        return Image(uiImage: uiImage).renderingMode(.original)
-    }
-}
-struct LazyImageProvider: ImageProvider {
-    let aspectRatio: CGFloat
-
-    func makeImage(url: URL?) -> some View {
-        AsyncImage(url: url) { phase in
-            switch phase {
-            case .empty, .failure:
-                    Color(.secondarySystemBackground)
-            case .success(let image):
-                image.resizable().scaledToFit()
-            @unknown default:
-                Image(systemName: "photo.badge.exclamationmark")
-                Color.clear
-            }
-        }
-        .aspectRatio(self.aspectRatio, contentMode: .fill)
-    }
-}
-
-extension ImageProvider where Self == LazyImageProvider {
-    static func lazyImage(aspectRatio: CGFloat) -> Self {
-        LazyImageProvider(aspectRatio: aspectRatio)
-    }
-}
-
 #Preview {
 
     ScrollView {
@@ -221,6 +174,6 @@ extension ImageProvider where Self == LazyImageProvider {
             ![image](https://i.imgur.com/0uptnWx.png)
             """
 
-        MarkdownView(content: markdownString)
+        VoleMarkdownView(content: markdownString)
     }
 }
