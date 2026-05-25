@@ -5,7 +5,9 @@
 //  Created by 杨权 on 8/23/25.
 //
 
+import Kingfisher
 import MarkdownView
+import QuickLook
 import SwiftUI
 
 enum LinkAction {
@@ -16,17 +18,33 @@ enum LinkAction {
 
 struct VoleMarkdownView: View {
     @State var content: String
+    @State private var imagePreviewURL: URL?
+    @State private var isPreparingImagePreview = false
 
     var onMentionsChanged: (([String]) -> Void)?
     var onLinkAction: ((LinkAction) -> Void)?  // 统一处理链接事件
-
-    @Environment(\.appOpenURL) private var appOpenURL
 
     var body: some View {
         let (md, mentions) = makeMarkdown(content)
 
         MarkdownView(md)
+            .markdownImageRenderer(
+                TappableMarkdownImageRenderer(openImagePreview: openImagePreview),
+                forURLScheme: "http"
+            )
+            .markdownImageRenderer(
+                TappableMarkdownImageRenderer(openImagePreview: openImagePreview),
+                forURLScheme: "https"
+            )
             .textSelection(.enabled)
+            .overlay(alignment: .center) {
+                if isPreparingImagePreview {
+                    ProgressView()
+                        .padding(14)
+                        .background(.regularMaterial, in: Circle())
+                }
+            }
+            .quickLookPreview($imagePreviewURL)
             // 把 mention 列表回调给外部
             .task(id: content) { @MainActor in
                 onMentionsChanged?(mentions)
@@ -64,6 +82,115 @@ struct VoleMarkdownView: View {
 
     private func makeMarkdown(_ content: String) -> (String, [String]) {
         MarkdownContentFormatter().format(content)
+    }
+
+    @MainActor
+    private func openImagePreview(_ url: URL) {
+        isPreparingImagePreview = true
+
+        Task {
+            do {
+                let fileURL = try await MarkdownImagePreviewLoader.localFile(
+                    for: url
+                )
+                await MainActor.run {
+                    imagePreviewURL = fileURL
+                    isPreparingImagePreview = false
+                }
+            } catch {
+                await MainActor.run {
+                    isPreparingImagePreview = false
+                    if UIApplication.shared.canOpenURL(url) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct TappableMarkdownImageRenderer: MarkdownImageRenderer {
+    var openImagePreview: @MainActor (URL) -> Void
+
+    func makeBody(configuration: Configuration) -> some View {
+        TappableMarkdownImage(
+            url: configuration.url,
+            alt: configuration.alternativeText,
+            openImagePreview: openImagePreview
+        )
+    }
+}
+
+private struct TappableMarkdownImage: View {
+    let url: URL
+    let alt: String?
+    var openImagePreview: @MainActor (URL) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            KFImage(url)
+                .placeholder {
+                    ProgressView()
+                        .frame(width: 44, height: 44)
+                }
+                .resizable()
+                .scaledToFit()
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+            if let alt, !alt.isEmpty {
+                Text(alt)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            openImagePreview(url)
+        }
+    }
+}
+
+private enum MarkdownImagePreviewLoader {
+    static func localFile(for url: URL) async throws -> URL {
+        guard !url.isFileURL else { return url }
+
+        let (temporaryURL, response) = try await URLSession.shared.download(
+            from: url
+        )
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("VoleMarkdownImagePreviews", isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+
+        let fileURL = directory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension(fileExtension(for: url, response: response))
+        try FileManager.default.moveItem(at: temporaryURL, to: fileURL)
+        return fileURL
+    }
+
+    private static func fileExtension(for url: URL, response: URLResponse) -> String
+    {
+        if !url.pathExtension.isEmpty {
+            return url.pathExtension
+        }
+
+        switch response.mimeType?.lowercased() {
+        case "image/png":
+            return "png"
+        case "image/gif":
+            return "gif"
+        case "image/webp":
+            return "webp"
+        case "image/bmp":
+            return "bmp"
+        case "image/tiff":
+            return "tiff"
+        default:
+            return "jpg"
+        }
     }
 }
 
