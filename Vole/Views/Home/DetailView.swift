@@ -154,20 +154,32 @@ struct DetailView: View {
                         }
                         // 内容
                         if let content = topic.content, !content.isEmpty {
-                            VoleMarkdownView(
-                                content: content,
-                                onMentionsChanged: nil,
-                                onLinkAction: { action in
-                                    switch action {
-                                    case .mention(let username):
-                                        print("@\(username)")
-                                    case .topic(let id):
-                                        path.append(Route.topicId(id))
-                                    default:
-                                        break
-                                    }
+                            VStack(alignment: .leading, spacing: 12) {
+                                if content.isLikelyHTML {
+                                    HTMLContentNotice(
+                                        url: topic.url.flatMap(URL.init(string:)),
+                                        openURL: { url in
+                                            safariURL = url
+                                            showSafari = true
+                                        }
+                                    )
                                 }
-                            )
+
+                                VoleMarkdownView(
+                                    content: content,
+                                    onMentionsChanged: nil,
+                                    onLinkAction: { action in
+                                        switch action {
+                                        case .mention(let username):
+                                            print("@\(username)")
+                                        case .topic(let id):
+                                            path.append(Route.topicId(id))
+                                        default:
+                                            break
+                                        }
+                                    }
+                                )
+                            }
                         }
                     }
 
@@ -586,6 +598,77 @@ struct DetailView: View {
             }
         }
     }
+}
+
+private struct HTMLContentNotice: View {
+    let url: URL?
+    let openURL: (URL) -> Void
+
+    private let noticeColor = Color.yellow
+
+    var body: some View {
+        Group {
+            if let url {
+                Button {
+                    openURL(url)
+                } label: {
+                    noticeContent(showsOpenIndicator: true)
+                }
+                .buttonStyle(.plain)
+            } else {
+                noticeContent(showsOpenIndicator: false)
+            }
+        }
+    }
+
+    private func noticeContent(showsOpenIndicator: Bool) -> some View {
+        HStack(alignment: .center, spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.subheadline)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("该主题内容包含 HTML")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                Text("当前页面可能无法完整显示，建议访问网页版。")
+                    .font(.caption)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if showsOpenIndicator {
+                Spacer(minLength: 8)
+                Image(systemName: "arrow.up.forward.app")
+                    .font(.caption)
+            }
+        }
+        .foregroundStyle(noticeColor)
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(noticeShape.fill(noticeColor.opacity(0.12)))
+        .overlay(noticeShape.stroke(noticeColor.opacity(0.24), lineWidth: 1))
+        .contentShape(noticeShape)
+    }
+
+    private var noticeShape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: 8, style: .continuous)
+    }
+}
+
+private extension String {
+    var isLikelyHTML: Bool {
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.contains("<"), trimmed.contains(">") else {
+            return false
+        }
+
+        return trimmed.range(
+            of: Self.htmlTagPattern,
+            options: [.regularExpression, .caseInsensitive]
+        ) != nil
+    }
+
+    static let htmlTagPattern =
+        #"<\s*/?\s*(?:html|head|body|div|section|article|p|br|hr|a|img|figure|figcaption|table|thead|tbody|tr|td|th|ul|ol|li|span|strong|em|b|i|blockquote|pre|code|h[1-6]|script|style|iframe|video|audio|source)\b[^>]*>"#
 }
 
 #Preview {
