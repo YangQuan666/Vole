@@ -63,96 +63,184 @@ struct VoleMarkdownView: View {
     }
 
     private func makeMarkdown(_ content: String) -> (String, [String]) {
+        MarkdownContentFormatter().format(content)
+    }
+}
+
+private struct MarkdownContentFormatter {
+    private let protectedPattern =
+        #"(?s)(```.*?```|`[^`\n]*`|!\[[^\]]*\]\([^)]+\)|\[[^\]]+\]\([^)]+\))"#
+    private let mentionPattern =
+        #"(?<![\p{L}0-9_])@([\p{L}0-9_]+)(?![\p{L}0-9_])"#
+    private let urlPattern =
+        #"https?://[^\s<>()\[\]{}]+"#
+    private let imageURLPattern =
+        #"(?i)^https?://\S+\.(?:png|jpg|jpeg|gif|webp|bmp|tiff)(?:\?\S*)?$"#
+
+    func format(_ content: String) -> (markdown: String, mentions: [String]) {
         var mentions: [String] = []
-        var result = ""
-
-        // 用正则拆分原始内容，保留 Markdown 图片/链接
-        let pattern = #"(!\[.*?\]\(.*?\)|\[.*?\]\(.*?\))"#
-        let regex = try! NSRegularExpression(pattern: pattern)
-        let ns = content as NSString
-        var last = 0
-
-        let matches = regex.matches(
-            in: content,
-            range: NSRange(location: 0, length: ns.length)
-        )
-
-        for match in matches {
-            // 普通文本片段
-            let rangeBefore = NSRange(
-                location: last,
-                length: match.range.location - last
-            )
-            let textBefore = ns.substring(with: rangeBefore)
-            result += processTextFragment(textBefore, &mentions)
-
-            // 已有 Markdown 图片或链接，直接保留
-            let markdownFragment = ns.substring(with: match.range)
-            result += markdownFragment
-
-            last = match.range.location + match.range.length
+        let markdown = transformUnprotectedSegments(in: normalizeNewlines(content)) {
+            segment in
+            processTextSegment(segment, mentions: &mentions)
         }
-
-        // 尾部普通文本
-        if last < ns.length {
-            let tail = ns.substring(from: last)
-            result += processTextFragment(tail, &mentions)
-        }
-        
-        let fix = result.replacingOccurrences(of: "\r\n", with: "\r\n\n")
-        return (fix, mentions)
+        return (markdown, mentions)
     }
 
-    // 处理普通文本片段：@mention + 图片 URL
-    private func processTextFragment(_ text: String, _ mentions: inout [String])
-        -> String
-    {
-        var result = text
-        let mentionPattern = #"(?<![\p{L}0-9_])@([\p{L}0-9_]+)(?![\p{L}0-9_])"#
-        let imagePattern = #"https?://\S+\.(png|jpg|jpeg|gif|webp|bmp|tiff)"#
-
-        // @mention
-        if let mentionRegex = try? NSRegularExpression(pattern: mentionPattern)
-        {
-            let nsText = result as NSString
-            let matches = mentionRegex.matches(
-                in: result,
-                range: NSRange(location: 0, length: nsText.length)
-            )
-            for match in matches.reversed() {
-                if let range = Range(match.range(at: 1), in: result) {
-                    let name = String(result[range])
-                    mentions.append(name)
-                    let encoded =
-                        name.addingPercentEncoding(
-                            withAllowedCharacters: .urlPathAllowed
-                        ) ?? name
-                    if let fullRange = Range(match.range, in: result) {
-                        result.replaceSubrange(
-                            fullRange,
-                            with: "[@\(name)](mention://\(encoded))"
-                        )
-                    }
-                }
-            }
+    private func transformUnprotectedSegments(
+        in content: String,
+        transform: (String) -> String
+    ) -> String {
+        guard let regex = try? NSRegularExpression(pattern: protectedPattern)
+        else {
+            return transform(content)
         }
 
-        // 图片 URL
-        if let imageRegex = try? NSRegularExpression(pattern: imagePattern) {
-            let nsText = result as NSString
-            let matches = imageRegex.matches(
-                in: result,
-                range: NSRange(location: 0, length: nsText.length)
-            )
-            for match in matches.reversed() {
-                if let range = Range(match.range, in: result) {
-                    let url = String(result[range])
-                    result.replaceSubrange(range, with: "![image](\(url))")
-                }
+        let nsContent = content as NSString
+        let matches = regex.matches(
+            in: content,
+            range: NSRange(location: 0, length: nsContent.length)
+        )
+        var result = ""
+        var cursor = 0
+
+        for match in matches {
+            if match.range.location > cursor {
+                let range = NSRange(
+                    location: cursor,
+                    length: match.range.location - cursor
+                )
+                result += transform(nsContent.substring(with: range))
             }
+
+            result += nsContent.substring(with: match.range)
+            cursor = match.range.location + match.range.length
+        }
+
+        if cursor < nsContent.length {
+            result += transform(nsContent.substring(from: cursor))
         }
 
         return result
+    }
+
+    private func processTextSegment(
+        _ text: String,
+        mentions: inout [String]
+    ) -> String {
+        guard let urlRegex = try? NSRegularExpression(pattern: urlPattern)
+        else {
+            return processMentions(in: text, mentions: &mentions)
+        }
+
+        let nsText = text as NSString
+        let matches = urlRegex.matches(
+            in: text,
+            range: NSRange(location: 0, length: nsText.length)
+        )
+        var result = ""
+        var cursor = 0
+
+        for match in matches {
+            if match.range.location > cursor {
+                let range = NSRange(
+                    location: cursor,
+                    length: match.range.location - cursor
+                )
+                result += processMentions(
+                    in: nsText.substring(with: range),
+                    mentions: &mentions
+                )
+            }
+
+            let rawURL = nsText.substring(with: match.range)
+            let (url, suffix) = trimTrailingURLPunctuation(rawURL)
+            result += markdownLink(for: url) + suffix
+            cursor = match.range.location + match.range.length
+        }
+
+        if cursor < nsText.length {
+            result += processMentions(
+                in: nsText.substring(from: cursor),
+                mentions: &mentions
+            )
+        }
+
+        return result
+    }
+
+    private func processMentions(
+        in text: String,
+        mentions: inout [String]
+    ) -> String {
+        replaceMatches(
+            in: text,
+            pattern: mentionPattern
+        ) { _, match in
+            guard let nameRange = Range(match.range(at: 1), in: text)
+            else {
+                return nil
+            }
+
+            let name = String(text[nameRange])
+            mentions.append(name)
+            let encoded = name.addingPercentEncoding(
+                withAllowedCharacters: .urlPathAllowed
+            ) ?? name
+            return "[@\(name)](mention://\(encoded))"
+        }
+    }
+
+    private func replaceMatches(
+        in text: String,
+        pattern: String,
+        replacement: (String, NSTextCheckingResult) -> String?
+    ) -> String {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return text
+        }
+
+        var result = text
+        let nsText = text as NSString
+        let matches = regex.matches(
+            in: text,
+            range: NSRange(location: 0, length: nsText.length)
+        )
+
+        for match in matches.reversed() {
+            guard let range = Range(match.range, in: result) else {
+                continue
+            }
+            let matchText = String(result[range])
+            guard let replacement = replacement(matchText, match) else {
+                continue
+            }
+            result.replaceSubrange(range, with: replacement)
+        }
+
+        return result
+    }
+
+    private func markdownLink(for url: String) -> String {
+        if url.range(of: imageURLPattern, options: .regularExpression) != nil {
+            return "![image](\(url))"
+        }
+        return "[\(url)](\(url))"
+    }
+
+    private func trimTrailingURLPunctuation(_ url: String)
+        -> (url: String, suffix: String)
+    {
+        var trimmed = url
+        var suffix = ""
+        while let last = trimmed.last, ".,;:!?".contains(last) {
+            suffix.insert(last, at: suffix.startIndex)
+            trimmed.removeLast()
+        }
+        return (trimmed, suffix)
+    }
+
+    private func normalizeNewlines(_ text: String) -> String {
+        text.replacingOccurrences(of: "\r\n", with: "\r\n\n")
     }
 }
 
