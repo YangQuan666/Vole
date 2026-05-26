@@ -116,7 +116,6 @@ private struct TappableMarkdownImageRenderer: MarkdownImageRenderer {
     func makeBody(configuration: Configuration) -> some View {
         TappableMarkdownImage(
             url: configuration.url,
-            alt: configuration.alternativeText,
             openImagePreview: openImagePreview
         )
     }
@@ -124,26 +123,29 @@ private struct TappableMarkdownImageRenderer: MarkdownImageRenderer {
 
 private struct TappableMarkdownImage: View {
     let url: URL
-    let alt: String?
     var openImagePreview: @MainActor (URL) -> Void
+    @State private var imageSize: CGSize?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        GeometryReader { proxy in
+            let maxWidth = proxy.size.width
+            let resolvedWidth = min(imageSize?.width ?? maxWidth, maxWidth)
+
             KFImage(url)
                 .placeholder {
                     ProgressView()
                         .frame(width: 44, height: 44)
                 }
+                .onSuccess { result in
+                    imageSize = result.image.size
+                }
                 .resizable()
-                .scaledToFit()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: resolvedWidth, alignment: .leading)
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-
-            if let alt, !alt.isEmpty {
-                Text(alt)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-            }
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .frame(minHeight: 44)
         .contentShape(Rectangle())
         .onTapGesture {
             openImagePreview(url)
