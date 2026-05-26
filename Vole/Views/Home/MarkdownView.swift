@@ -156,8 +156,19 @@ private struct TappableMarkdownImage: View {
 private struct HorizontalScrollableMarkdownTableStyle: MarkdownTableStyle {
     func makeBody(configuration: Configuration) -> some View {
         ScrollView(.horizontal, showsIndicators: true) {
-            configuration.table
-                .fixedSize(horizontal: true, vertical: false)
+            HStack(spacing: 0) {
+                configuration.table
+                    .fixedSize(horizontal: true, vertical: false)
+                    .padding(8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(.background.secondary)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(.secondary.opacity(0.28), lineWidth: 1)
+                    )
+            }
         }
     }
 }

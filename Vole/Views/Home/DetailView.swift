@@ -638,14 +638,12 @@ private struct HTMLContentNotice: View {
             if showsOpenIndicator {
                 Spacer(minLength: 8)
                 Image(systemName: "arrow.up.forward.app")
-                    .font(.caption)
             }
         }
         .foregroundStyle(noticeColor)
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(noticeShape.fill(noticeColor.opacity(0.12)))
-        .overlay(noticeShape.stroke(noticeColor.opacity(0.24), lineWidth: 1))
         .contentShape(noticeShape)
     }
 
