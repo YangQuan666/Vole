@@ -206,7 +206,7 @@ private struct MarkdownContentFormatter {
 
     func format(_ content: String) -> (markdown: String, mentions: [String]) {
         var mentions: [String] = []
-        let markdown = transformUnprotectedSegments(in: normalizeNewlines(content)) {
+        let markdown = transformUnprotectedSegments(in: content) {
             segment in
             processTextSegment(segment, mentions: &mentions)
         }
@@ -366,9 +366,6 @@ private struct MarkdownContentFormatter {
         return (trimmed, suffix)
     }
 
-    private func normalizeNewlines(_ text: String) -> String {
-        text.replacingOccurrences(of: "\r\n", with: "\r\n\n")
-    }
 }
 
 #Preview {
