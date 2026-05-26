@@ -5,6 +5,7 @@
 //  Created by 杨权 on 8/23/25.
 //
 
+import Foundation
 import Kingfisher
 import MarkdownView
 import QuickLook
@@ -18,7 +19,8 @@ enum LinkAction {
 
 struct VoleMarkdownView: View {
     @State var content: String
-    @State private var imagePreviewURL: URL?
+    @State private var quickLookURLs: [URL] = []
+    @State private var selectedQuickLookURL: URL?
     @State private var isPreparingImagePreview = false
 
     var onMentionsChanged: (([String]) -> Void)?
@@ -26,14 +28,21 @@ struct VoleMarkdownView: View {
 
     var body: some View {
         let (md, mentions) = makeMarkdown(content)
+        let imageURLs = MarkdownImageCollector.imageURLs(in: md)
 
         MarkdownView(md)
             .markdownImageRenderer(
-                TappableMarkdownImageRenderer(openImagePreview: openImagePreview),
+                TappableMarkdownImageRenderer(
+                    imageURLs: imageURLs,
+                    openImagePreview: openImagePreview
+                ),
                 forURLScheme: "http"
             )
             .markdownImageRenderer(
-                TappableMarkdownImageRenderer(openImagePreview: openImagePreview),
+                TappableMarkdownImageRenderer(
+                    imageURLs: imageURLs,
+                    openImagePreview: openImagePreview
+                ),
                 forURLScheme: "https"
             )
             .markdownTableStyle(HorizontalScrollableMarkdownTableStyle())
@@ -45,7 +54,7 @@ struct VoleMarkdownView: View {
                         .background(.regularMaterial, in: Circle())
                 }
             }
-            .quickLookPreview($imagePreviewURL)
+            .quickLookPreview($selectedQuickLookURL, in: quickLookURLs)
             // 把 mention 列表回调给外部
             .task(id: content) { @MainActor in
                 onMentionsChanged?(mentions)
@@ -86,17 +95,40 @@ struct VoleMarkdownView: View {
     }
 
     @MainActor
-    private func openImagePreview(_ url: URL) {
-        isPreparingImagePreview = true
-
+    private func openImagePreview(
+        url: URL,
+        image: KFCrossPlatformImage?,
+        imageURLs: [URL]
+    ) {
         Task {
             do {
-                let fileURL = try await MarkdownImagePreviewLoader.localFile(
-                    for: url
+                if image == nil {
+                    await MainActor.run {
+                        isPreparingImagePreview = true
+                    }
+                }
+
+                let fileURL = try await MarkdownQuickLookImageExporter.fileURL(
+                    for: url,
+                    image: image
                 )
+
                 await MainActor.run {
-                    imagePreviewURL = fileURL
+                    quickLookURLs = [fileURL]
+                    selectedQuickLookURL = fileURL
                     isPreparingImagePreview = false
+                }
+
+                let urls = imageURLs.isEmpty ? [url] : imageURLs
+                let fileURLs = try await MarkdownQuickLookImageExporter.fileURLs(
+                    for: urls,
+                    preferredImage: image,
+                    preferredURL: url
+                )
+
+                await MainActor.run {
+                    quickLookURLs = fileURLs
+                    selectedQuickLookURL = fileURL
                 }
             } catch {
                 await MainActor.run {
@@ -111,11 +143,13 @@ struct VoleMarkdownView: View {
 }
 
 private struct TappableMarkdownImageRenderer: MarkdownImageRenderer {
-    var openImagePreview: @MainActor (URL) -> Void
+    let imageURLs: [URL]
+    var openImagePreview: @MainActor (URL, KFCrossPlatformImage?, [URL]) -> Void
 
     func makeBody(configuration: Configuration) -> some View {
         TappableMarkdownImage(
             url: configuration.url,
+            imageURLs: imageURLs,
             openImagePreview: openImagePreview
         )
     }
@@ -123,8 +157,10 @@ private struct TappableMarkdownImageRenderer: MarkdownImageRenderer {
 
 private struct TappableMarkdownImage: View {
     let url: URL
-    var openImagePreview: @MainActor (URL) -> Void
+    let imageURLs: [URL]
+    var openImagePreview: @MainActor (URL, KFCrossPlatformImage?, [URL]) -> Void
     @State private var imageSize: CGSize?
+    @State private var previewImage: KFCrossPlatformImage?
     @State private var availableWidth: CGFloat = 0
 
     private var displaySize: CGSize {
@@ -147,6 +183,7 @@ private struct TappableMarkdownImage: View {
                     .frame(width: 44, height: 44)
             }
             .onSuccess { result in
+                previewImage = result.image
                 imageSize = result.image.size
             }
             .resizable()
@@ -159,7 +196,7 @@ private struct TappableMarkdownImage: View {
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             .contentShape(Rectangle())
             .onTapGesture {
-                openImagePreview(url)
+                openImagePreview(url, previewImage, imageURLs)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .frame(height: size.height, alignment: .leading)
@@ -197,46 +234,106 @@ private struct HorizontalScrollableMarkdownTableStyle: MarkdownTableStyle {
     }
 }
 
-private enum MarkdownImagePreviewLoader {
-    static func localFile(for url: URL) async throws -> URL {
-        guard !url.isFileURL else { return url }
+private enum MarkdownQuickLookImageExporter {
+    static func fileURLs(
+        for urls: [URL],
+        preferredImage: KFCrossPlatformImage?,
+        preferredURL: URL
+    ) async throws -> [URL] {
+        var exportedURLs: [URL] = []
+        var exportedSourceURLs = Set<URL>()
 
-        let (temporaryURL, response) = try await URLSession.shared.download(
-            from: url
-        )
+        for url in urls {
+            guard exportedSourceURLs.insert(url).inserted else { continue }
+
+            if let fileURL = try? await fileURL(
+                for: url,
+                image: url == preferredURL ? preferredImage : nil
+            ) {
+                exportedURLs.append(fileURL)
+            }
+        }
+
+        return exportedURLs
+    }
+
+    static func fileURL(
+        for url: URL,
+        image: KFCrossPlatformImage?
+    ) async throws -> URL {
+        let fileURL = previewFileURL(for: url)
+
+        if FileManager.default.fileExists(atPath: fileURL.path) {
+            return fileURL
+        }
+
+        let exportImage: KFCrossPlatformImage
+        if let cachedImage = image {
+            exportImage = cachedImage
+        } else {
+            exportImage = try await retrieveImage(for: url)
+        }
+
+        guard let data = exportImage.kf.pngRepresentation() else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+
+        try data.write(to: fileURL, options: .atomic)
+        return fileURL
+    }
+
+    private static func retrieveImage(for url: URL) async throws -> KFCrossPlatformImage {
+        let resource = KF.ImageResource(downloadURL: url)
+        return try await KingfisherManager.shared
+            .retrieveImage(with: resource)
+            .image
+    }
+
+    private static func previewFileURL(for url: URL) -> URL {
         let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("VoleMarkdownImagePreviews", isDirectory: true)
-        try FileManager.default.createDirectory(
+            .appendingPathComponent("VoleMarkdownQuickLookImages", isDirectory: true)
+
+        try? FileManager.default.createDirectory(
             at: directory,
             withIntermediateDirectories: true
         )
 
-        let fileURL = directory
-            .appendingPathComponent(UUID().uuidString)
-            .appendingPathExtension(fileExtension(for: url, response: response))
-        try FileManager.default.moveItem(at: temporaryURL, to: fileURL)
-        return fileURL
+        return directory
+            .appendingPathComponent(url.absoluteString.stableFileName)
+            .appendingPathExtension("png")
     }
+}
 
-    private static func fileExtension(for url: URL, response: URLResponse) -> String
-    {
-        if !url.pathExtension.isEmpty {
-            return url.pathExtension
+private extension String {
+    var stableFileName: String {
+        let hash = unicodeScalars.reduce(UInt64(5381)) { result, scalar in
+            ((result << 5) &+ result) &+ UInt64(scalar.value)
+        }
+        return String(format: "%016llx", hash)
+    }
+}
+
+private enum MarkdownImageCollector {
+    static func imageURLs(in markdown: String) -> [URL] {
+        guard let regex = try? NSRegularExpression(
+            pattern: #"!\[[^\]]*\]\(([^)]+)\)"#
+        ) else {
+            return []
         }
 
-        switch response.mimeType?.lowercased() {
-        case "image/png":
-            return "png"
-        case "image/gif":
-            return "gif"
-        case "image/webp":
-            return "webp"
-        case "image/bmp":
-            return "bmp"
-        case "image/tiff":
-            return "tiff"
-        default:
-            return "jpg"
+        let nsMarkdown = markdown as NSString
+        let matches = regex.matches(
+            in: markdown,
+            range: NSRange(location: 0, length: nsMarkdown.length)
+        )
+
+        return matches.compactMap { match in
+            guard match.numberOfRanges > 1 else { return nil }
+
+            let rawURL = nsMarkdown
+                .substring(with: match.range(at: 1))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return URL(string: rawURL)
         }
     }
 }
