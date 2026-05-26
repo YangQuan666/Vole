@@ -36,6 +36,7 @@ struct VoleMarkdownView: View {
                 TappableMarkdownImageRenderer(openImagePreview: openImagePreview),
                 forURLScheme: "https"
             )
+            .markdownTableStyle(HorizontalScrollableMarkdownTableStyle())
             .textSelection(.enabled)
             .overlay(alignment: .center) {
                 if isPreparingImagePreview {
@@ -146,6 +147,15 @@ private struct TappableMarkdownImage: View {
         .contentShape(Rectangle())
         .onTapGesture {
             openImagePreview(url)
+        }
+    }
+}
+
+private struct HorizontalScrollableMarkdownTableStyle: MarkdownTableStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        ScrollView(.horizontal, showsIndicators: true) {
+            configuration.table
+                .fixedSize(horizontal: true, vertical: false)
         }
     }
 }
