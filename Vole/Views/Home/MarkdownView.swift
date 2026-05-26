@@ -125,31 +125,55 @@ private struct TappableMarkdownImage: View {
     let url: URL
     var openImagePreview: @MainActor (URL) -> Void
     @State private var imageSize: CGSize?
+    @State private var availableWidth: CGFloat = 0
+
+    private var displaySize: CGSize {
+        guard let imageSize, imageSize.width > 0 else {
+            return CGSize(width: 44, height: 44)
+        }
+
+        let maxWidth = availableWidth > 0 ? availableWidth : imageSize.width
+        let width = min(imageSize.width, maxWidth)
+        let height = imageSize.height * width / imageSize.width
+        return CGSize(width: width, height: height)
+    }
 
     var body: some View {
-        GeometryReader { proxy in
-            let maxWidth = proxy.size.width
-            let resolvedWidth = min(imageSize?.width ?? maxWidth, maxWidth)
+        let size = displaySize
 
-            KFImage(url)
-                .placeholder {
-                    ProgressView()
-                        .frame(width: 44, height: 44)
+        KFImage(url)
+            .placeholder {
+                ProgressView()
+                    .frame(width: 44, height: 44)
+            }
+            .onSuccess { result in
+                imageSize = result.image.size
+            }
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(
+                width: size.width,
+                height: size.height,
+                alignment: .leading
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .contentShape(Rectangle())
+            .onTapGesture {
+                openImagePreview(url)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: size.height, alignment: .leading)
+            .background {
+                GeometryReader { proxy in
+                    Color.clear
+                        .onAppear {
+                            availableWidth = proxy.size.width
+                        }
+                        .onChange(of: proxy.size.width) { _, width in
+                            availableWidth = width
+                        }
                 }
-                .onSuccess { result in
-                    imageSize = result.image.size
-                }
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: resolvedWidth, alignment: .leading)
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .frame(minHeight: 44)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            openImagePreview(url)
-        }
+            }
     }
 }
 
