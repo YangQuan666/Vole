@@ -43,6 +43,18 @@ struct SettingView: View {
                 Text("外观")
             }
 
+            Section {
+                NavigationLink {
+                    HomeNodeListSettingsView()
+                } label: {
+                    Label("首页列表", systemImage: "list.bullet.rectangle.fill")
+                }
+            } header: {
+                Text("内容")
+            } footer: {
+                Text("自定义首页 picker 中的节点列表，每个列表最多选择 10 个节点。")
+            }
+
             // 基本信息
             Section {
                 // 点击跳转 App Store

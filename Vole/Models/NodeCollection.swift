@@ -18,11 +18,36 @@ struct NodeCollection: Identifiable, Codable, Hashable {
     var color: Color { Color(named: colorHex) }
 
     enum CodingKeys: String, CodingKey {
+        case id
         case name
         case systemIcon
         case colorHex
         case nodeNames
-        // id 不列入 keys，这样 JSON 里没有 id 也不会报错
+    }
+
+    init(
+        id: UUID = UUID(),
+        name: String,
+        systemIcon: String,
+        colorHex: String,
+        nodeNames: [String] = []
+    ) {
+        self.id = id
+        self.name = name
+        self.systemIcon = systemIcon
+        self.colorHex = colorHex
+        self.nodeNames = nodeNames
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        name = try container.decode(String.self, forKey: .name)
+        systemIcon = try container.decode(String.self, forKey: .systemIcon)
+        colorHex = try container.decode(String.self, forKey: .colorHex)
+        nodeNames =
+            try container.decodeIfPresent([String].self, forKey: .nodeNames)
+            ?? []
     }
 }
 

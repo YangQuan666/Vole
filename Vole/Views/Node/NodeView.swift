@@ -9,7 +9,7 @@ import Kingfisher
 import SwiftUI
 
 struct NodeView: View {
-    @State private var collections = NodeCollectionManager.shared.collections
+    @StateObject private var collectionManager = NodeCollectionManager.shared
     @State private var showProfile = false
     @StateObject private var nodeManager = NodeManager.shared
     @ObservedObject private var userManager = UserManager.shared
@@ -36,7 +36,10 @@ struct NodeView: View {
                             // 分类横向滚动
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 12) {
-                                    ForEach(collections, id: \.self) {
+                                    ForEach(
+                                        collectionManager.collections,
+                                        id: \.self
+                                    ) {
                                         collection in
                                         HStack(spacing: 8) {
                                             Image(
