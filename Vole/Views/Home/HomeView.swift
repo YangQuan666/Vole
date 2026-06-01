@@ -5,7 +5,6 @@
 //  Created by 杨权 on 5/25/25.
 //
 
-import Kingfisher
 import SwiftUI
 
 struct HomeView: View {
@@ -27,10 +26,7 @@ struct HomeView: View {
                         topics: data[feed],
                         isLoading: loadingFeeds.contains(feed),
                         isSelected: selection == feed,
-                        onRefresh: {
-                            await loadTopics(for: feed)
-                        },
-                        onRetry: {
+                        onLoad: {
                             await loadTopics(for: feed)
                         },
                         onSelectTopic: { topic in
@@ -124,7 +120,8 @@ struct HomeView: View {
             }
     }
 
-    func loadTopics(for feed: HomeFeed) async {
+    @MainActor
+    private func loadTopics(for feed: HomeFeed) async {
         guard !loadingFeeds.contains(feed) else { return }
         guard let action = action(for: feed) else {
             selection = .latest
@@ -134,9 +131,7 @@ struct HomeView: View {
         defer { loadingFeeds.remove(feed) }
         do {
             let result = try await action()
-            await MainActor.run {
-                data[feed] = result ?? []
-            }
+            data[feed] = result ?? []
         } catch {
             if error is CancellationError { return }
             print("出错了: \(error)")
@@ -201,8 +196,7 @@ private struct HomeFeedPage: View {
     let topics: [Topic]?
     let isLoading: Bool
     let isSelected: Bool
-    let onRefresh: () async -> Void
-    let onRetry: () async -> Void
+    let onLoad: () async -> Void
     let onSelectTopic: (Topic) -> Void
 
     @State private var scrollPosition: Int?
@@ -219,7 +213,7 @@ private struct HomeFeedPage: View {
                 }
                 .scrollPosition(id: $scrollPosition)
                 .refreshable {
-                    await onRefresh()
+                    await onLoad()
                 }
             } else if isLoading {
                 ZStack {
@@ -230,7 +224,7 @@ private struct HomeFeedPage: View {
                 VStack {
                     Button {
                         Task {
-                            await onRetry()
+                            await onLoad()
                         }
                     } label: {
                         Text("点击重试")
