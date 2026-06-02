@@ -22,6 +22,7 @@ struct DetailView: View {
     @State private var selectedUser: Member?
     @State private var showAlert = false
     @State private var showReportDialog = false
+    @State private var topicLoadErrorMessage: String?
 
     @StateObject private var nodeManager = NodeManager.shared
     @ObservedObject var blockManager = BlockManager.shared
@@ -325,6 +326,8 @@ struct DetailView: View {
                         }
                     }
                 }
+            } else if let errorMessage = topicLoadErrorMessage {
+                topicUnavailableView(message: errorMessage)
             } else if topicId != nil {
                 // 还没有加载到 topic
                 ProgressView("加载中...")
@@ -432,6 +435,27 @@ struct DetailView: View {
         }
     }
 
+    private func topicUnavailableView(message: String) -> some View {
+        VStack(spacing: 16) {
+            Image(systemName: "text.page.slash")
+                .font(.system(size: 44, weight: .light))
+                .foregroundStyle(.quaternary)
+
+            VStack(spacing: 8) {
+                Text("主题不存在")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .padding(.horizontal, 32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
     // 回话视图
     @ViewBuilder
     private func conversationView(_ reply: Reply, _ topic: Topic) -> some View {
@@ -525,13 +549,19 @@ struct DetailView: View {
     private func loadTopic() async {
         guard topic == nil else { return }
         guard let id = topicId else { return }
+        topicLoadErrorMessage = nil
         do {
             let response = try await V2exAPI.shared.topic(topicId: id)
             if let r = response, r.success, let newTopic = r.result {
                 topic = newTopic
+            } else {
+                topicLoadErrorMessage = response?.message ?? "无法加载该主题"
             }
         } catch {
             print("❌ 获取 Topic 失败: \(error)")
+            if (error as? URLError)?.code != .cancelled {
+                topicLoadErrorMessage = "无法加载该主题"
+            }
         }
     }
 

@@ -8,22 +8,21 @@
 import SwiftUI
 
 struct SearchResultView: View {
-    // 外部传入参数
     let query: String
 
-    // 1. 定义搜索分类枚举
     enum SearchCategory: String, CaseIterable, Identifiable {
         case topic = "话题"
         case node = "节点"
         case user = "用户"
+
         var id: String { self.rawValue }
     }
-    // 内部状态管理
+
     @State private var selectedCategory: SearchCategory = .topic
     @State private var results: [SoV2exHit] = []
     @State private var isLoading = false
     @State private var pagingState = SearchPagingState()
-    @State private var isPagingLoading: Bool = false
+    @State private var isPagingLoading = false
 
     @State private var nodes: [Node] = []
     @State private var users: [Member] = []
@@ -31,13 +30,11 @@ struct SearchResultView: View {
     @ObservedObject private var nodeManager = NodeManager.shared
     @ObservedObject private var userManager = UserManager.shared
 
-    // 筛选状态
     @State private var filterOptions = SearchFilterOptions()
     @State private var isFilterPresented = false
 
     @Binding var path: NavigationPath
 
-    // 判断是否有筛选条件生效（用于改变图标状态）
     private var isFiltering: Bool {
         filterOptions != SearchFilterOptions()
     }
@@ -61,13 +58,12 @@ struct SearchResultView: View {
                 }
             }
         }
-        .animation(.snappy, value: selectedCategory)
-        .animation(.snappy, value: isLoading)
         .sheet(isPresented: $isFilterPresented) {
             SearchFilterSheet(
                 options: $filterOptions,
                 onConfirm: {
                     isFilterPresented = false
+                    resetTopicData()
                     Task { await performSearch() }
                 },
                 onCancel: {
@@ -78,28 +74,20 @@ struct SearchResultView: View {
             .presentationDragIndicator(.visible)
         }
         .task {
-            if results.isEmpty { await performSearch() }
-        }
-        .task {
             await performSearch()
         }
         .onChange(of: selectedCategory) {
-            Task { await performSearch() }
-        }
-        .onChange(of: query) { oldValue, newValue in
-            if oldValue == newValue {
-                return
+            withAnimation(.snappy) {
+                isLoading = isCurrentCategoryEmpty
             }
-            resetAllData()
             Task { await performSearch() }
         }
     }
 
-    private func resetAllData() {
+    private func resetTopicData() {
         results = []
-        nodes = []
-        users = []
         pagingState = SearchPagingState()
+        isPagingLoading = false
     }
 
     @ViewBuilder
@@ -140,16 +128,14 @@ struct SearchResultView: View {
         }
     }
 
-    // 1. 列表头部筛选栏
     private var listHeaderView: some View {
         VStack(spacing: 12) {
-            // 新增的类别切换器
             Picker("搜索类别", selection: $selectedCategory) {
                 ForEach(SearchCategory.allCases) { category in
                     Text(category.rawValue).tag(category)
                 }
             }
-            .pickerStyle(.segmented)  // 分段式效果
+            .pickerStyle(.segmented)
             .padding(.top, 4)
 
             HStack {
@@ -176,7 +162,6 @@ struct SearchResultView: View {
 
                 Spacer()
 
-                // 仅在“话题”搜索下显示筛选按钮（因为目前的筛选逻辑是针对话题的）
                 if selectedCategory == .topic {
                     Button(action: {
                         isFilterPresented = true
@@ -197,11 +182,9 @@ struct SearchResultView: View {
         .textCase(nil)
     }
 
-    // 2. 列表底部加载栏
     @ViewBuilder
     private var footerView: some View {
         if selectedCategory == .topic {
-            // 话题支持分页，逻辑最复杂
             if isPagingLoading {
                 HStack(spacing: 8) {
                     Spacer()
@@ -220,7 +203,6 @@ struct SearchResultView: View {
                     footerText("上滑加载更多 (已展示 \(results.count) 条)")
                 }
             }
-
         }
     }
 
@@ -233,17 +215,15 @@ struct SearchResultView: View {
             .listRowSeparator(.hidden)
     }
 
-    // 3. 空状态视图
     private var emptyStateView: some View {
         VStack(spacing: 20) {
-            // 使用内边距代替 Spacer，确保在 List 中有足够的存在感
             Image(
                 systemName: selectedCategory == .user
                     ? "person.slash" : "magnifyingglass"
             )
-            .font(.system(size: 44, weight: .light))  // 稍微纤细一点更有高级感
-            .foregroundStyle(.quaternary)  // 使用系统四级颜色，自带通透感
-            .padding(.top, 60)  // 距离顶部的距离
+            .font(.system(size: 44, weight: .light))
+            .foregroundStyle(.quaternary)
+            .padding(.top, 60)
 
             VStack(spacing: 8) {
                 Text(emptyStateTitle)
@@ -256,7 +236,6 @@ struct SearchResultView: View {
                     .multilineTextAlignment(.center)
             }
 
-            // 如果是因为筛选导致没有结果
             if selectedCategory == .topic && isFiltering {
                 VStack(spacing: 12) {
                     Button(action: {
@@ -277,12 +256,11 @@ struct SearchResultView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.bottom, 60)  // 底部留白
-        .listRowSeparator(.hidden)  // 关键：隐藏分割线
-        .listRowBackground(Color.clear)  // 关键：背景透明，让它看起来不像一个“行”
+        .padding(.bottom, 60)
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
     }
 
-    // 辅助属性：根据分类返回不同的提示语
     private var emptyStateTitle: String {
         switch selectedCategory {
         case .topic: return "没有找到相关话题"
@@ -297,6 +275,7 @@ struct SearchResultView: View {
 
     private func resetFilters() {
         filterOptions = SearchFilterOptions()
+        resetTopicData()
         Task { await performSearch() }
     }
 
@@ -306,12 +285,11 @@ struct SearchResultView: View {
             return
         }
         await MainActor.run {
-            withAnimation { self.isLoading = true }
+            withAnimation(.snappy) { self.isLoading = true }
         }
 
         switch selectedCategory {
         case .topic:
-            // 原有话题搜索逻辑，填充到 results
             await performTopicSearch()
         case .node:
             await performNodeSearch()
@@ -319,11 +297,10 @@ struct SearchResultView: View {
             await performUserSearch()
         }
         await MainActor.run {
-            withAnimation { self.isLoading = false }
+            withAnimation(.snappy) { self.isLoading = false }
         }
     }
 
-    // 1. 话题搜索逻辑
     private func performTopicSearch() async {
         let req = buildRequest(from: 0)
         do {
@@ -340,7 +317,7 @@ struct SearchResultView: View {
             await MainActor.run { self.isLoading = false }
         }
     }
-    // 2. 节点搜索逻辑
+
     private func performNodeSearch() async {
         let list = await nodeManager.search(name: query)
         await MainActor.run {
@@ -348,7 +325,6 @@ struct SearchResultView: View {
         }
     }
 
-    // 3. 用户搜索逻辑
     private func performUserSearch() async {
         let members = await userManager.search(name: query)
         await MainActor.run {
@@ -362,7 +338,9 @@ struct SearchResultView: View {
             pagingState.currentOffset < total
         else { return }
 
-        isPagingLoading = true
+        await MainActor.run {
+            isPagingLoading = true
+        }
         let req = buildRequest(from: pagingState.currentOffset)
 
         do {
@@ -379,7 +357,6 @@ struct SearchResultView: View {
         }
     }
 
-    // Request Builder
     private func buildRequest(from: Int) -> SoV2exSearchRequest {
         var req = SoV2exSearchRequest(
             q: query,
@@ -387,20 +364,17 @@ struct SearchResultView: View {
             size: pagingState.pageSize
         )
 
-        // 1. 时间筛选
         if let startTime = filterOptions.timeRange.startTimeStamp {
             req.gte = startTime
         }
 
-        // 2. 节点筛选
-        if !filterOptions.nodeName.trimmingCharacters(in: .whitespaces).isEmpty
-        {
-            req.node = filterOptions.nodeName.trimmingCharacters(
-                in: .whitespaces
-            )
+        let nodeName = filterOptions.nodeName.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        if !nodeName.isEmpty {
+            req.node = nodeName
         }
 
-        // 3. 排序
         switch filterOptions.sortType {
         case .weight:
             req.sort = .sumup
