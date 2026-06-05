@@ -16,7 +16,7 @@ struct NodeRowView: View {
     var body: some View {
         HStack {
             // 左侧头像
-            if let avatarURL = node.avatarLarge,
+            if let avatarURL = node.getHighestQualityAvatar(),
                 let url = makeFullURL(from: avatarURL)
             {
                 KFImage(url)

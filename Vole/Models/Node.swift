@@ -35,6 +35,22 @@ public struct Node: Identifiable, Codable, Hashable {
         case parentNodeName = "parent_node_name"
     }
 
+    public func getHighestQualityAvatar() -> String? {
+        if let avatarLarge, !avatarLarge.isEmpty {
+            return avatarLarge
+        }
+        if let avatarNormal, !avatarNormal.isEmpty {
+            return avatarNormal
+        }
+        if let avatar, !avatar.isEmpty {
+            return avatar
+        }
+        if let avatarMini, !avatarMini.isEmpty {
+            return avatarMini
+        }
+        return nil
+    }
+
     static func createVirtual(name: String, title: String? = nil) -> Node {
         Node(
             id: nil,  // ID 为 nil 是识别虚拟节点的标志

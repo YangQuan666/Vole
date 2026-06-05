@@ -31,7 +31,7 @@ struct NodeDetailView: View {
                     Section {
                         VStack(spacing: 16) {
                             // 头像
-                            if let avatarURL = node.avatarLarge ?? node.avatar,
+                            if let avatarURL = node.getHighestQualityAvatar(),
                                 let url = URL(string: avatarURL)
                             {
                                 KFImage(url)
