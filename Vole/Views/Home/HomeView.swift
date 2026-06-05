@@ -20,25 +20,16 @@ struct HomeView: View {
 
     var body: some View {
         NavigationStack(path: $navManager.homePath) {
-            ZStack {
-                ForEach(availableFeeds) { feed in
-                    HomeFeedPage(
-                        topics: data[feed],
-                        isLoading: loadingFeeds.contains(feed),
-                        isSelected: selection == feed,
-                        onLoad: {
-                            await loadTopics(for: feed)
-                        },
-                        onSelectTopic: { topic in
-                            openTopic(topic)
-                        }
-                    )
-                    .opacity(selection == feed ? 1 : 0)
-                    .allowsHitTesting(selection == feed)
-                    .accessibilityHidden(selection != feed)
-                    .zIndex(selection == feed ? 1 : 0)
+            HomeFeedPage(
+                topics: data[selection],
+                isLoading: loadingFeeds.contains(selection),
+                onLoad: {
+                    await loadTopics(for: selection)
+                },
+                onSelectTopic: { topic in
+                    openTopic(topic)
                 }
-            }
+            )
             .navigationTitle("主页")
             .navigationDestination(for: Route.self) { route in
                 switch route {
@@ -195,11 +186,8 @@ struct HomeView: View {
 private struct HomeFeedPage: View {
     let topics: [Topic]?
     let isLoading: Bool
-    let isSelected: Bool
     let onLoad: () async -> Void
     let onSelectTopic: (Topic) -> Void
-
-    @State private var scrollPosition: Int?
 
     var body: some View {
         Group {
@@ -211,7 +199,6 @@ private struct HomeFeedPage: View {
                         }
                     }
                 }
-                .scrollPosition(id: $scrollPosition)
                 .refreshable {
                     await onLoad()
                 }
@@ -220,7 +207,7 @@ private struct HomeFeedPage: View {
                     ProgressView("加载中…")
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if isSelected {
+            } else {
                 VStack {
                     Button {
                         Task {
@@ -239,8 +226,6 @@ private struct HomeFeedPage: View {
                     maxHeight: .infinity,
                     alignment: .center
                 )
-            } else {
-                Color.clear
             }
         }
     }
