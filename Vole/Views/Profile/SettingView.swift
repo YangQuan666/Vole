@@ -47,7 +47,7 @@ struct SettingView: View {
                 NavigationLink {
                     HomeNodeListSettingsView()
                 } label: {
-                    Label("首页列表", systemImage: "list.bullet.rectangle.fill")
+                    Label("首页列表", systemImage: "list.bullet.rectangle.portrait.fill")
                 }
             } header: {
                 Text("内容")

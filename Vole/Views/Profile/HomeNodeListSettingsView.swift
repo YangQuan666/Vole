@@ -1,3 +1,4 @@
+import Kingfisher
 import SwiftUI
 
 struct HomeNodeListSettingsView: View {
@@ -9,7 +10,7 @@ struct HomeNodeListSettingsView: View {
             if collectionManager.customCollections.isEmpty {
                 ContentUnavailableView(
                     "暂无自定义列表",
-                    systemImage: "list.bullet.rectangle",
+                    systemImage: "list.bullet.rectangle.portrait.fill",
                     description: Text("创建列表后，它会出现在首页 picker 中。")
                 )
             } else {
@@ -186,6 +187,8 @@ struct HomeNodeCollectionEditorView: View {
                 Image(systemName: checkmarkName(for: node))
                     .foregroundColor(checkmarkColor(for: node))
 
+                nodeAvatar(node)
+
                 VStack(alignment: .leading, spacing: 3) {
                     Text(node.title ?? node.name)
                         .foregroundStyle(.primary)
@@ -204,6 +207,41 @@ struct HomeNodeCollectionEditorView: View {
             }
         }
         .buttonStyle(.plain)
+    }
+
+    private func nodeAvatar(_ node: Node) -> some View {
+        Group {
+            if let url = nodeAvatarURL(for: node) {
+                KFImage(url)
+                    .placeholder {
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.secondary.opacity(0.15))
+                    }
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.secondary.opacity(0.15))
+                    .overlay {
+                        Image(systemName: "number")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+            }
+        }
+        .frame(width: 34, height: 34)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+    }
+
+    private func nodeAvatarURL(for node: Node) -> URL? {
+        node.getHighestQualityAvatar().flatMap(makeFullNodeURL)
+    }
+
+    private func makeFullNodeURL(from path: String) -> URL? {
+        if path.hasPrefix("http") {
+            return URL(string: path)
+        }
+        return URL(string: path, relativeTo: URL(string: "https://www.v2ex.com"))
     }
 
     private var navigationTitle: String {
