@@ -24,8 +24,17 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/LiYanan2004/MarkdownView.git",
       "state" : {
-        "revision" : "232f6f674ecc6bc7f30c256bcf5015054aac6584",
-        "version" : "2.7.0"
+        "revision" : "6f452b55635246224a3329362e4e11cd3d592a30",
+        "version" : "3.0.0"
+      }
+    },
+    {
+      "identity" : "richtext",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/LiYanan2004/RichText.git",
+      "state" : {
+        "revision" : "a2fb191988f6f2ce60574962c96a0e1846c36dae",
+        "version" : "1.0.0"
       }
     },
     {
@@ -44,6 +53,15 @@
       "state" : {
         "revision" : "3c6f9523da3a1ec2fd829673e472d95b8097a3b8",
         "version" : "0.8.0"
+      }
+    },
+    {
+      "identity" : "swiftmath",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/mgriebling/SwiftMath.git",
+      "state" : {
+        "revision" : "fa8244ed032f4a1ade4cb0571bf87d2f1a9fd2d7",
+        "version" : "1.7.3"
       }
     },
     {

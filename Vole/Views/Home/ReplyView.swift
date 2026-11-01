@@ -38,8 +38,6 @@ struct ReplyRowView: View {
                             path.append(Route.topicId(id))
                         case .node(let name):
                             path.append(Route.nodeName(name))
-                        default:
-                            break
                         }
                     }
                 )
