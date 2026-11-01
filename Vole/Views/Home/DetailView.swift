@@ -30,6 +30,9 @@ struct DetailView: View {
     @State private var showBlockTopicAlert = false
     @State private var showBlockUserAlert = false
     @State private var showReportDialog = false
+    @State private var showReplyComposer = false
+    @State private var showReplyLogin = false
+    @State private var replyTarget: Member?
     @State private var topicLoadErrorMessage: String?
     @State private var repliesLoadErrorMessage: String?
 
@@ -251,6 +254,27 @@ struct DetailView: View {
             }
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showReplyComposer, onDismiss: {
+            replyTarget = nil
+        }) {
+            if let topic {
+                NavigationStack {
+                    ReplyComposerView(
+                        topicID: topic.id,
+                        replyTo: replyTarget
+                    ) {
+                        Task {
+                            await loadReply(topicId: topic.id, force: true)
+                        }
+                    }
+                }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
+        }
+        .sheet(isPresented: $showReplyLogin) {
+            ProfileView()
         }
         .alert("确定要屏蔽该话题吗？", isPresented: $showBlockTopicAlert) {
             Button("确认屏蔽", role: .destructive) {
@@ -554,6 +578,13 @@ struct DetailView: View {
                             allowsFullSwipe: true
                         ) {
                             Button {
+                                beginReply(to: reply.member)
+                            } label: {
+                                Label("回复", systemImage: "arrowshape.turn.up.left")
+                            }
+                            .tint(.accentColor)
+
+                            Button {
                                 presentAuthor(reply.member.username)
                             } label: {
                                 Label("只看TA", systemImage: "person.text.rectangle")
@@ -600,6 +631,17 @@ struct DetailView: View {
                             .fill(Color.accentColor.opacity(0.12))
                     )
             }
+
+            Spacer(minLength: 8)
+
+            Button {
+                beginReply()
+            } label: {
+                Label("评论", systemImage: "square.and.pencil")
+                    .font(.subheadline.weight(.medium))
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel("评论主题")
         }
         .textCase(nil)
         .padding(.top, 4)
@@ -690,6 +732,15 @@ struct DetailView: View {
             selectedConversationReplyId = nil
             selectedAuthor = username
         }
+    }
+
+    private func beginReply(to member: Member? = nil) {
+        guard userManager.token?.token?.isEmpty == false else {
+            showReplyLogin = true
+            return
+        }
+        replyTarget = member
+        showReplyComposer = true
     }
 
     private func replyScrollID(_ replyId: Int) -> String {

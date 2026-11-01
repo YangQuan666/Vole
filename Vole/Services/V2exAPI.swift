@@ -7,6 +7,27 @@
 
 import Foundation
 
+enum V2exAPIError: LocalizedError {
+    case httpFailure(
+        statusCode: Int,
+        method: String,
+        url: String,
+        allowedMethods: String?,
+        message: String?
+    )
+    case invalidResponse(statusCode: Int, details: String, body: String)
+
+    var errorDescription: String? {
+        switch self {
+        case let .httpFailure(statusCode, method, url, allowedMethods, message):
+            let allowed = allowedMethods.map { "；允许的方法：\($0)" } ?? ""
+            return "请求失败（HTTP \(statusCode)）：\(method) \(url)\(allowed)\n\(message ?? "服务器未提供错误说明")"
+        case let .invalidResponse(statusCode, details, body):
+            return "服务器返回的数据无法解析（HTTP \(statusCode)）。\(details)\n响应：\(body)"
+        }
+    }
+}
+
 public struct V2exAPI {
 
     private var endpointV1: String { SiteConfiguration.endpointV1 }
@@ -69,20 +90,53 @@ public struct V2exAPI {
             throw URLError(.badServerResponse)
         }
 
-        if let remainingStr = httpResponse.value(
-            forHTTPHeaderField: "X-Rate-Limit-Remaining"
-        ),
-            let remaining = Int(remainingStr),
-            remaining == 0
-        {
-            // 已经没有额度了，直接返回
-            throw URLError(.resourceUnavailable)
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            throw V2exAPIError.httpFailure(
+                statusCode: httpResponse.statusCode,
+                method: request.httpMethod ?? httpMethod,
+                url: httpResponse.url?.absoluteString ?? requestUrl.absoluteString,
+                allowedMethods: httpResponse.value(forHTTPHeaderField: "Allow"),
+                message: Self.serverMessage(from: data)
+            )
         }
-        let decoder = JSONDecoder()
 
-        let obj = try decoder.decode(decodeClass.self, from: data)
+        let decoder = JSONDecoder()
+        let obj: T
+        do {
+            obj = try decoder.decode(decodeClass.self, from: data)
+        } catch let error as DecodingError {
+            throw V2exAPIError.invalidResponse(
+                statusCode: httpResponse.statusCode,
+                details: error.localizedDescription,
+                body: Self.responsePreview(from: data)
+            )
+        }
 
         return obj
+    }
+
+    private static func serverMessage(from data: Data) -> String? {
+        guard let json = try? JSONSerialization.jsonObject(with: data),
+            let object = json as? [String: Any]
+        else {
+            return responsePreview(from: data)
+        }
+
+        for key in ["message", "error", "detail"] {
+            if let value = object[key] as? String, !value.isEmpty {
+                return value
+            }
+        }
+        return responsePreview(from: data)
+    }
+
+    private static func responsePreview(from data: Data) -> String {
+        guard let text = String(data: data, encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty
+        else {
+            return "响应内容为空或不是 UTF-8 文本"
+        }
+        return String(text.prefix(240))
     }
 
     // =========== V1 ===========
@@ -376,6 +430,42 @@ public struct V2exAPI {
             url: endpointV2 + path,
             args: args,
             decodeClass: Response<Token>.self
+        )
+    }
+
+    /// 创建主题
+    public func createTopic(
+        nodeName: String,
+        title: String,
+        content: String? = nil,
+        syntax: String = "markdown"
+    ) async throws -> APIWriteResponse<Topic>? {
+        var args: [String: Any] = [
+            "node_name": nodeName,
+            "title": title,
+            "syntax": syntax,
+        ]
+        if let content, !content.isEmpty {
+            args["content"] = content
+        }
+
+        return try await request(
+            httpMethod: "POST",
+            url: endpointV2 + "topics",
+            args: args,
+            decodeClass: APIWriteResponse<Topic>.self
+        )
+    }
+
+    /// 创建主题回复
+    public func createReply(topicId: Int, content: String) async throws
+        -> APIWriteResponse<JSONValue>?
+    {
+        return try await request(
+            httpMethod: "POST",
+            url: endpointV2 + "topics/\(topicId)/replies",
+            args: ["content": content],
+            decodeClass: APIWriteResponse<JSONValue>.self
         )
     }
     

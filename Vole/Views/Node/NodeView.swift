@@ -12,6 +12,8 @@ struct NodeView: View {
     @StateObject private var collectionManager = NodeCollectionManager.shared
     @StateObject private var favoriteNodeManager = FavoriteNodeManager.shared
     @State private var showProfile = false
+    @State private var showCreateTopic = false
+    @State private var createdTopicID: Int?
     @StateObject private var nodeManager = NodeManager.shared
     @ObservedObject private var userManager = UserManager.shared
     @EnvironmentObject var navManager: NavigationManager
@@ -114,13 +116,35 @@ struct NodeView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    AvatarView {
-                        showProfile = true
+                    Button {
+                        if userManager.token?.token?.isEmpty == false {
+                            showCreateTopic = true
+                        } else {
+                            showProfile = true
+                        }
+                    } label: {
+                        Image(systemName: "square.and.pencil")
                     }
+                    .accessibilityLabel("创建主题")
                 }
             }
             .sheet(isPresented: $showProfile) {
                 ProfileView()
+            }
+            .sheet(isPresented: $showCreateTopic, onDismiss: {
+                if let createdTopicID {
+                    navManager.nodePath.append(Route.topicId(createdTopicID))
+                    self.createdTopicID = nil
+                }
+            }) {
+                NavigationStack {
+                    CreateTopicView { topic in
+                        createdTopicID = topic.id
+                        showCreateTopic = false
+                    }
+                }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
             }
         }
     }

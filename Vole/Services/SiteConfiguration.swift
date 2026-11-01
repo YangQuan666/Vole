@@ -1,14 +1,16 @@
 import Foundation
 
 enum SiteConfiguration {
-    static let defaultBaseURL = "https://www.v2ex.com"
+    static let defaultBaseURL = "https://edge.v2ex.com"
     private static let presetBaseURLs = [
         defaultBaseURL,
+        "https://www.v2ex.com",
         "https://global.v2ex.co",
     ]
 
     private static let baseURLsKey = "siteBaseURLs"
     private static let selectedBaseURLKey = "selectedSiteBaseURL"
+    private static let defaultSiteMigrationKey = "didMigrateDefaultSiteToEdge"
 
     static let didChangeNotification = NSNotification.Name(
         "SiteConfiguration.didChange"
@@ -97,11 +99,25 @@ enum SiteConfiguration {
     }
 
     static func loadState() -> (baseURLs: [String], selectedBaseURL: String) {
-        resolveState(
+        let storedSelection = UserDefaults.standard.string(
+            forKey: selectedBaseURLKey
+        )
+        let selection: String?
+        if !UserDefaults.standard.bool(forKey: defaultSiteMigrationKey) {
+            let oldDefault = "https://www.v2ex.com"
+            selection = storedSelection.flatMap { selected in
+                selected.caseInsensitiveCompare(oldDefault) == .orderedSame
+                    ? defaultBaseURL
+                    : selected
+            }
+            UserDefaults.standard.set(true, forKey: defaultSiteMigrationKey)
+        } else {
+            selection = storedSelection
+        }
+
+        return resolveState(
             baseURLs: UserDefaults.standard.stringArray(forKey: baseURLsKey) ?? [],
-            selectedBaseURL: UserDefaults.standard.string(
-                forKey: selectedBaseURLKey
-            )
+            selectedBaseURL: selection
         )
     }
 
@@ -145,7 +161,7 @@ enum SiteConfigurationError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidBaseURL:
-            return "请输入有效的站点地址，例如 https://www.v2ex.com"
+            return "请输入有效的站点地址，例如 https://edge.v2ex.com"
         }
     }
 }

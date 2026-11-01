@@ -52,6 +52,33 @@ struct VoleTests {
         #expect(defaults.object(forKey: "read_notification_ids") == nil)
     }
 
+    @Test func decodesCreatedTopicFromWrappedOrDirectResponse() throws {
+        let decoder = JSONDecoder()
+        let wrapped = try decoder.decode(
+            APIWriteResponse<Topic>.self,
+            from: Data(#"{"success":true,"result":{"id":41}}"#.utf8)
+        )
+        let direct = try decoder.decode(
+            APIWriteResponse<Topic>.self,
+            from: Data(#"{"id":42}"#.utf8)
+        )
+
+        #expect(wrapped.success)
+        #expect(wrapped.result?.id == 41)
+        #expect(direct.success)
+        #expect(direct.result?.id == 42)
+    }
+
+    @Test func decodesReplyResponseWithoutRequiringFullReplyModel() throws {
+        let response = try JSONDecoder().decode(
+            APIWriteResponse<JSONValue>.self,
+            from: Data(#"{"success":true,"result":{"id":43}}"#.utf8)
+        )
+
+        #expect(response.success)
+        #expect(response.result != nil)
+    }
+
     private func makeTestDefaults() -> (UserDefaults, String) {
         let suiteName = "VoleTests.NotificationReadState.\(UUID().uuidString)"
         return (UserDefaults(suiteName: suiteName)!, suiteName)
