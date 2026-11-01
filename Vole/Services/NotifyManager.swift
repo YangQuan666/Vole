@@ -43,9 +43,7 @@ final class NotifyManager: ObservableObject {
     @Published var endIndex: Int = 0  // 当前加载到的末尾索引 (即 10 或 20)
     @Published var isLoading: Bool = false  // 是否正在加载中，用于防止重复请求
 
-    private let keyReadIds = "read_notification_ids"
-    private let keyLastReadId = "last_read_all_id"
-    private let keyAllReadTotal = "all_read_total_count"
+    private let readStateStore = NotificationReadStateStore()
 
     private let cacheDirectoryName = "NotificationCache"
     private var pollingTask: Task<Void, Never>?
@@ -54,6 +52,8 @@ final class NotifyManager: ObservableObject {
     private var isAppActive = true
     private var isNotificationServiceActive = false
     private var loadedCacheAccountID: String?
+    private var activeReadStateAccountID: String?
+    private var notificationServiceAccountID: String?
 
     private var canLoadNotifications: Bool {
         UserManager.shared.didValidateStoredToken
@@ -62,18 +62,7 @@ final class NotifyManager: ObservableObject {
     }
 
     private init() {
-        // 读取已读集合
-        if let stored = UserDefaults.standard.array(forKey: keyReadIds)
-            as? [Int]
-        {
-            readIds = Set(stored)
-        }
-        // 读取水位线
-        lastReadAllId = UserDefaults.standard.integer(forKey: keyLastReadId)
-        allReadTotalCount = UserDefaults.standard.integer(
-            forKey: keyAllReadTotal
-        )
-
+        switchReadState(to: Self.readStateAccountID(for: UserManager.shared.currentMember))
         setupAuthListener()
     }
 
@@ -86,6 +75,7 @@ final class NotifyManager: ObservableObject {
             .receive(on: RunLoop.main)
             .sink { [weak self] member, token, didValidateStoredToken in
                 guard let self else { return }
+                self.switchReadState(to: Self.readStateAccountID(for: member))
 
                 let canLoadNotifications =
                     didValidateStoredToken
@@ -102,9 +92,27 @@ final class NotifyManager: ObservableObject {
     }
 
     private func activateNotificationService() {
-        guard !isNotificationServiceActive else { return }
+        guard let accountID = notificationCacheAccountID else { return }
+
+        if isNotificationServiceActive {
+            guard notificationServiceAccountID != accountID else { return }
+            notificationServiceAccountID = accountID
+            notifications = []
+            totalCount = 0
+            latestTotalCount = 0
+            currentPage = 1
+            endIndex = 0
+            loadedCacheAccountID = nil
+            clearPendingRefresh()
+            loadCachedNotificationsIfNeeded()
+            Task {
+                await refresh()
+            }
+            return
+        }
 
         isNotificationServiceActive = true
+        notificationServiceAccountID = accountID
         print("NotifyManager: 认证状态可用，启动服务")
         loadCachedNotificationsIfNeeded()
         startPollingIfNeeded()
@@ -120,6 +128,7 @@ final class NotifyManager: ObservableObject {
 
         print("NotifyManager: 认证状态不可用，清理数据")
         isNotificationServiceActive = false
+        notificationServiceAccountID = nil
         stopPolling()
         notifications = []
         totalCount = 0
@@ -217,9 +226,40 @@ final class NotifyManager: ObservableObject {
     }
 
     private func save() {
-        UserDefaults.standard.set(Array(readIds), forKey: keyReadIds)
-        UserDefaults.standard.set(lastReadAllId, forKey: keyLastReadId)
-        UserDefaults.standard.set(allReadTotalCount, forKey: keyAllReadTotal)
+        guard let activeReadStateAccountID else { return }
+        readStateStore.save(
+            NotificationReadState(
+                readIds: readIds,
+                lastReadAllId: lastReadAllId,
+                allReadTotalCount: allReadTotalCount
+            ),
+            for: activeReadStateAccountID
+        )
+    }
+
+    private func switchReadState(to accountID: String?) {
+        guard activeReadStateAccountID != accountID else { return }
+        activeReadStateAccountID = accountID
+
+        guard let accountID else {
+            readIds = []
+            lastReadAllId = 0
+            allReadTotalCount = 0
+            return
+        }
+
+        let state = readStateStore.load(for: accountID)
+        readIds = state.readIds
+        lastReadAllId = state.lastReadAllId
+        allReadTotalCount = state.allReadTotalCount
+    }
+
+    private static func readStateAccountID(for member: Member?) -> String? {
+        guard let member else { return nil }
+        if let id = member.id {
+            return "id-\(id)"
+        }
+        return "username-\(member.username.lowercased())"
     }
 
     // 是否还有下一页数据
@@ -235,10 +275,15 @@ final class NotifyManager: ObservableObject {
     func loadNotifications(page: Int, isRefresh: Bool) async {
         guard canLoadNotifications else { return }
         guard let t = UserManager.shared.token, !isLoading else { return }
+        let requestAccountID = notificationCacheAccountID
 
         isLoading = true
         do {
             let response = try await fetchNotifications(page: page, token: t.token ?? "")
+            guard requestAccountID == notificationCacheAccountID else {
+                retryForCurrentNotificationAccount(after: requestAccountID)
+                return
+            }
             isLoading = false
 
             if let response {
@@ -257,6 +302,10 @@ final class NotifyManager: ObservableObject {
                 }
             }
         } catch {
+            guard requestAccountID == notificationCacheAccountID else {
+                retryForCurrentNotificationAccount(after: requestAccountID)
+                return
+            }
             isLoading = false
             print("加载通知失败: \(error)")
         }
@@ -283,10 +332,15 @@ final class NotifyManager: ObservableObject {
     private func pollLatestNotifications() async {
         guard canLoadNotifications else { return }
         guard let token = UserManager.shared.token?.token, !isLoading else { return }
+        let requestAccountID = notificationCacheAccountID
 
         isLoading = true
         do {
             let response = try await fetchNotifications(page: 1, token: token)
+            guard requestAccountID == notificationCacheAccountID else {
+                retryForCurrentNotificationAccount(after: requestAccountID)
+                return
+            }
             isLoading = false
 
             guard let response else { return }
@@ -315,8 +369,24 @@ final class NotifyManager: ObservableObject {
                 pendingNewCount = pendingRefreshPayload?.newCount ?? 0
             }
         } catch {
+            guard requestAccountID == notificationCacheAccountID else {
+                retryForCurrentNotificationAccount(after: requestAccountID)
+                return
+            }
             isLoading = false
             print("轮询通知失败: \(error)")
+        }
+    }
+
+    private func retryForCurrentNotificationAccount(after accountID: String?) {
+        isLoading = false
+        guard accountID != notificationCacheAccountID,
+            isNotificationServiceActive,
+            canLoadNotifications
+        else { return }
+
+        Task {
+            await refresh()
         }
     }
 
@@ -485,5 +555,65 @@ final class NotifyManager: ObservableObject {
         return applicationSupportURL
             .appendingPathComponent(cacheDirectoryName, isDirectory: true)
             .appendingPathComponent("\(fileName).json")
+    }
+}
+
+struct NotificationReadState: Codable, Equatable {
+    var readIds: Set<Int> = []
+    var lastReadAllId = 0
+    var allReadTotalCount = 0
+}
+
+struct NotificationReadStateStore {
+    private let defaults: UserDefaults
+
+    private let legacyReadIdsKey = "read_notification_ids"
+    private let legacyLastReadAllIdKey = "last_read_all_id"
+    private let legacyAllReadTotalCountKey = "all_read_total_count"
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
+
+    func load(for accountID: String) -> NotificationReadState {
+        let key = storageKey(for: accountID)
+        if let data = defaults.data(forKey: key),
+            let state = try? JSONDecoder().decode(
+                NotificationReadState.self,
+                from: data
+            )
+        {
+            return state
+        }
+
+        let legacyKeys = [
+            legacyReadIdsKey,
+            legacyLastReadAllIdKey,
+            legacyAllReadTotalCountKey,
+        ]
+        guard legacyKeys.contains(where: { defaults.object(forKey: $0) != nil })
+        else {
+            return NotificationReadState()
+        }
+
+        let state = NotificationReadState(
+            readIds: Set(defaults.array(forKey: legacyReadIdsKey) as? [Int] ?? []),
+            lastReadAllId: defaults.integer(forKey: legacyLastReadAllIdKey),
+            allReadTotalCount: defaults.integer(forKey: legacyAllReadTotalCountKey)
+        )
+        save(state, for: accountID)
+        for legacyKey in legacyKeys {
+            defaults.removeObject(forKey: legacyKey)
+        }
+        return state
+    }
+
+    func save(_ state: NotificationReadState, for accountID: String) {
+        guard let data = try? JSONEncoder().encode(state) else { return }
+        defaults.set(data, forKey: storageKey(for: accountID))
+    }
+
+    private func storageKey(for accountID: String) -> String {
+        "notification_read_state_v1.\(accountID)"
     }
 }
