@@ -1,6 +1,43 @@
-# Workspace constraints
+# Vole 项目说明与开发规范
 
-- Never create or clone a simulator under any circumstances.
-- Do not run UI tests or any command that may create a simulator clone.
-- Do not boot, shut down, delete, or otherwise operate a simulator unless the user explicitly authorizes that exact action.
-- Prefer static checks and non-simulator builds. Ask before any verification that may start simulator services or impose substantial system load.
+## App 简介与功能
+
+Vole 是一款基于 V2EX API 开发的开源 iOS 客户端，使用 SwiftUI 构建，注重原生体验，免费且无广告。
+
+- 主题浏览：查看最新、最热主题，以及自定义节点集合中的主题。
+- 主题阅读：查看主题详情、Markdown 内容、图片和回复，支持按对话展示回复。
+- 节点管理：浏览节点及节点主题，管理收藏节点、自定义节点集合和首页列表顺序。
+- 搜索：搜索主题、节点和用户，支持搜索历史与筛选。
+- 账户与通知：通过 Personal Access Token 登录，查看个人资料、管理 Token 和查看通知。
+- 内容互动：发布主题、回复主题；具体可用能力以官方 API、Token 权限和账户状态为准。
+- 阅读与偏好：屏蔽主题或用户、举报内容，以及调整主题色等设置。
+
+## SwiftUI 与系统组件
+
+- 使用纯 SwiftUI 实现界面和交互，不引入 UIKit / AppKit 视图、控制器或通过 Representable 包装的界面实现。
+- 优先复用项目已有组件和 SwiftUI 标准组件，使用系统提供的导航、列表、表单、工具栏、弹窗及样式。
+- 尽量遵循系统默认外观和交互，避免自定义复杂样式、手工模拟系统控件或为简单功能引入复杂封装。
+- 优先依靠系统组件、容器尺寸和安全区域完成自适应布局，避免写死设备型号或屏幕尺寸。
+
+## 系统兼容与 Apple API
+
+- 最低支持 iOS 18.6，不得擅自提高最低部署版本。
+- 使用现代、未弃用的 API；已有新 API 替代时，不再新增旧式 API 的用法。
+- 对 iOS 18.6 已支持的功能，直接使用对应的现代 API，不添加面向更低系统版本的兼容代码。
+- 使用高于 iOS 18.6 才提供的 API 时，必须通过 `if #available` 等可用性检查，并提供可在 iOS 18.6 正常工作的实现。
+- 不为追求最新 API 破坏最低系统兼容性；确认 API 的引入版本和弃用状态后再使用。
+
+## V2EX API 参考
+
+- 新增或修改 V2EX 接口调用时，必须先参考官方 API 文档：[https://edge.v2ex.com/help/api](https://edge.v2ex.com/help/api)，并查阅该页面链接的相关接口说明。
+- 以官方文档为依据确认接口版本、路径、HTTP 方法、鉴权方式、参数、分页、返回结构、权限和调用限制，不凭经验猜测接口。
+- 官方提供新版替代接口时，优先采用新版；不要新增已弃用接口的调用。不要仅凭版本号认定某个接口已弃用。
+- 复用项目已有的 `V2exAPI`、`SiteConfiguration` 和数据模型，避免在视图中重复实现请求或散落硬编码地址。
+- 文档未说明或暂时无法确认的能力，先核实再实现，不将推测当作已支持的接口能力。
+
+## 验证与模拟器限制
+
+- 任何情况下都不得创建或克隆模拟器。
+- 不运行 UI 测试或任何可能创建模拟器克隆的命令。
+- 除非用户明确授权具体操作，否则不得启动、关闭、删除或以其他方式操作模拟器。
+- 优先使用静态检查和不依赖模拟器的构建。任何可能启动模拟器服务或造成显著系统负载的验证，都必须先征求用户同意。
