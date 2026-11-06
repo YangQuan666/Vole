@@ -8,6 +8,7 @@
 import Foundation
 
 enum V2exAPIError: LocalizedError {
+    case apiFailure(message: String)
     case httpFailure(
         statusCode: Int,
         method: String,
@@ -19,6 +20,8 @@ enum V2exAPIError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
+        case let .apiFailure(message):
+            return message
         case let .httpFailure(statusCode, method, url, allowedMethods, message):
             let allowed = allowedMethods.map { "；允许的方法：\($0)" } ?? ""
             return "请求失败（HTTP \(statusCode)）：\(method) \(url)\(allowed)\n\(message ?? "服务器未提供错误说明")"
@@ -44,7 +47,8 @@ public struct V2exAPI {
         url: String,
         args: [String: Any]? = nil,
         decodeClass: T.Type,
-        token: String? = nil
+        token: String? = nil,
+        useStoredToken: Bool = true
     ) async throws -> (
         T?
     ) where T: Decodable {
@@ -66,13 +70,15 @@ public struct V2exAPI {
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let storedToken = await MainActor.run { UserManager.shared.token?.token }
-        if let t = token {
-            request.setValue(
-                "Bearer " + t,
-                forHTTPHeaderField: "Authorization"
-            )
-        } else if let t = storedToken {
+        let authenticationToken: String?
+        if let token {
+            authenticationToken = token
+        } else if useStoredToken {
+            authenticationToken = await MainActor.run { UserManager.shared.token?.token }
+        } else {
+            authenticationToken = nil
+        }
+        if let t = authenticationToken {
             request.setValue(
                 "Bearer " + t,
                 forHTTPHeaderField: "Authorization"
@@ -176,16 +182,6 @@ public struct V2exAPI {
     }
 
     /**
-     最新主题
-     */
-    public func latestTopics() async throws -> [Topic]? {
-        return try await request(
-            url: endpointV1 + "topics/latest.json",
-            decodeClass: [Topic].self
-        )
-    }
-
-    /**
      节点信息
     
      获得指定节点的名字，简介，URL 及头像图片的地址。
@@ -284,6 +280,43 @@ public struct V2exAPI {
     }
 
     // =========== V2 ===========
+
+    /**
+     最新主题，未登录时使用 V1
+     - parameter page: V2 分页页码，默认为 1；V1 仅支持第一页
+     */
+    public func latestTopics(page: Int = 1) async throws -> Response<[Topic]>? {
+        let token = await MainActor.run { UserManager.shared.token?.token }
+        return try await latestTopics(page: page, token: token)
+    }
+
+    func latestTopics(page: Int, token: String?) async throws -> Response<[Topic]>? {
+        guard let token, !token.isEmpty else {
+            guard page == 1 else { return nil }
+            let topics = try await request(
+                url: endpointV1 + "topics/latest.json",
+                decodeClass: [Topic].self,
+                useStoredToken: false
+            )
+            return Response(
+                success: true, message: nil, result: topics, pagination: nil
+            )
+        }
+
+        let response = try await request(
+            url: endpointV2 + "topics/latest",
+            args: ["p": page],
+            decodeClass: Response<[Topic]>.self,
+            token: token,
+            useStoredToken: false
+        )
+        if let response, !response.success {
+            throw V2exAPIError.apiFailure(
+                message: response.message ?? "加载最新主题失败"
+            )
+        }
+        return response
+    }
 
     /**
      获取指定节点下的主题

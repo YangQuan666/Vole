@@ -54,7 +54,7 @@ struct TopicRow: View {
 
     @ViewBuilder
     private var topicAvatar: some View {
-        if let avatarURL = topic.member?.avatarNormal,
+        if let avatarURL = topic.member?.getHighestQualityAvatar(),
             let url = URL(string: avatarURL)
         {
             KFImage(url)

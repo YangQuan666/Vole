@@ -13,6 +13,7 @@ struct HomeView: View {
     @State private var topicsByFeed: [HomeFeed: [Topic]] = [:]
     @State private var showProfile = false
     @State private var loadingFeeds: Set<HomeFeed> = []
+    @StateObject private var latestTopics = LatestTopicsStore()
 
     @ObservedObject private var userManager = UserManager.shared
     @StateObject private var collectionManager = NodeCollectionManager.shared
@@ -27,10 +28,23 @@ struct HomeView: View {
 
         NavigationStack(path: $navManager.homePath) {
             HomeFeedPage(
-                topics: topicsByFeed[feed],
-                isLoading: loadingFeeds.contains(feed),
+                topics: feed == .latest ? latestTopics.topics : topicsByFeed[feed],
+                isLoading: feed == .latest ? latestTopics.isLoading : loadingFeeds.contains(feed),
+                hasMore: feed == .latest && latestTopics.hasMore,
+                loadMoreID: latestTopics.contentVersion,
+                errorMessage: feed == .latest ? latestTopics.errorMessage : nil,
                 onLoad: {
                     await loadTopics(for: feed)
+                },
+                onLoadMore: {
+                    await latestTopics.loadMore()
+                },
+                onRetry: {
+                    if feed == .latest {
+                        await latestTopics.retry()
+                    } else {
+                        await loadTopics(for: feed)
+                    }
                 },
                 onSelectTopic: { topic in
                     openTopic(topic)
@@ -87,7 +101,8 @@ struct HomeView: View {
             .onAppear {
                 ensureVisibleSelection()
             }
-            .task(id: feed) {
+            .task(id: HomeFeedLoadContext(feed: feed, token: latestToken)) {
+                latestTopics.updateToken(latestToken)
                 await loadTopicsIfNeeded(for: feed)
             }
             .onChange(of: collectionManager.customCollections) { _, value in
@@ -120,6 +135,13 @@ struct HomeView: View {
         resolvedFeed(for: selection)
     }
 
+    private var latestToken: String? {
+        guard let token = userManager.token?.token, !token.isEmpty else {
+            return nil
+        }
+        return token
+    }
+
     private func resolvedFeed(for feed: HomeFeed) -> HomeFeed {
         visibleHomeFeeds.contains(feed) ? feed : visibleHomeFeeds.first ?? .latest
     }
@@ -132,6 +154,10 @@ struct HomeView: View {
 
     @MainActor
     private func loadTopicsIfNeeded(for feed: HomeFeed) async {
+        if feed == .latest {
+            await latestTopics.loadIfNeeded()
+            return
+        }
         guard topicsByFeed[feed] == nil || topicsByFeed[feed]?.isEmpty == true
         else { return }
         await loadTopics(for: feed)
@@ -139,6 +165,10 @@ struct HomeView: View {
 
     @MainActor
     private func loadTopics(for feed: HomeFeed) async {
+        if feed == .latest {
+            await latestTopics.refresh()
+            return
+        }
         guard !loadingFeeds.contains(feed) else { return }
         guard let action = action(for: feed) else {
             ensureVisibleSelection()
@@ -168,7 +198,7 @@ struct HomeView: View {
         case .hot:
             return { try await V2exAPI.shared.hotTopics() }
         case .latest:
-            return { try await V2exAPI.shared.latestTopics() }
+            return nil // Latest topics use the paginated loader.
         case .collection(let id):
             guard let collection = collectionManager.customCollection(id: id)
             else { return nil }
@@ -207,6 +237,11 @@ struct HomeView: View {
             return all.sorted { ($0.created ?? 0) > ($1.created ?? 0) }
         }
     }
+}
+
+private struct HomeFeedLoadContext: Equatable {
+    let feed: HomeFeed
+    let token: String?
 }
 
 struct HomeTitleDisplayModeModifier: ViewModifier {
@@ -248,7 +283,12 @@ struct HomeFeedPicker: View {
 private struct HomeFeedPage: View {
     let topics: [Topic]?
     let isLoading: Bool
+    let hasMore: Bool
+    let loadMoreID: Int
+    let errorMessage: String?
     let onLoad: () async -> Void
+    let onLoadMore: () async -> Void
+    let onRetry: () async -> Void
     let onSelectTopic: (Topic) -> Void
 
     @ObservedObject private var blockManager = BlockManager.shared
@@ -269,11 +309,11 @@ private struct HomeFeedPage: View {
                 HomeFeedStateView(
                     systemImage: "doc.text.magnifyingglass",
                     title: "暂时没有内容",
-                    message: "当前列表没有加载到主题，可以稍后再试。",
+                    message: errorMessage ?? "当前列表没有加载到主题，可以稍后再试。",
                     isLoading: false
                 ) {
                     Task {
-                        await onLoad()
+                        await onRetry()
                     }
                 }
             }
@@ -303,6 +343,27 @@ private struct HomeFeedPage: View {
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
             }
+
+            if let errorMessage {
+                VStack(spacing: 8) {
+                    Text(errorMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    Button("重新加载") {
+                        Task {
+                            await onRetry()
+                        }
+                    }
+                    .disabled(isLoading)
+                }
+                .frame(maxWidth: .infinity)
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+            } else if hasMore {
+                HomeFeedLoadMore(contentVersion: loadMoreID, onLoad: onLoadMore)
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+            }
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
@@ -310,6 +371,22 @@ private struct HomeFeedPage: View {
         .refreshable {
             await onLoad()
         }
+    }
+}
+
+private struct HomeFeedLoadMore: View {
+    let contentVersion: Int
+    let onLoad: () async -> Void
+    @State private var isVisible = false
+
+    var body: some View {
+        ProgressView()
+            .frame(maxWidth: .infinity)
+            .onScrollVisibilityChange { isVisible = $0 }
+            .task(id: isVisible ? contentVersion : nil) {
+                guard isVisible else { return }
+                await onLoad()
+            }
     }
 }
 
