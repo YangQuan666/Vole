@@ -20,6 +20,7 @@ struct NodeDetailView: View {
     @State private var nodeLoadFailed = false
 
     @ObservedObject private var userManager = UserManager.shared
+    @ObservedObject private var blockManager = BlockManager.shared
     @StateObject private var favoriteNodeManager = FavoriteNodeManager.shared
     @StateObject private var nodeManager = NodeManager.shared
     @Environment(\.openURL) private var openURL
@@ -54,7 +55,7 @@ struct NodeDetailView: View {
                         .listRowBackground(Color.clear)
 
                     if !topics.isEmpty {
-                        ForEach(topics) { topic in
+                        ForEach(blockManager.visible(topics)) { topic in
                             TopicRow(topic: topic) {
                                 if userManager.token != nil {
                                     path.append(Route.topicId(topic.id))
@@ -63,7 +64,7 @@ struct NodeDetailView: View {
                                 }
                             }
                             .onAppear {
-                                if topic == topics.last {
+                                if topic.id == blockManager.visible(topics).last?.id {
                                     Task { await loadNextPageIfNeeded() }
                                 }
                             }

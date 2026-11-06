@@ -35,6 +35,10 @@ struct DetailView: View {
     @State private var replyTarget: Member?
     @State private var topicLoadErrorMessage: String?
     @State private var repliesLoadErrorMessage: String?
+    @State private var isSubmittingReport = false
+    @State private var reportResultMessage: String?
+
+    @Environment(\.dismiss) private var dismiss
 
     @StateObject private var nodeManager = NodeManager.shared
     @ObservedObject var blockManager = BlockManager.shared
@@ -228,6 +232,7 @@ struct DetailView: View {
                         Button("举报内容", systemImage: "exclamationmark.bubble") {
                             showReportDialog = true
                         }
+                        .disabled(isSubmittingReport)
                         Button("在浏览器中打开", systemImage: "safari") {
                             presentSafari(for: shareURL)
                         }
@@ -278,9 +283,7 @@ struct DetailView: View {
         }
         .alert("确定要屏蔽该话题吗？", isPresented: $showBlockTopicAlert) {
             Button("确认屏蔽", role: .destructive) {
-                Task {
-                    await V2exAPI.shared.blockTopic(topic: topic)
-                }
+                blockCurrentTopic()
             }
             Button("取消", role: .cancel) {}
         }
@@ -291,15 +294,49 @@ struct DetailView: View {
         ) {
             ForEach(reportReasons, id: \.self) { reason in
                 Button(reason, role: .destructive) {
-                    Task {
-                        await V2exAPI.shared.report(topic: topic, reason: reason)
-                    }
+                    submitReport(reason: reason)
                 }
             }
             Button("取消", role: .cancel) {}
         }
+        .alert(
+            "举报",
+            isPresented: Binding(
+                get: { reportResultMessage != nil },
+                set: { if !$0 { reportResultMessage = nil } }
+            )
+        ) {
+            Button("好", role: .cancel) {}
+        } message: {
+            Text(reportResultMessage ?? "")
+        }
         .onChange(of: blockManager.blockedUsernames) { _, _ in
             rebuildConversationCacheFromCurrentReplies()
+        }
+    }
+
+    /// 本地立即屏蔽并返回上一页，同时通知开发者
+    private func blockCurrentTopic() {
+        guard let topic else { return }
+        blockManager.blockTopic(topic.id)
+        let reporter = userManager.currentMember?.username
+        Task {
+            try? await ReportService.shared.blockTopic(topic, reporter: reporter)
+        }
+        dismiss()
+    }
+
+    private func submitReport(reason: String) {
+        guard let topic, !isSubmittingReport else { return }
+        isSubmittingReport = true
+        Task {
+            do {
+                try await ReportService.shared.report(topic, reason: reason)
+                reportResultMessage = "已收到你的举报，我们会在 24 小时内处理。"
+            } catch {
+                reportResultMessage = error.localizedDescription
+            }
+            isSubmittingReport = false
         }
     }
 

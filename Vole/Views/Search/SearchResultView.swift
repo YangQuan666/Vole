@@ -31,6 +31,8 @@ struct SearchResultView: View {
     @State private var pagingState = SearchPagingState()
     @State private var isPagingLoading = false
     @State private var pagingErrorMessage: String?
+    /// 每次重置话题搜索时递增，用于丢弃旧筛选条件下仍在途的请求结果
+    @State private var topicSearchGeneration = 0
 
     @State private var nodes: [Node] = []
     @State private var nodeLoadState: SearchLoadState = .idle
@@ -39,6 +41,7 @@ struct SearchResultView: View {
 
     @ObservedObject private var nodeManager = NodeManager.shared
     @ObservedObject private var userManager = UserManager.shared
+    @ObservedObject private var blockManager = BlockManager.shared
 
     @State private var filterOptions = SearchFilterOptions()
     @State private var isNodeFilterPresented = false
@@ -169,6 +172,7 @@ struct SearchResultView: View {
     }
 
     private func resetTopicData() {
+        topicSearchGeneration += 1
         results = []
         topicLoadState = .idle
         pagingState = SearchPagingState()
@@ -180,12 +184,16 @@ struct SearchResultView: View {
     private func renderSearchResults() -> some View {
         switch selectedCategory {
         case .topic:
-            ForEach(results) { res in
+            let visibleResults = results.filter {
+                !blockManager.blockedTopicIds.contains($0.source.id)
+                    && !blockManager.isBlocked($0.source.member)
+            }
+            ForEach(visibleResults) { res in
                 SearchRowView(result: res) {
                     path.append(Route.topicId(res.source.id))
                 }
                 .onAppear {
-                    if res.id == results.last?.id {
+                    if res.id == visibleResults.last?.id {
                         Task { await loadNextPage() }
                     }
                 }
@@ -501,12 +509,14 @@ struct SearchResultView: View {
     }
 
     private func performTopicSearch() async {
+        let generation = topicSearchGeneration
         let req = buildRequest(from: 0)
         do {
             let res = try await SoV2exService.shared.search(req)
             if Task.isCancelled { return }
 
             await MainActor.run {
+                guard generation == self.topicSearchGeneration else { return }
                 self.pagingErrorMessage = nil
                 self.pagingState.totalResults = res.total
                 self.results = res.hits
@@ -515,6 +525,7 @@ struct SearchResultView: View {
             }
         } catch {
             await MainActor.run {
+                guard generation == self.topicSearchGeneration else { return }
                 self.topicLoadState = .failed("话题搜索请求失败，请检查网络后重试")
             }
         }
@@ -557,6 +568,7 @@ struct SearchResultView: View {
         await MainActor.run {
             isPagingLoading = true
         }
+        let generation = topicSearchGeneration
         let req = buildRequest(from: pagingState.currentOffset)
 
         do {
@@ -564,6 +576,7 @@ struct SearchResultView: View {
             if Task.isCancelled { return }
 
             await MainActor.run {
+                guard generation == self.topicSearchGeneration else { return }
                 self.pagingErrorMessage = nil
                 self.results.append(contentsOf: res.hits)
                 self.pagingState.currentOffset = self.results.count
@@ -571,6 +584,7 @@ struct SearchResultView: View {
             }
         } catch {
             await MainActor.run {
+                guard generation == self.topicSearchGeneration else { return }
                 self.isPagingLoading = false
                 self.pagingErrorMessage = "加载更多失败，请稍后重试"
             }

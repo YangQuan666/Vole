@@ -7,6 +7,7 @@
 
 import Foundation
 
+@MainActor
 class UserManager: ObservableObject {
     static let shared = UserManager()
     private init() {
@@ -49,7 +50,6 @@ class UserManager: ObservableObject {
         return true
     }
 
-    @MainActor
     func refreshStoredTokenDetails() async {
         guard let token, let value = token.token else {
             didValidateStoredToken = true

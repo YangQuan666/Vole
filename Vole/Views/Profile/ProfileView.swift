@@ -50,7 +50,8 @@ struct ProfileView: View {
 
             print("🔄 检测到 Token，正在尝试静默登录...")
             do {
-                try await loginWithToken(token)
+                let member = try await fetchMember(token: token)
+                userManager.saveMember(member)
                 print("✅ 静默登录成功")
             } catch {
                 print("❌ 静默登录失败：", error)
@@ -58,12 +59,11 @@ struct ProfileView: View {
         }
     }
 
+    /// 只校验 Token，不落盘；拉取资料成功后才在 loginWithToken 中保存
     private func validateToken(_ token: String) async throws -> Token {
         let response = try await V2exAPI.shared.token(token: token)
         if let r = response, let validatedToken = r.result, r.success {
-            let persistedToken = validatedToken.withRawToken(token)
-            userManager.saveToken(persistedToken)
-            return persistedToken
+            return validatedToken.withRawToken(token)
         } else {
             throw NSError(
                 domain: "TokenError",
@@ -75,11 +75,29 @@ struct ProfileView: View {
         }
     }
 
-    private func loginWithToken(_ token: String) async throws {
+    private func loginWithToken(_ token: Token) async throws {
+        guard let value = token.token else {
+            throw NSError(
+                domain: "LoginError",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "Token 无效"]
+            )
+        }
+        let member = try await fetchMember(token: value)
+        guard userManager.saveToken(token) else {
+            throw NSError(
+                domain: "LoginError",
+                code: 2,
+                userInfo: [NSLocalizedDescriptionKey: "无法将 Token 保存到 Keychain"]
+            )
+        }
+        userManager.saveMember(member)
+    }
+
+    private func fetchMember(token: String) async throws -> Member {
         let response = try await V2exAPI.shared.member(token: token)
         if let r = response, let member = r.result, r.success {
-            userManager.saveMember(member)
-            print(member)
+            return member
         } else {
             throw NSError(
                 domain: "LoginError",
@@ -140,7 +158,7 @@ struct TokenInputPage: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var token: String
     var onValidate: (String) async throws -> Token
-    var onLogin: (String) async throws -> Void  // 登录
+    var onLogin: (Token) async throws -> Void  // 登录（传入已校验的 Token）
 
     @State private var errorMessage: String?
     @State private var isLoading = false
@@ -437,6 +455,7 @@ struct TokenInputPage: View {
         isTokenFieldFocused = false
 
         let phase = loginPhase
+        let tokenToLogin = validatedToken
         Task {
             do {
                 switch phase {
@@ -447,7 +466,8 @@ struct TokenInputPage: View {
                         isLoading = false
                     }
                 case .login:
-                    try await onLogin(candidate)
+                    guard let tokenToLogin else { return }
+                    try await onLogin(tokenToLogin)
                     await MainActor.run {
                         isLoading = false
                     }

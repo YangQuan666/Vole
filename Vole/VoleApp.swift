@@ -26,11 +26,12 @@ struct VoleApp: App {
                 .task {
                     await UserManager.shared.refreshStoredTokenDetails()
                 }
-                .sheet(isPresented: $showWelcome) {
+                .sheet(isPresented: $showWelcome, onDismiss: {
+                    // Welcome 关闭（点击继续或下滑）后 → 若未同意 EULA 则弹 EULA
+                    if !acceptedEULA { showEULA = true }
+                }) {
                     WelcomePage {
                         showWelcome = false
-                        // Welcome完成 → 若未同意EULA则弹EULA
-                        if !acceptedEULA { showEULA = true }
                     }
                 }
                 .sheet(isPresented: $showEULA) {

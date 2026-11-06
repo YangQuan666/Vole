@@ -54,7 +54,7 @@ struct HomeView: View {
                 case .nodeName(let nodeName):
                     NodeDetailView(
                         nodeName: nodeName,
-                        path: $navManager.nodePath
+                        path: $navManager.homePath
                     )
                 default:
                     EmptyView()
@@ -251,6 +251,8 @@ private struct HomeFeedPage: View {
     let onLoad: () async -> Void
     let onSelectTopic: (Topic) -> Void
 
+    @ObservedObject private var blockManager = BlockManager.shared
+
     var body: some View {
         Group {
             if let topics, !topics.isEmpty {
@@ -286,7 +288,7 @@ private struct HomeFeedPage: View {
 
     private func list(_ topics: [Topic]) -> some View {
         List {
-            ForEach(topics) { topic in
+            ForEach(blockManager.visible(topics)) { topic in
                 TopicRow(topic: topic) {
                     onSelectTopic(topic)
                 }

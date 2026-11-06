@@ -2,3 +2,6 @@
 .DS_Store
 # Xcode user-specific data
 xcuserdata/
+
+# Local secrets (report webhook etc.)
+Vole/Secrets.plist

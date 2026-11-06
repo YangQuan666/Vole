@@ -17,6 +17,7 @@ struct NodeCollectionView: View {
 
     @StateObject private var nodeManager = NodeManager.shared
     @ObservedObject private var userManager = UserManager.shared
+    @ObservedObject private var blockManager = BlockManager.shared
 
     var body: some View {
         List {
@@ -42,7 +43,7 @@ struct NodeCollectionView: View {
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
             } else {
-                ForEach(topics) { topic in
+                ForEach(blockManager.visible(topics)) { topic in
                     TopicRow(topic: topic) {
                         if userManager.token != nil {
                             path.append(Route.topicId(topic.id))

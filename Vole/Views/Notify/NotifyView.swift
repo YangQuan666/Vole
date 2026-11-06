@@ -30,7 +30,7 @@ struct NotifyView: View {
                     case .nodeName(let nodeName):
                         NodeDetailView(
                             nodeName: nodeName,
-                            path: $navManager.nodePath
+                            path: $navManager.notifyPath
                         )
                     case .node(let node):
                         NodeDetailView(node: node, path: $navManager.notifyPath)
