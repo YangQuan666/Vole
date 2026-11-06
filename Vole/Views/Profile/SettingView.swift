@@ -9,6 +9,7 @@ struct SettingView: View {
     @State private var purchasingProductID: String?
     @StateObject private var storeManager = StoreManager.shared
     @StateObject private var siteConfigurationStore = SiteConfigurationStore.shared
+    @ObservedObject private var iconManager = AppIconManager.shared
 
     private var appVersion: String {
         let version =
@@ -56,6 +57,22 @@ struct SettingView: View {
         List {
             Section("偏好设置") {
                 themeRow
+
+                NavigationLink {
+                    AppIconSettingsView()
+                } label: {
+                    SettingRow(
+                        systemImage: "app.badge",
+                        tint: .indigo,
+                        title: "应用图标",
+                        subtitle: "更换主屏幕上的 App 图标"
+                    ) {
+                        Text(iconManager.currentIcon.title)
+                            .font(.footnote.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
 
                 NavigationLink {
                     HomeNodeListSettingsView()
