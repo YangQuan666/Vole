@@ -42,6 +42,16 @@ public struct Member: Identifiable, Decodable, Encodable, Hashable {
         case lastModified = "last_modified"
     }
 
+    /// 用户在当前站点的网页主页地址。
+    static func profileURL(username: String) -> URL? {
+        guard
+            let encoded = username.addingPercentEncoding(
+                withAllowedCharacters: .urlPathAllowed
+            )
+        else { return nil }
+        return SiteConfiguration.makeSiteURL(from: "/member/\(encoded)")
+    }
+
     // 获取最高清的头像
     public func getHighestQualityAvatar() -> String? {
         // 返回第一个有效的头像 URL，从 mini 到 XXXLarge

@@ -17,6 +17,10 @@ struct ReplyRowView: View {
     let floor: Int
     let showsConversationIndicator: Bool
     var onMentionsChanged: (([String]) -> Void)? = nil
+    /// 点击 @用户名 时回调；未提供时打开该用户的网页主页。
+    var onMentionTap: ((String) -> Void)? = nil
+
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -33,7 +37,11 @@ struct ReplyRowView: View {
                     onLinkAction: { action in
                         switch action {
                         case .mention(let username):
-                            print("@\(username)")
+                            if let onMentionTap {
+                                onMentionTap(username)
+                            } else if let url = Member.profileURL(username: username) {
+                                openURL.openPreferringInApp(url)
+                            }
                         case .topic(let id):
                             path.append(Route.topicId(id))
                         case .node(let name):

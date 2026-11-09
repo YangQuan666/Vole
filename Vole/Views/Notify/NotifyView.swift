@@ -83,27 +83,27 @@ struct NotifyView: View {
     }
 
     private var notificationList: some View {
-        ScrollView {
-            LazyVStack(spacing: 12) {
-                ForEach(notifyManager.notifications, id: \.id) { item in
-                    NotifyRowView(item: item) { topicId in
-                        navManager.notifyPath.append(Route.topicId(topicId))
-                    }
-                    .onAppear {
-                        if item.id == notifyManager.notifications.last?.id {
-                            Task {
-                                await notifyManager.loadNextPage()
-                            }
+        // 使用 List 承载通知卡片，行内的 swipeActions 才能生效。
+        List {
+            ForEach(notifyManager.notifications, id: \.id) { item in
+                NotifyRowView(item: item) { topicId in
+                    navManager.notifyPath.append(Route.topicId(topicId))
+                }
+                .notificationListRow()
+                .onAppear {
+                    if item.id == notifyManager.notifications.last?.id {
+                        Task {
+                            await notifyManager.loadNextPage()
                         }
                     }
                 }
-
-                footerView
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 6)
-            .padding(.bottom, 12)
+
+            footerView
+                .notificationListRow()
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
         .background(Color(.systemGroupedBackground))
         .homeLikeListTopInset()
         .safeAreaInset(edge: .top, spacing: 8) {
@@ -212,6 +212,15 @@ struct NotifyView: View {
             return "有 \(notifyManager.pendingNewCount) 条新通知，点击更新"
         }
         return "有新通知，点击更新"
+    }
+}
+
+private extension View {
+    /// 保持原卡片样式：去掉系统分隔线与行背景，行间距与原 LazyVStack 一致。
+    func notificationListRow() -> some View {
+        listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
     }
 }
 

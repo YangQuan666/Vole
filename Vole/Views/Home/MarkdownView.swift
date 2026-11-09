@@ -140,10 +140,7 @@ struct VoleMarkdownView: View {
             return .handled
         }
 
-        if UIApplication.shared.canOpenURL(url) {
-            UIApplication.shared.open(url)
-        }
-        return .handled
+        return .systemActionPreferringInApp(url)
     }
 
     @MainActor
@@ -850,12 +847,14 @@ private struct TappableMarkdownImage: View {
     }
 
     private func displaySize(maxWidth: CGFloat) -> CGSize {
-        guard let imageSize else {
+        // 尚未拿到图片尺寸或容器宽度时，先占用一个小方块，
+        // 待 onGeometryChange 测得宽度后再按比例展开。
+        guard let imageSize, maxWidth > 0 else {
             let fallbackSide = min(maxWidth > 0 ? maxWidth : 44, 44)
             return CGSize(width: fallbackSide, height: fallbackSide)
         }
 
-        let width = min(imageSize.width, maxWidth > 0 ? maxWidth : imageSize.width)
+        let width = min(imageSize.width, maxWidth)
         let height = imageSize.height * width / imageSize.width
         return CGSize(width: width, height: height)
     }
@@ -884,14 +883,10 @@ private struct TappableMarkdownImage: View {
             guard width > 0, abs(containerWidth - width) > 0.5 else { return }
             containerWidth = width
         }
-        .frame(height: displaySize(maxWidth: resolvedContainerWidth).height)
+        .frame(height: displaySize(maxWidth: containerWidth).height)
         .task(id: url) {
             await loadImageSizeIfNeeded()
         }
-    }
-
-    private var resolvedContainerWidth: CGFloat {
-        containerWidth > 0 ? containerWidth : UIScreen.main.bounds.width
     }
 
     @ViewBuilder

@@ -24,8 +24,6 @@ struct DetailView: View {
     @State private var selectedConversationReplyId: Int?
     @State private var selectedAuthor: String?
     @State private var conversationIndex = ReplyConversationIndex.empty
-    @State private var showSafari = false
-    @State private var safariURL: URL? = nil
     @State private var selectedUser: Member?
     @State private var showBlockTopicAlert = false
     @State private var showBlockUserAlert = false
@@ -39,6 +37,7 @@ struct DetailView: View {
     @State private var reportResultMessage: String?
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
 
     @StateObject private var nodeManager = NodeManager.shared
     @ObservedObject var blockManager = BlockManager.shared
@@ -84,8 +83,7 @@ struct DetailView: View {
                                                 HTMLContentNotice(
                                                     url: topic.url.flatMap(URL.init(string:)),
                                                     openURL: { url in
-                                                        safariURL = url
-                                                        showSafari = true
+                                                        openURL.openPreferringInApp(url)
                                                     }
                                                 )
                                             }
@@ -226,7 +224,7 @@ struct DetailView: View {
                         }
                         .disabled(isSubmittingReport)
                         Button("在浏览器中打开", systemImage: "safari") {
-                            presentSafari(for: shareURL)
+                            openWebPage(for: shareURL)
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
@@ -236,13 +234,6 @@ struct DetailView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     commentOverlayCloseButton
                 }
-            }
-        }
-        .sheet(isPresented: $showSafari) {
-            if let safariURL {
-                SafariView(url: safariURL)
-                    .ignoresSafeArea()
-                    .interactiveDismissDisabled(true)
             }
         }
         .sheet(item: $selectedUser) { member in
@@ -518,7 +509,7 @@ struct DetailView: View {
 
     private func topicTitleButton(_ title: String, urlString: String?) -> some View {
         Button {
-            presentSafari(for: urlString)
+            openWebPage(for: urlString)
         } label: {
             Text(title)
                 .font(.system(size: 21, weight: .bold))
@@ -534,21 +525,41 @@ struct DetailView: View {
         .accessibilityHint("打开主题原网页")
     }
 
-    private func presentSafari(for urlString: String?) {
+    private func openWebPage(for urlString: String?) {
         guard let urlString, let url = URL(string: urlString) else { return }
-        safariURL = url
-        showSafari = true
+        openURL.openPreferringInApp(url)
     }
 
     private func handleMarkdownLinkAction(_ action: LinkAction) {
         switch action {
         case .mention(let username):
-            print("@\(username)")
+            showMember(named: username)
         case .topic(let id):
             path.append(Route.topicId(id))
         case .node(let name):
             path.append(Route.nodeName(name))
         }
+    }
+
+    /// 优先使用本帖中已有的用户资料展示资料卡；
+    /// 官方 API 2.0 不提供按用户名查询他人资料的接口，找不到时打开网页主页。
+    private func showMember(named username: String) {
+        if let member = knownMember(named: username) {
+            selectedUser = member
+        } else if let url = Member.profileURL(username: username) {
+            openURL.openPreferringInApp(url)
+        }
+    }
+
+    private func knownMember(named username: String) -> Member? {
+        func matches(_ member: Member) -> Bool {
+            member.username.caseInsensitiveCompare(username) == .orderedSame
+        }
+
+        if let author = topic?.member, matches(author) {
+            return author
+        }
+        return replies?.last { matches($0.member) }?.member
     }
 
     @ViewBuilder
@@ -589,7 +600,8 @@ struct DetailView: View {
                             topic: topic,
                             reply: reply,
                             floor: item.floor,
-                            showsConversationIndicator: hasConversation
+                            showsConversationIndicator: hasConversation,
+                            onMentionTap: showMember(named:)
                         )
                         .contentShape(Rectangle())
                         .onTapGesture {
@@ -888,7 +900,8 @@ struct DetailView: View {
             topic: topic,
             reply: item.reply,
             floor: item.floor,
-            showsConversationIndicator: false
+            showsConversationIndicator: false,
+            onMentionTap: showMember(named:)
         )
         .padding(14)
         .background(

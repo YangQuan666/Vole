@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 private let membershipDetailsURL = URL(string: "https://v2ex.com/balance/add")!
 
@@ -385,7 +384,8 @@ private struct MarkdownComposerEditor: View {
     let characterLimit: Int
     var previewTitle: String? = nil
     @State private var mode: Mode = .edit
-    @State private var formatRequest: MarkdownFormatRequest?
+    @State private var selection: TextSelection?
+    @FocusState private var isEditorFocused: Bool
 
     private var previewContent: String {
         guard let previewTitle,
@@ -426,12 +426,15 @@ private struct MarkdownComposerEditor: View {
 
             Group {
                 if mode == .edit {
-                    MarkdownTextView(text: $text, formatRequest: $formatRequest)
+                    TextEditor(text: $text, selection: $selection)
+                        .focused($isEditorFocused)
+                        .scrollContentBackground(.hidden)
                         .overlay(alignment: .topLeading) {
                             if text.isEmpty {
                                 Text("正文支持 Markdown")
                                     .foregroundStyle(.tertiary)
                                     .padding(.top, 8)
+                                    .padding(.leading, 5)
                                     .allowsHitTesting(false)
                             }
                         }
@@ -457,6 +460,17 @@ private struct MarkdownComposerEditor: View {
         }
     }
 
+    private func applyFormatting(_ action: MarkdownFormattingAction) {
+        let result = MarkdownFormatter.apply(
+            action,
+            to: text,
+            selection: selection
+        )
+        text = result.text
+        selection = result.selection
+        isEditorFocused = true
+    }
+
     private func formattingButton(
         title: String? = nil,
         systemImage: String? = nil,
@@ -464,7 +478,7 @@ private struct MarkdownComposerEditor: View {
         action: MarkdownFormattingAction
     ) -> some View {
         Button {
-            formatRequest = MarkdownFormatRequest(action: action)
+            applyFormatting(action)
         } label: {
             Group {
                 if let title {
@@ -491,139 +505,96 @@ private enum MarkdownFormattingAction {
     case codeBlock
 }
 
-private struct MarkdownFormatRequest: Identifiable {
-    let id = UUID()
-    let action: MarkdownFormattingAction
-}
-
-private struct MarkdownTextView: UIViewRepresentable {
-    @Binding var text: String
-    @Binding var formatRequest: MarkdownFormatRequest?
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
+/// 对纯文本应用 Markdown 格式，返回新文本及格式化后的选区。
+private enum MarkdownFormatter {
+    struct Result {
+        let text: String
+        let selection: TextSelection
     }
 
-    func makeUIView(context: Context) -> UITextView {
-        let textView = UITextView()
-        textView.delegate = context.coordinator
-        textView.backgroundColor = .clear
-        textView.font = .preferredFont(forTextStyle: .body)
-        textView.adjustsFontForContentSizeCategory = true
-        textView.textColor = .label
-        textView.tintColor = .systemBlue
-        textView.textContainerInset = UIEdgeInsets(top: 8, left: 0, bottom: 8, right: 0)
-        textView.textContainer.lineFragmentPadding = 0
-        textView.keyboardDismissMode = .interactive
-        textView.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
-        return textView
+    static func apply(
+        _ action: MarkdownFormattingAction,
+        to text: String,
+        selection: TextSelection?
+    ) -> Result {
+        let range = selectedRange(in: text, selection: selection)
+        switch action {
+        case .heading(let level):
+            return applyHeading(level, to: text, range: range)
+        case .bold:
+            return wrap(text, range: range, opening: "**", closing: "**")
+        case .italic:
+            return wrap(text, range: range, opening: "*", closing: "*")
+        case .codeBlock:
+            return wrap(text, range: range, opening: "```\n", closing: "\n```")
+        }
     }
 
-    func updateUIView(_ textView: UITextView, context: Context) {
-        if textView.text != text {
-            textView.text = text
+    private static func selectedRange(
+        in text: String,
+        selection: TextSelection?
+    ) -> Range<String.Index> {
+        let end = text.endIndex..<text.endIndex
+        guard let selection else { return end }
+
+        let range: Range<String.Index>?
+        switch selection.indices {
+        case .selection(let selected):
+            range = selected
+        case .multiSelection(let selected):
+            range = selected.ranges.first
+        @unknown default:
+            range = nil
         }
 
-        if let request = formatRequest,
-            context.coordinator.lastFormatRequestID != request.id
-        {
-            context.coordinator.lastFormatRequestID = request.id
-            context.coordinator.apply(request.action, to: textView)
-            DispatchQueue.main.async {
-                if formatRequest?.id == request.id {
-                    formatRequest = nil
-                }
+        guard let range, range.upperBound <= text.endIndex else { return end }
+        return range
+    }
+
+    private static func applyHeading(
+        _ level: Int,
+        to text: String,
+        range: Range<String.Index>
+    ) -> Result {
+        var target = range.isEmpty ? text.lineRange(for: range) : range
+        // 行范围包含末尾换行符，排除它以免给下一行空行加标题标记。
+        if !target.isEmpty, text[text.index(before: target.upperBound)] == "\n" {
+            target = target.lowerBound..<text.index(before: target.upperBound)
+        }
+
+        let marker = String(repeating: "#", count: level) + " "
+        let formatted = text[target]
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map { line in
+                marker + line.replacing(#/^#{1,6}\s*/#, with: "")
             }
-        }
+            .joined(separator: "\n")
+
+        let start = text.distance(from: text.startIndex, to: target.lowerBound)
+        let newText = text.replacingCharacters(in: target, with: formatted)
+        let cursor = newText.index(
+            newText.startIndex,
+            offsetBy: min(start + marker.count, newText.count)
+        )
+        return Result(text: newText, selection: TextSelection(insertionPoint: cursor))
     }
 
-    final class Coordinator: NSObject, UITextViewDelegate {
-        private var parent: MarkdownTextView
-        var lastFormatRequestID: UUID?
+    private static func wrap(
+        _ text: String,
+        range: Range<String.Index>,
+        opening: String,
+        closing: String
+    ) -> Result {
+        let selected = String(text[range])
+        let start = text.distance(from: text.startIndex, to: range.lowerBound)
+        let newText = text.replacingCharacters(
+            in: range,
+            with: opening + selected + closing
+        )
 
-        init(_ parent: MarkdownTextView) {
-            self.parent = parent
-        }
-
-        func textViewDidChange(_ textView: UITextView) {
-            parent.text = textView.text
-        }
-
-        func apply(_ action: MarkdownFormattingAction, to textView: UITextView) {
-            switch action {
-            case .heading(let level):
-                applyHeading(level, to: textView)
-            case .bold:
-                wrapSelection(in: textView, with: "**")
-            case .italic:
-                wrapSelection(in: textView, with: "*")
-            case .codeBlock:
-                wrapSelection(in: textView, opening: "```\n", closing: "\n```")
-            }
-            parent.text = textView.text
-        }
-
-        private func applyHeading(_ level: Int, to textView: UITextView) {
-            let source = textView.text as NSString
-            let selection = textView.selectedRange
-            let range = selection.length > 0
-                ? selection
-                : source.lineRange(
-                    for: NSRange(
-                        location: min(selection.location, source.length),
-                        length: 0
-                    )
-                )
-            let selectedText = source.substring(with: range)
-            let marker = String(repeating: "#", count: level) + " "
-            let headingPattern = try? NSRegularExpression(pattern: #"^#{1,6}\s*"#)
-            let formatted = selectedText
-                .components(separatedBy: "\n")
-                .map { line in
-                    let lineRange = NSRange(line.startIndex..., in: line)
-                    let cleanLine = headingPattern?.stringByReplacingMatches(
-                        in: line,
-                        range: lineRange,
-                        withTemplate: ""
-                    ) ?? line
-                    return marker + cleanLine
-                }
-                .joined(separator: "\n")
-
-            textView.text = source.replacingCharacters(in: range, with: formatted)
-            textView.selectedRange = NSRange(
-                location: min(range.location + marker.utf16.count, (textView.text as NSString).length),
-                length: 0
-            )
-            textView.becomeFirstResponder()
-        }
-
-        private func wrapSelection(in textView: UITextView, with delimiter: String) {
-            wrapSelection(
-                in: textView,
-                opening: delimiter,
-                closing: delimiter
-            )
-        }
-
-        private func wrapSelection(
-            in textView: UITextView,
-            opening: String,
-            closing: String
-        ) {
-            let source = textView.text as NSString
-            let range = textView.selectedRange
-            let selectedText = source.substring(with: range)
-            let replacement = opening + selectedText + closing
-            textView.text = source.replacingCharacters(in: range, with: replacement)
-
-            let selectionStart = range.location + opening.utf16.count
-            textView.selectedRange = NSRange(
-                location: selectionStart,
-                length: selectedText.utf16.count
-            )
-            textView.becomeFirstResponder()
-        }
+        let lower = newText.index(newText.startIndex, offsetBy: start + opening.count)
+        let upper = newText.index(lower, offsetBy: selected.count)
+        return Result(text: newText, selection: TextSelection(range: lower..<upper))
     }
 }
 
