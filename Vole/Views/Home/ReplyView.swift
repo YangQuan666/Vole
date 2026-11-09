@@ -154,11 +154,9 @@ struct ReplyRowView: View {
                     }
                 }
 
-                TimelineView(.everyMinute) { _ in
-                    Text(DateConverter.relativeTimeString(reply.created))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                RelativeTimeText(timestamp: reply.created)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Spacer(minLength: 8)

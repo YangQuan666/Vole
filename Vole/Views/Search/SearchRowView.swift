@@ -81,14 +81,12 @@ struct SearchRowView: View {
             .lineLimit(3)
 
             HStack {
-                TimelineView(.everyMinute) { _ in
-                    Text(
-                        DateConverter.relativeTimeString(
-                            isoDateString: result.source.created
-                        )
-                    )
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                if let created = DateConverter.date(
+                    isoDateString: result.source.created
+                ) {
+                    RelativeTimeText(date: created)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
 
                 Spacer()

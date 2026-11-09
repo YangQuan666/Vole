@@ -12,6 +12,8 @@ struct TopicRow: View {
     let topic: Topic
     let onTap: () -> Void
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             topicAvatar
@@ -87,20 +89,25 @@ struct TopicRow: View {
         }
     }
 
+    /// 固定布局，避免行高随文字长度变化导致滚动时跳动。
+    /// 默认单行：空间不足时先截断节点名，再截断作者名，时间始终完整显示；
+    /// 仅在辅助功能字号下改为竖排（只取决于字号设置，滚动中不会切换）。
+    @ViewBuilder
     private var topicMetaLine: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 6) {
                 authorAndTime
-
-                Spacer(minLength: 8)
 
                 if let nodeTitle {
                     nodeBadge(nodeTitle)
                 }
             }
-
-            VStack(alignment: .leading, spacing: 6) {
+        } else {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
                 authorAndTime
+                    .layoutPriority(1)
+
+                Spacer(minLength: 8)
 
                 if let nodeTitle {
                     nodeBadge(nodeTitle)
@@ -139,12 +146,10 @@ struct TopicRow: View {
     @ViewBuilder
     private var topicCreatedTime: some View {
         if let created = topic.created {
-            TimelineView(.everyMinute) { _ in
-                Text(DateConverter.relativeTimeString(created))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
+            RelativeTimeText(timestamp: created)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize()
         }
     }
 

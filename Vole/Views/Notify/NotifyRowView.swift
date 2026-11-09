@@ -78,11 +78,9 @@ struct NotifyRowView: View {
 
                     VStack(alignment: .trailing, spacing: 8) {
                         if let created = item.created {
-                            TimelineView(.everyMinute) { _ in
-                                Text(DateConverter.relativeTimeString(created))
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
+                            RelativeTimeText(timestamp: created)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
                         }
                     }
                 }

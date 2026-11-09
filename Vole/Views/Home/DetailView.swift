@@ -119,17 +119,9 @@ struct DetailView: View {
                                         header: HStack {
                                             Text("第 \(idx + 1)条附言")
                                             if let created = supplement.created {
-                                                TimelineView(.everyMinute) {
-                                                    _ in
-                                                    Text(
-                                                        DateConverter
-                                                            .relativeTimeString(
-                                                                created
-                                                            )
-                                                    )
+                                                RelativeTimeText(timestamp: created)
                                                     .font(.caption)
-                                                    .foregroundColor(.secondary)
-                                                }
+                                                    .foregroundStyle(.secondary)
                                             }
                                         }
                                     ) {
@@ -407,11 +399,9 @@ struct DetailView: View {
                     .foregroundStyle(.primary)
 
                 if let created {
-                    TimelineView(.everyMinute) { _ in
-                        Text(DateConverter.relativeTimeString(created))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                    RelativeTimeText(timestamp: created)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
         }

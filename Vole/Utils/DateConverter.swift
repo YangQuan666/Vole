@@ -7,37 +7,25 @@
 
 import Foundation
 
-class DateConverter {
-    
-    // 时间戳转为相对时间
-    static func relativeTimeString(_ timestamp: Int) -> String {
-        let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .full
-        return formatter.localizedString(for: date, relativeTo: Date())
-    }
-    
-    // iso时间转为相对时间
-    static func relativeTimeString(isoDateString: String) -> String {
-        let isoFormatter = ISO8601DateFormatter()
-        
-        // 关键修改：移除 .withInternetDateTime，并明确列出所有需要的组件
-        isoFormatter.formatOptions = [
+enum DateConverter {
+
+    /// 复用的 ISO8601 解析器，避免每次调用都创建
+    private static let isoFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        // sov2ex 返回的时间不带时区后缀，明确列出需要的组件
+        formatter.formatOptions = [
             .withYear,
             .withMonth,
             .withDay,
             .withTime,
             .withDashSeparatorInDate,
-            .withColonSeparatorInTime
+            .withColonSeparatorInTime,
         ]
-    
-        guard let date = isoFormatter.date(from: isoDateString) else {
-            return ""
-        }
-        
-        // 使用 RelativeDateTimeFormatter 格式化
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .full
-        return formatter.localizedString(for: date, relativeTo: Date())
+        return formatter
+    }()
+
+    /// 解析 ISO8601 时间字符串，失败返回 nil
+    static func date(isoDateString: String) -> Date? {
+        isoFormatter.date(from: isoDateString)
     }
 }
