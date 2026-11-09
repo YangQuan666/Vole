@@ -481,8 +481,8 @@ struct DetailView: View {
                     topicMetric(
                         value: stars,
                         label: "收藏",
-                        systemImage: "star.fill",
-                        tint: .yellow
+                        systemImage: "star",
+                        tint: .secondary
                     )
                 }
 
@@ -490,8 +490,8 @@ struct DetailView: View {
                     topicMetric(
                         value: thanks,
                         label: "感谢",
-                        systemImage: "heart.fill",
-                        tint: .red
+                        systemImage: "heart",
+                        tint: .secondary
                     )
                 }
 

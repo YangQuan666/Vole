@@ -173,15 +173,15 @@ struct TopicRow: View {
                 if let stars = topic.stars, stars > 0 {
                     topicMetric(
                         stars,
-                        systemImage: "star.fill",
-                        color: .yellow
+                        systemImage: "star",
+                        color: .secondary
                     )
                 }
                 if let thanks = topic.thanks, thanks > 0 {
                     topicMetric(
                         thanks,
-                        systemImage: "heart.fill",
-                        color: .red
+                        systemImage: "heart",
+                        color: .secondary
                     )
                 }
                 if let replies = topic.replies, replies > 0 {
