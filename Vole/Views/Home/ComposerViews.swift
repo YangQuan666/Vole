@@ -69,10 +69,13 @@ struct CreateTopicView: View {
     @State private var selectedNodeName = ""
     @State private var title = ""
     @State private var content = ""
+    @State private var attachments: [ComposerImageAttachment] = []
     @State private var showNodePicker = false
     @State private var isSubmitting = false
     @State private var errorMessage: String?
     @State private var showMembershipAlert = false
+    @State private var showDiscardConfirmation = false
+    @State private var showPendingImagesConfirmation = false
 
     let onCreated: (Topic) -> Void
 
@@ -100,67 +103,115 @@ struct CreateTopicView: View {
             && !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Button {
-                    showNodePicker = true
-                } label: {
-                    Label(
-                        selectedNode?.title ?? (selectedNodeName.isEmpty ? "选择节点" : selectedNodeName),
-                        systemImage: "square.grid.2x2"
-                    )
-                }
-                .buttonStyle(.borderless)
+    private var hasChanges: Bool {
+        !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !attachments.isEmpty
+    }
 
-                Spacer()
+    private var pendingImageCount: Int {
+        attachments.filter { !$0.isUploaded }.count
+    }
 
-                Text("\(title.count)/120")
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
+    /// 发布到的节点：未选择时为灰色，选中后为主题色。
+    private var nodeChip: some View {
+        Button {
+            showNodePicker = true
+        } label: {
+            HStack(spacing: 4) {
+                Text(selectedNodeName.isEmpty ? "选择节点" : (selectedNode?.title ?? selectedNodeName))
+                    .lineLimit(1)
+                Image(systemName: "chevron.down")
+                    .font(.caption2.weight(.bold))
             }
-            .padding(.vertical, 10)
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(selectedNodeName.isEmpty ? Color.secondary : Color.accentColor)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(
+                Capsule().fill(
+                    selectedNodeName.isEmpty
+                        ? Color(.tertiarySystemFill)
+                        : Color.accentColor.opacity(0.12)
+                )
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(selectedNodeName.isEmpty ? "选择节点" : "节点：\(selectedNode?.title ?? selectedNodeName)")
+        .accessibilityHint("选择主题要发布到的节点")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 8) {
+                nodeChip
+
+                TextField("标题", text: titleBinding, axis: .vertical)
+                    .font(.title2.weight(.bold))
+                    .lineLimit(1...3)
+                    .textInputAutocapitalization(.sentences)
+
+                // 标题字数只在接近上限时提示。
+                if title.count >= 100 {
+                    Text("\(title.count)/120")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+
+                if let errorMessage {
+                    ComposerErrorLabel(message: errorMessage)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+            .padding(.bottom, 10)
 
             Divider()
+                .padding(.horizontal, 20)
 
-            TextField("主题标题", text: titleBinding, axis: .vertical)
-                .font(.title2.weight(.semibold))
-                .lineLimit(1...2)
-                .textInputAutocapitalization(.sentences)
-                .padding(.vertical, 14)
-
-            Divider()
-
-            MarkdownComposerEditor(
+            MarkdownEditor(
                 text: contentBinding,
+                attachments: $attachments,
                 characterLimit: 20_000,
                 previewTitle: title
             )
             .frame(maxHeight: .infinity)
-
-            if let errorMessage {
-                Label(errorMessage, systemImage: "exclamationmark.circle")
-                    .font(.footnote)
-                    .foregroundStyle(.red)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 8)
-            }
         }
-        .padding(.horizontal, 20)
         .background(Color(.systemBackground))
         .navigationTitle("新主题")
         .navigationBarTitleDisplayMode(.inline)
+        .interactiveDismissDisabled(hasChanges || isSubmitting)
         .sheet(isPresented: $showMembershipAlert) {
             MembershipRequiredSheet()
         }
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("取消") { dismiss() }
-                    .disabled(isSubmitting)
+                Button("取消") {
+                    if hasChanges {
+                        showDiscardConfirmation = true
+                    } else {
+                        dismiss()
+                    }
+                }
+                .disabled(isSubmitting)
+                .confirmationDialog(
+                    "放弃这个主题吗？",
+                    isPresented: $showDiscardConfirmation,
+                    titleVisibility: .visible
+                ) {
+                    Button("放弃编辑", role: .destructive) { dismiss() }
+                    Button("继续编辑", role: .cancel) {}
+                } message: {
+                    Text("已输入的内容不会被保存。")
+                }
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button {
-                    Task { await submit() }
+                    if pendingImageCount > 0 {
+                        showPendingImagesConfirmation = true
+                    } else {
+                        Task { await submit() }
+                    }
                 } label: {
                     if isSubmitting {
                         ProgressView()
@@ -171,9 +222,15 @@ struct CreateTopicView: View {
                 .disabled(!canSubmit)
             }
         }
+        .alert("仍要发布吗？", isPresented: $showPendingImagesConfirmation) {
+            Button("取消", role: .cancel) {}
+            Button("发布") { Task { await submit() } }
+        } message: {
+            Text("有 \(pendingImageCount) 张图片尚未上传，不会随主题发布。")
+        }
         .sheet(isPresented: $showNodePicker) {
             NavigationStack {
-                NodeSelectionSheet { node in
+                NodeSelectionSheet(selectedNodeName: selectedNodeName) { node in
                     selectedNodeName = node.name
                 }
             }
@@ -237,9 +294,12 @@ struct ReplyComposerView: View {
     let onSent: () -> Void
 
     @State private var content: String
+    @State private var attachments: [ComposerImageAttachment] = []
     @State private var isSubmitting = false
     @State private var errorMessage: String?
     @State private var showMembershipAlert = false
+    @State private var showDiscardConfirmation = false
+    @State private var showPendingImagesConfirmation = false
 
     init(topicID: Int, replyTo: Member?, onSent: @escaping () -> Void) {
         self.topicID = topicID
@@ -267,6 +327,14 @@ struct ReplyComposerView: View {
         !isSubmitting && !submissionContent.isEmpty
     }
 
+    private var hasChanges: Bool {
+        !submissionContent.isEmpty || !attachments.isEmpty
+    }
+
+    private var pendingImageCount: Int {
+        attachments.filter { !$0.isUploaded }.count
+    }
+
     private var submissionContent: String {
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let mention else { return trimmed }
@@ -280,46 +348,63 @@ struct ReplyComposerView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            if let replyTo {
-                Label("回复 @\(replyTo.username)", systemImage: "arrowshape.turn.up.left")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 10)
-
-                Divider()
+        // 回复对象已显示在导航标题中，这里不再重复。
+        VStack(alignment: .leading, spacing: 0) {
+            if let errorMessage {
+                ComposerErrorLabel(message: errorMessage)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 10)
             }
 
-            MarkdownComposerEditor(
+            MarkdownEditor(
                 text: contentBinding,
-                characterLimit: characterLimit
+                attachments: $attachments,
+                characterLimit: characterLimit,
+                placeholder: "写下你的评论，支持 Markdown"
             )
             .frame(maxHeight: .infinity)
-
-            if let errorMessage {
-                Label(errorMessage, systemImage: "exclamationmark.circle")
-                    .font(.footnote)
-                    .foregroundStyle(.red)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 8)
-            }
         }
-        .padding(.horizontal, 20)
         .background(Color(.systemBackground))
         .navigationTitle(replyTo.map { "回复 @\($0.username)" } ?? "评论")
         .navigationBarTitleDisplayMode(.inline)
+        .interactiveDismissDisabled(hasChanges || isSubmitting)
         .sheet(isPresented: $showMembershipAlert) {
             MembershipRequiredSheet()
         }
+        .alert("仍要发送吗？", isPresented: $showPendingImagesConfirmation) {
+            Button("取消", role: .cancel) {}
+            Button("发送") { Task { await submit() } }
+        } message: {
+            Text("有 \(pendingImageCount) 张图片尚未上传，不会随评论发送。")
+        }
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("取消") { dismiss() }
-                    .disabled(isSubmitting)
+                Button("取消") {
+                    if hasChanges {
+                        showDiscardConfirmation = true
+                    } else {
+                        dismiss()
+                    }
+                }
+                .disabled(isSubmitting)
+                .confirmationDialog(
+                    "放弃这条评论吗？",
+                    isPresented: $showDiscardConfirmation,
+                    titleVisibility: .visible
+                ) {
+                    Button("放弃编辑", role: .destructive) { dismiss() }
+                    Button("继续编辑", role: .cancel) {}
+                } message: {
+                    Text("已输入的内容不会被保存。")
+                }
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button {
-                    Task { await submit() }
+                    if pendingImageCount > 0 {
+                        showPendingImagesConfirmation = true
+                    } else {
+                        Task { await submit() }
+                    }
                 } label: {
                     if isSubmitting {
                         ProgressView()
@@ -372,242 +457,42 @@ struct ReplyComposerView: View {
     }
 }
 
-private struct MarkdownComposerEditor: View {
-    private enum Mode: String, CaseIterable, Identifiable {
-        case edit = "编辑"
-        case preview = "预览"
-
-        var id: String { rawValue }
-    }
-
-    @Binding var text: String
-    let characterLimit: Int
-    var previewTitle: String? = nil
-    @State private var mode: Mode = .edit
-    @State private var selection: TextSelection?
-    @FocusState private var isEditorFocused: Bool
-
-    private var previewContent: String {
-        guard let previewTitle,
-            !previewTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        else { return text }
-        return "# \(previewTitle)\n\n\(text)"
-    }
+private struct ComposerErrorLabel: View {
+    let message: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Picker("编辑模式", selection: $mode) {
-                ForEach(Mode.allCases) { mode in
-                    Text(mode.rawValue).tag(mode)
-                }
-            }
-            .pickerStyle(.segmented)
-
-            HStack(spacing: 6) {
-                formattingButton(title: "H1", help: "一级标题", action: .heading(1))
-                formattingButton(title: "H2", help: "二级标题", action: .heading(2))
-                formattingButton(title: "H3", help: "三级标题", action: .heading(3))
-
-                Divider()
-                    .frame(height: 22)
-
-                formattingButton(systemImage: "bold", help: "粗体", action: .bold)
-                formattingButton(systemImage: "italic", help: "斜体", action: .italic)
-                formattingButton(
-                    systemImage: "chevron.left.forwardslash.chevron.right",
-                    help: "代码块",
-                    action: .codeBlock
-                )
-
-                Spacer(minLength: 0)
-            }
-
-            Divider()
-
-            Group {
-                if mode == .edit {
-                    TextEditor(text: $text, selection: $selection)
-                        .focused($isEditorFocused)
-                        .scrollContentBackground(.hidden)
-                        .overlay(alignment: .topLeading) {
-                            if text.isEmpty {
-                                Text("正文支持 Markdown")
-                                    .foregroundStyle(.tertiary)
-                                    .padding(.top, 8)
-                                    .padding(.leading, 5)
-                                    .allowsHitTesting(false)
-                            }
-                        }
-                } else if previewContent.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text("没有内容可预览")
-                        .foregroundStyle(.tertiary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                } else {
-                    ScrollView {
-                        VoleMarkdownView(content: previewContent)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
-            }
-            .frame(minHeight: 250, maxHeight: .infinity)
-
-            HStack {
-                Spacer()
-                Text("\(text.count)/\(characterLimit)")
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    private func applyFormatting(_ action: MarkdownFormattingAction) {
-        let result = MarkdownFormatter.apply(
-            action,
-            to: text,
-            selection: selection
-        )
-        text = result.text
-        selection = result.selection
-        isEditorFocused = true
-    }
-
-    private func formattingButton(
-        title: String? = nil,
-        systemImage: String? = nil,
-        help: String,
-        action: MarkdownFormattingAction
-    ) -> some View {
-        Button {
-            applyFormatting(action)
-        } label: {
-            Group {
-                if let title {
-                    Text(title)
-                        .font(.caption.weight(.semibold).monospaced())
-                } else if let systemImage {
-                    Image(systemName: systemImage)
-                        .font(.system(size: 14, weight: .semibold))
-                }
-            }
-            .frame(width: 36, height: 34)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .help(help)
-        .accessibilityLabel(help)
+        Label(message, systemImage: "exclamationmark.circle.fill")
+            .font(.footnote)
+            .foregroundStyle(.red)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
-private enum MarkdownFormattingAction {
-    case heading(Int)
-    case bold
-    case italic
-    case codeBlock
-}
-
-/// 对纯文本应用 Markdown 格式，返回新文本及格式化后的选区。
-private enum MarkdownFormatter {
-    struct Result {
-        let text: String
-        let selection: TextSelection
-    }
-
-    static func apply(
-        _ action: MarkdownFormattingAction,
-        to text: String,
-        selection: TextSelection?
-    ) -> Result {
-        let range = selectedRange(in: text, selection: selection)
-        switch action {
-        case .heading(let level):
-            return applyHeading(level, to: text, range: range)
-        case .bold:
-            return wrap(text, range: range, opening: "**", closing: "**")
-        case .italic:
-            return wrap(text, range: range, opening: "*", closing: "*")
-        case .codeBlock:
-            return wrap(text, range: range, opening: "```\n", closing: "\n```")
-        }
-    }
-
-    private static func selectedRange(
-        in text: String,
-        selection: TextSelection?
-    ) -> Range<String.Index> {
-        let end = text.endIndex..<text.endIndex
-        guard let selection else { return end }
-
-        let range: Range<String.Index>?
-        switch selection.indices {
-        case .selection(let selected):
-            range = selected
-        case .multiSelection(let selected):
-            range = selected.ranges.first
-        @unknown default:
-            range = nil
-        }
-
-        guard let range, range.upperBound <= text.endIndex else { return end }
-        return range
-    }
-
-    private static func applyHeading(
-        _ level: Int,
-        to text: String,
-        range: Range<String.Index>
-    ) -> Result {
-        var target = range.isEmpty ? text.lineRange(for: range) : range
-        // 行范围包含末尾换行符，排除它以免给下一行空行加标题标记。
-        if !target.isEmpty, text[text.index(before: target.upperBound)] == "\n" {
-            target = target.lowerBound..<text.index(before: target.upperBound)
-        }
-
-        let marker = String(repeating: "#", count: level) + " "
-        let formatted = text[target]
-            .split(separator: "\n", omittingEmptySubsequences: false)
-            .map { line in
-                marker + line.replacing(#/^#{1,6}\s*/#, with: "")
-            }
-            .joined(separator: "\n")
-
-        let start = text.distance(from: text.startIndex, to: target.lowerBound)
-        let newText = text.replacingCharacters(in: target, with: formatted)
-        let cursor = newText.index(
-            newText.startIndex,
-            offsetBy: min(start + marker.count, newText.count)
-        )
-        return Result(text: newText, selection: TextSelection(insertionPoint: cursor))
-    }
-
-    private static func wrap(
-        _ text: String,
-        range: Range<String.Index>,
-        opening: String,
-        closing: String
-    ) -> Result {
-        let selected = String(text[range])
-        let start = text.distance(from: text.startIndex, to: range.lowerBound)
-        let newText = text.replacingCharacters(
-            in: range,
-            with: opening + selected + closing
-        )
-
-        let lower = newText.index(newText.startIndex, offsetBy: start + opening.count)
-        let upper = newText.index(lower, offsetBy: selected.count)
-        return Result(text: newText, selection: TextSelection(range: lower..<upper))
-    }
-}
-
+/// 选择发布节点：未搜索时先列出最近使用和收藏的节点，再列出全部节点。
 private struct NodeSelectionSheet: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var nodeManager = NodeManager.shared
+    @ObservedObject private var favoriteNodeManager = FavoriteNodeManager.shared
+    @AppStorage("composerRecentNodeNames") private var recentNodeNamesStorage = ""
 
+    let selectedNodeName: String
     let onSelect: (Node) -> Void
     @State private var query = ""
 
-    private var filteredNodes: [Node] {
-        guard !query.isEmpty else { return nodeManager.nodes }
-        let keyword = query.lowercased()
+    private static let maxRecentCount = 6
+
+    private var recentNodeNames: [String] {
+        recentNodeNamesStorage.split(separator: ",").map(String.init)
+    }
+
+    private var recentNodes: [Node] {
+        recentNodeNames.compactMap { name in
+            nodeManager.nodes.first { $0.name == name }
+        }
+    }
+
+    private var searchResults: [Node] {
+        let keyword = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         return nodeManager.nodes.filter {
             $0.name.lowercased().contains(keyword)
                 || ($0.title?.lowercased().contains(keyword) ?? false)
@@ -615,25 +500,38 @@ private struct NodeSelectionSheet: View {
     }
 
     var body: some View {
-        List(filteredNodes, id: \.name) { node in
-            Button {
-                onSelect(node)
-                dismiss()
-            } label: {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(node.title ?? node.name)
-                        .foregroundStyle(.primary)
-                    Text(node.name)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+        List {
+            if query.trimmingCharacters(in: .whitespaces).isEmpty {
+                if !recentNodes.isEmpty {
+                    Section("最近使用") {
+                        ForEach(recentNodes, id: \.name, content: row)
+                    }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
+                if !favoriteNodeManager.favoriteNodes.isEmpty {
+                    Section("我的收藏") {
+                        ForEach(favoriteNodeManager.favoriteNodes, id: \.name, content: row)
+                    }
+                }
+                Section("全部节点") {
+                    ForEach(nodeManager.nodes, id: \.name, content: row)
+                }
+            } else {
+                ForEach(searchResults, id: \.name, content: row)
             }
-            .buttonStyle(.plain)
         }
-        .searchable(text: $query, prompt: "搜索节点")
-        .navigationTitle("选择节点")
+        .overlay {
+            if nodeManager.nodes.isEmpty {
+                ProgressView()
+            } else if !query.isEmpty, searchResults.isEmpty {
+                ContentUnavailableView.search(text: query)
+            }
+        }
+        .searchable(
+            text: $query,
+            placement: .navigationBarDrawer(displayMode: .always),
+            prompt: "搜索节点名称"
+        )
+        .navigationTitle("发布到")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -645,5 +543,40 @@ private struct NodeSelectionSheet: View {
                 await nodeManager.refreshNodes(force: false)
             }
         }
+    }
+
+    private func row(_ node: Node) -> some View {
+        Button {
+            rememberRecent(node)
+            onSelect(node)
+            dismiss()
+        } label: {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(node.title ?? node.name)
+                        .foregroundStyle(.primary)
+                    Text(node.name)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer(minLength: 8)
+
+                if node.name == selectedNodeName {
+                    Image(systemName: "checkmark")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Color.accentColor)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(node.name == selectedNodeName ? .isSelected : [])
+    }
+
+    private func rememberRecent(_ node: Node) {
+        var names = recentNodeNames.filter { $0 != node.name }
+        names.insert(node.name, at: 0)
+        recentNodeNamesStorage = names.prefix(Self.maxRecentCount).joined(separator: ",")
     }
 }
