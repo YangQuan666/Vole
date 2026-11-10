@@ -439,18 +439,23 @@ struct DetailView: View {
         .buttonStyle(.plain)
     }
 
-    /// 帖子末尾的互动数据。回复数已显示在评论区标题中，这里不再重复。
+    /// 帖子末尾的互动数据：评论、收藏、感谢。
     @ViewBuilder
     private func topicEngagementMetrics(for topic: Topic) -> some View {
+        // 评论加载后以实际条数为准，避免与列表不一致。
+        let comments = replies?.count ?? topic.replies ?? 0
         let stars = topic.stars ?? 0
         let thanks = topic.thanks ?? 0
 
-        if stars > 0 || thanks > 0 {
+        if comments > 0 || stars > 0 || thanks > 0 {
             VStack(spacing: 10) {
                 Divider()
 
-                // 两项各占一半宽度并居中，像工具栏一样左右平衡。
+                // 各项等宽并居中，像工具栏一样左右平衡。
                 HStack(spacing: 0) {
+                    topicMetric(value: comments, label: "评论", systemImage: "bubble.left")
+                        .frame(maxWidth: .infinity)
+
                     topicMetric(value: stars, label: "收藏", systemImage: "star")
                         .frame(maxWidth: .infinity)
 
@@ -594,14 +599,14 @@ struct DetailView: View {
                 commentsLoadingRow
                     .listRowInsets(commentRowInsets)
             } header: {
-                commentsSectionHeader(count: nil)
+                commentsSectionHeader
             }
         } else if let errorMessage = repliesLoadErrorMessage, replies == nil {
             Section {
                 commentsErrorRow(message: errorMessage, topicId: topic.id)
                     .listRowInsets(commentRowInsets)
             } header: {
-                commentsSectionHeader(count: nil)
+                commentsSectionHeader
             }
         } else if let replies = visibleReplyItems {
             if replies.isEmpty {
@@ -609,7 +614,7 @@ struct DetailView: View {
                     commentsEmptyRow
                         .listRowInsets(commentRowInsets)
                 } header: {
-                    commentsSectionHeader(count: 0)
+                    commentsSectionHeader
                 }
             } else {
                 Section {
@@ -649,26 +654,28 @@ struct DetailView: View {
                             edge: .trailing,
                             allowsFullSwipe: true
                         ) {
+                            // 三个操作各用一种固定颜色，且避开主题色可选项，
+                            // 无论用户选择哪种主题色都不会撞色。
                             Button {
                                 beginReply(to: reply.member)
                             } label: {
                                 Label("回复", systemImage: "arrowshape.turn.up.left")
                             }
-                            .tint(.accentColor)
+                            .tint(.indigo)
 
                             Button {
                                 presentAuthor(reply.member.username, from: reply.id)
                             } label: {
                                 Label("只看TA", systemImage: "person.text.rectangle")
                             }
-                            .tint(.blue)
+                            .tint(.teal)
 
                             Button {
                                 copyReplyContent(reply.content)
                             } label: {
                                 Label("复制", systemImage: "doc.on.doc")
                             }
-                            .tint(.accentColor)
+                            .tint(.gray)
                         }
                         .listRowInsets(
                             commentRowInsets
@@ -676,47 +683,36 @@ struct DetailView: View {
                         .id(replyScrollID(reply.id))
                     }
                 } header: {
-                    commentsSectionHeader(count: replies.count)
+                    commentsSectionHeader
                 }
             }
         }
     }
 
-    private func commentsSectionHeader(count: Int?) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "bubble.left.and.bubble.right.fill")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Color.accentColor)
-
+    /// 评论区标题：左侧为分区标题，右侧为写评论按钮。评论数显示在帖子底部的统计栏中。
+    private var commentsSectionHeader: some View {
+        HStack(alignment: .center) {
+            // 分区标题默认为次要颜色，这里明确使用主要文字颜色。
             Text("评论")
-                .font(.headline)
-                .foregroundStyle(.primary)
-
-            if let count {
-                Text(count.formattedCount)
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(Color.accentColor)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 4)
-                    .background(
-                        Capsule()
-                            .fill(Color.accentColor.opacity(0.12))
-                    )
-            }
+                .font(.title3.weight(.bold))
+                .foregroundStyle(Color.primary)
+                .accessibilityAddTraits(.isHeader)
 
             Spacer(minLength: 8)
 
             Button {
                 beginReply()
             } label: {
-                Label("评论", systemImage: "square.and.pencil")
-                    .font(.subheadline.weight(.medium))
+                Label("写评论", systemImage: "square.and.pencil")
+                    .font(.subheadline.weight(.semibold))
             }
-            .buttonStyle(.borderless)
-            .accessibilityLabel("评论主题")
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.capsule)
+            .controlSize(.small)
         }
         .textCase(nil)
-        .padding(.top, 4)
+        .padding(.top, 8)
+        .padding(.bottom, 4)
     }
 
     private var commentsLoadingRow: some View {
