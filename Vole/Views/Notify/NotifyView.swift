@@ -8,8 +8,8 @@
 import SwiftUI
 
 struct NotifyView: View {
-    @State private var showProfile = false
     @State private var showAlert = false
+    @State private var notificationFilter = NotificationFilter.all
     @ObservedObject private var userManager = UserManager.shared
     @ObservedObject private var notifyManager = NotifyManager.shared
     @EnvironmentObject var navManager: NavigationManager
@@ -39,21 +39,24 @@ struct NotifyView: View {
                     }
                 }
                 .toolbar {
-                    if notifyManager.unreadCount > 0 {
+                    if isLoggedIn && notifyManager.unreadCount > 0 {
                         ToolbarItem {
                             Button {
                                 showAlert = true
                             } label: {
                                 Image(systemName: "tray.and.arrow.down")
                             }
-                        }
-                        if #available(iOS 26.0, *) {
-                            ToolbarSpacer(.fixed)
+                            .accessibilityLabel("全部已读")
                         }
                     }
-                    ToolbarItem {
-                        AvatarView {
-                            showProfile = true
+                    if #available(iOS 26.0, *), isLoggedIn,
+                        notifyManager.unreadCount > 0
+                    {
+                        ToolbarSpacer(.fixed)
+                    }
+                    if isLoggedIn {
+                        ToolbarItem {
+                            notificationFilterMenu
                         }
                     }
                 }
@@ -63,9 +66,36 @@ struct NotifyView: View {
                     }
                     Button("取消", role: .cancel) {}
                 }
-                .sheet(isPresented: $showProfile) {
-                    ProfileView()
+        }
+    }
+
+    private var notificationFilterMenu: some View {
+        Menu {
+            Picker("通知筛选", selection: $notificationFilter) {
+                ForEach(NotificationFilter.allCases) { filter in
+                    Label(filter.title, systemImage: filter.symbol)
+                        .tag(filter)
                 }
+            }
+        } label: {
+            Image(
+                systemName: notificationFilter == .all
+                    ? "line.3.horizontal.decrease.circle"
+                    : "line.3.horizontal.decrease.circle.fill"
+            )
+        }
+        .accessibilityLabel("筛选通知")
+        .accessibilityValue(notificationFilter.title)
+    }
+
+    private var filteredNotifications: [Notification] {
+        switch notificationFilter {
+        case .all:
+            notifyManager.notifications
+        case .unread:
+            notifyManager.notifications.filter { !notifyManager.isRead($0.id) }
+        case .read:
+            notifyManager.notifications.filter { notifyManager.isRead($0.id) }
         }
     }
 
@@ -85,13 +115,22 @@ struct NotifyView: View {
     private var notificationList: some View {
         // 使用 List 承载通知卡片，行内的 swipeActions 才能生效。
         List {
-            ForEach(notifyManager.notifications, id: \.id) { item in
+            if filteredNotifications.isEmpty,
+                !notifyManager.notifications.isEmpty
+            {
+                filteredEmptyRow
+                    .notificationListRow()
+            }
+
+            ForEach(filteredNotifications, id: \.id) { item in
                 NotifyRowView(item: item) { topicId in
                     navManager.notifyPath.append(Route.topicId(topicId))
                 }
                 .notificationListRow()
                 .onAppear {
-                    if item.id == notifyManager.notifications.last?.id {
+                    if notificationFilter == .all,
+                        item.id == notifyManager.notifications.last?.id
+                    {
                         Task {
                             await notifyManager.loadNextPage()
                         }
@@ -119,6 +158,18 @@ struct NotifyView: View {
             listStateOverlay
         }
         .animation(.snappy, value: notifyManager.hasPendingRefresh)
+    }
+
+    private var filteredEmptyRow: some View {
+        ContentUnavailableView(
+            notificationFilter.emptyTitle,
+            systemImage: notificationFilter.symbol,
+            description: Text(
+                notifyManager.hasNextPage
+                    ? "当前已加载通知中没有匹配项。"
+                    : "当前没有符合条件的通知。"
+            )
+        )
     }
 
     @ViewBuilder
@@ -161,15 +212,33 @@ struct NotifyView: View {
     @ViewBuilder
     private var footerView: some View {
         if notifyManager.hasNextPage {
-            HStack(spacing: 10) {
-                ProgressView()
-                    .controlSize(.small)
-                Text("正在加载更多通知…")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+            if notificationFilter == .all {
+                HStack(spacing: 10) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("正在加载更多通知…")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.vertical, 12)
+            } else {
+                Button {
+                    Task {
+                        await notifyManager.loadNextPage()
+                    }
+                } label: {
+                    if notifyManager.isLoading {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Label("加载更多通知", systemImage: "arrow.down")
+                    }
+                }
+                .disabled(notifyManager.isLoading)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.vertical, 12)
             }
-            .frame(maxWidth: .infinity, alignment: .center)
-            .padding(.vertical, 12)
         } else if notifyManager.totalCount > 0 {
             Text("已加载全部 \(notifyManager.totalCount) 条通知")
                 .font(.footnote)
@@ -212,6 +281,38 @@ struct NotifyView: View {
             return "有 \(notifyManager.pendingNewCount) 条新通知，点击更新"
         }
         return "有新通知，点击更新"
+    }
+}
+
+private enum NotificationFilter: String, CaseIterable, Identifiable {
+    case all
+    case unread
+    case read
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .all: "全部"
+        case .unread: "未读"
+        case .read: "已读"
+        }
+    }
+
+    var emptyTitle: String {
+        switch self {
+        case .all: "还没有通知"
+        case .unread: "没有未读通知"
+        case .read: "没有已读通知"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .all: "tray.full"
+        case .unread: "envelope.badge"
+        case .read: "envelope.open"
+        }
     }
 }
 
