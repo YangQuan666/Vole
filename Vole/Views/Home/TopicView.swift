@@ -224,9 +224,18 @@ struct TopicRow: View {
         return summary
     }
 
-    /// 节点：与主题详情页共用 NodeTag 样式
+    /// 节点作为主题元信息展示，不使用按钮或标签背景。
     private func nodeLabel(_ title: String) -> some View {
-        NodeTag(title: title)
+        HStack(spacing: 4) {
+            Image(systemName: "square.stack.3d.up")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
     }
 
     private func topicMetric(
