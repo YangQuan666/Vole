@@ -145,6 +145,7 @@ struct CreateTopicView: View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 8) {
                 nodeChip
+                    .padding(.bottom, 8)
 
                 TextField("标题", text: titleBinding, axis: .vertical)
                     .font(.title2.weight(.bold))
@@ -163,8 +164,8 @@ struct CreateTopicView: View {
                 }
             }
             .padding(.horizontal, 20)
-            .padding(.top, 12)
-            .padding(.bottom, 10)
+            .padding(.top, 16)
+            .padding(.bottom, 14)
 
             Divider()
                 .padding(.horizontal, 20)
