@@ -156,6 +156,7 @@ struct ReplyThreadOverlay<Card: View>: View {
     private func threadCard(_ item: ReplyConversationItem, index: Int) -> some View {
         let id = item.reply.id
         let isVisible = isRevealed || id == flyingReplyID
+        let isCurrent = id == heroReplyID
 
         return card(item)
             .frame(width: contentWidth)
@@ -171,14 +172,13 @@ struct ReplyThreadOverlay<Card: View>: View {
             .onDisappear { cardFrames.frames[id] = nil }
             .background {
                 // 气泡向外延伸，使回复内容与列表中的回复等宽。
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(Color(.secondarySystemGroupedBackground))
+                bubble(isCurrent: isCurrent)
                     .padding(.horizontal, contentWidth == nil ? 0 : -12)
                     .opacity(isRevealed ? 1 : 0)
             }
             .contentShape(Rectangle())
             .onTapGesture { onSelect(item) }
-            .accessibilityAddTraits(.isButton)
+            .accessibilityAddTraits(isCurrent ? [.isButton, .isSelected] : .isButton)
             .accessibilityHint("返回第 \(item.floor + 1) 楼")
             .offset(offsets[id] ?? .zero)
             .opacity(isVisible ? 1 : 0)
@@ -187,6 +187,19 @@ struct ReplyThreadOverlay<Card: View>: View {
             .animation(cardAnimation(index: index, isFlying: id == flyingReplyID), value: isRevealed)
             .zIndex(id == flyingReplyID ? 1 : 0)
             .id(id)
+    }
+
+    /// 当前点按的回复以主题色浅底和描边突出显示。
+    private func bubble(isCurrent: Bool) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
+        return shape
+            .fill(Color(.secondarySystemGroupedBackground))
+            .overlay {
+                if isCurrent {
+                    shape.fill(Color.accentColor.opacity(0.12))
+                    shape.strokeBorder(Color.accentColor.opacity(0.45), lineWidth: 1.5)
+                }
+            }
     }
 
     /// 打开时其余回复依次出现；浮起的回复和关闭动画不加延迟。
