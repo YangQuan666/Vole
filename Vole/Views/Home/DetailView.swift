@@ -23,6 +23,11 @@ struct DetailView: View {
     @State private var selectedConversation: ReplyConversation?
     @State private var selectedConversationReplyId: Int?
     @State private var selectedAuthor: String?
+    /// 浮层中从列表浮起的回复。
+    @State private var threadHeroReplyID: Int?
+    /// 浮起到浮层、在列表中暂时隐藏的回复。
+    @State private var threadState = ReplyThreadState()
+    @State private var replyFrames = ReplyFrameStore()
     @State private var conversationIndex = ReplyConversationIndex.empty
     @State private var selectedUser: Member?
     @State private var showBlockTopicAlert = false
@@ -160,26 +165,26 @@ struct DetailView: View {
                         }
 
                         if let selectedConversation {
-                            replyCollectionOverlay(
+                            replyThreadOverlay(
                                 title: "对话",
                                 subtitle: conversationSubtitle(selectedConversation),
                                 systemImage: "bubble.left.and.bubble.right.fill",
                                 items: selectedConversation.items,
                                 topic: topic,
-                                selectedReplyId: selectedConversationReplyId,
                                 scrollProxy: scrollProxy
                             )
+                            .id(selectedConversation.id)
                         } else if let selectedAuthor {
                             let items = authorReplyItems(for: selectedAuthor)
-                            replyCollectionOverlay(
+                            replyThreadOverlay(
                                 title: "只看 \(selectedAuthor)",
                                 subtitle: "\(items.count.formattedCount) 条评论",
                                 systemImage: "person.text.rectangle",
                                 items: items,
                                 topic: topic,
-                                selectedReplyId: nil,
                                 scrollProxy: scrollProxy
                             )
+                            .id(selectedAuthor)
                         }
                     }
                 }
@@ -292,6 +297,12 @@ struct DetailView: View {
             Button("好", role: .cancel) {}
         } message: {
             Text(reportResultMessage ?? "")
+        }
+        .onChange(of: isCommentOverlayPresented) { _, isPresented in
+            // 浮层被直接移除（如屏蔽用户后对话消失）时，恢复列表中隐藏的回复。
+            if !isPresented {
+                resetReplyThreadState()
+            }
         }
         .onChange(of: blockManager.blockedUsernames) { _, _ in
             rebuildConversationCacheFromCurrentReplies()
@@ -603,6 +614,14 @@ struct DetailView: View {
                             showsConversationIndicator: hasConversation,
                             onMentionTap: showMember(named:)
                         )
+                        .equatable()
+                        .onGeometryChange(for: CGRect.self) { proxy in
+                            proxy.frame(in: .global)
+                        } action: { frame in
+                            replyFrames.frames[reply.id] = frame
+                        }
+                        .onDisappear { replyFrames.frames[reply.id] = nil }
+                        .replyLiftHidden(reply.id, state: threadState)
                         .contentShape(Rectangle())
                         .onTapGesture {
                             if hasConversation, let conversation {
@@ -624,7 +643,7 @@ struct DetailView: View {
                             .tint(.accentColor)
 
                             Button {
-                                presentAuthor(reply.member.username)
+                                presentAuthor(reply.member.username, from: reply.id)
                             } label: {
                                 Label("只看TA", systemImage: "person.text.rectangle")
                             }
@@ -758,19 +777,18 @@ struct DetailView: View {
         _ conversation: ReplyConversation,
         selectedReplyId: Int
     ) {
-        withAnimation(.spring(dampingFraction: 0.6)) {
-            selectedAuthor = nil
-            selectedConversationReplyId = selectedReplyId
-            selectedConversation = conversation
-        }
+        guard !isCommentOverlayPresented else { return }
+        threadState.closeRequest = nil
+        threadHeroReplyID = selectedReplyId
+        selectedConversationReplyId = selectedReplyId
+        selectedConversation = conversation
     }
 
-    private func presentAuthor(_ username: String) {
-        withAnimation(.spring(dampingFraction: 0.6)) {
-            selectedConversation = nil
-            selectedConversationReplyId = nil
-            selectedAuthor = username
-        }
+    private func presentAuthor(_ username: String, from replyId: Int) {
+        guard !isCommentOverlayPresented else { return }
+        threadState.closeRequest = nil
+        threadHeroReplyID = replyId
+        selectedAuthor = username
     }
 
     private func beginReply(to member: Member? = nil) {
@@ -786,71 +804,52 @@ struct DetailView: View {
         "reply-\(replyId)"
     }
 
-    // 评论集合浮层
-    @ViewBuilder
-    private func replyCollectionOverlay(
+    // 评论浮层：仿 iMessage 回复线程，回复从列表浮起并在关闭时落回
+    private func replyThreadOverlay(
         title: String,
         subtitle: String,
         systemImage: String,
         items: [ReplyConversationItem],
         topic: Topic,
-        selectedReplyId: Int?,
         scrollProxy: ScrollViewProxy
     ) -> some View {
-        ZStack {
-            Rectangle()
-                .fill(.ultraThinMaterial)
-                .ignoresSafeArea()
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    dismissCommentOverlay()
-                }
+        let heroReplyID = threadHeroReplyID
+        let contentWidth = heroReplyID.flatMap { replyFrames.frames[$0]?.width }
+            ?? replyFrames.frames.values.first?.width
 
-            GeometryReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 12) {
-                        replyCollectionHeader(
-                            title: title,
-                            subtitle: subtitle,
-                            systemImage: systemImage
-                        )
-
-                        ForEach(
-                            items,
-                            id: \.id
-                        ) { item in
-                            replyOverlayCard(
-                                item,
-                                topic: topic,
-                                isSelected: item.reply.id == selectedReplyId
-                            ) {
-                                closeCommentOverlayAndScroll(
-                                    to: item,
-                                    scrollProxy: scrollProxy
-                                )
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 18)
-                    .padding(.bottom, 24)
-                    .frame(
-                        maxWidth: .infinity,
-                        minHeight: proxy.size.height,
-                        alignment: .top
-                    )
-                    .background {
-                        Color.clear
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                dismissCommentOverlay()
-                            }
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        return ReplyThreadOverlay(
+            title: title,
+            subtitle: subtitle,
+            systemImage: systemImage,
+            items: items,
+            heroReplyID: heroReplyID,
+            contentWidth: contentWidth,
+            rowFrames: replyFrames,
+            threadState: threadState,
+            onSelect: { item in
+                closeCommentOverlayAndScroll(to: item, scrollProxy: scrollProxy)
+            },
+            onLift: { replyId in
+                threadState.liftedReplyID = replyId
+            },
+            onClosed: {
+                selectedConversation = nil
+                selectedAuthor = nil
+                resetReplyThreadState()
             }
+        ) { item in
+            ReplyRowView(
+                path: $path,
+                topic: topic,
+                reply: item.reply,
+                floor: item.floor,
+                showsConversationIndicator: conversationIndex
+                    .conversation(containing: item.reply.id)?
+                    .hasMultipleReplies == true,
+                onMentionTap: showMember(named:)
+            )
+            .equatable()
         }
-        .transition(.opacity)
         .zIndex(1)
     }
 
@@ -861,69 +860,6 @@ struct DetailView: View {
             Image(systemName: "xmark")
         }
         .accessibilityLabel("关闭浮层")
-    }
-
-    private func replyCollectionHeader(
-        title: String,
-        subtitle: String,
-        systemImage: String
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 8) {
-                Image(systemName: systemImage)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.accentColor)
-
-                Text(title)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-            }
-
-            Text(subtitle)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 2)
-        .padding(.vertical, 4)
-    }
-
-    private func replyOverlayCard(
-        _ item: ReplyConversationItem,
-        topic: Topic,
-        isSelected: Bool,
-        onSelect: @escaping () -> Void
-    ) -> some View {
-        ReplyRowView(
-            path: $path,
-            topic: topic,
-            reply: item.reply,
-            floor: item.floor,
-            showsConversationIndicator: false,
-            onMentionTap: showMember(named:)
-        )
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(
-                    isSelected
-                        ? Color.accentColor.opacity(0.10)
-                        : Color(.secondarySystemGroupedBackground).opacity(0.82)
-                )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(
-                    isSelected
-                        ? Color.accentColor.opacity(0.42)
-                        : Color.white.opacity(0.08),
-                    lineWidth: isSelected ? 1.5 : 1
-                )
-        )
-        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .onTapGesture(perform: onSelect)
-        .accessibilityHint("返回第 \(item.floor + 1) 楼")
     }
 
     private func conversationSubtitle(_ conversation: ReplyConversation) -> String {
@@ -939,25 +875,26 @@ struct DetailView: View {
     }
 
     private func dismissCommentOverlay() {
-        withAnimation(.easeOut(duration: 0.16)) {
-            selectedConversation = nil
-            selectedConversationReplyId = nil
-            selectedAuthor = nil
-        }
+        guard threadState.closeRequest == nil else { return }
+        threadState.closeRequest = .dismiss
+    }
+
+    private func resetReplyThreadState() {
+        selectedConversationReplyId = nil
+        threadHeroReplyID = nil
+        threadState.liftedReplyID = nil
+        // closeRequest 留到下次打开时再清除：浮层移除前修改它会让浮层多渲染一次。
     }
 
     private func closeCommentOverlayAndScroll(
         to item: ReplyConversationItem,
         scrollProxy: ScrollViewProxy
     ) {
-        let targetID = replyScrollID(item.reply.id)
-
-        dismissCommentOverlay()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
-            withAnimation(.easeInOut(duration: 0.26)) {
-                scrollProxy.scrollTo(targetID, anchor: .center)
-            }
-        }
+        guard threadState.closeRequest == nil else { return }
+        // 在模糊背景下先把列表滚动到目标楼层，回复再从浮层落回该位置。
+        threadState.liftedReplyID = item.reply.id
+        scrollProxy.scrollTo(replyScrollID(item.reply.id), anchor: .center)
+        threadState.closeRequest = .jump(to: item.reply.id)
     }
 
     @ViewBuilder
