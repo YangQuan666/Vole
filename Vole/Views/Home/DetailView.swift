@@ -420,21 +420,7 @@ struct DetailView: View {
                 path.append(Route.node(node))
             }
         } label: {
-            HStack(spacing: 5) {
-                Image(systemName: "square.stack.3d.up")
-                    .imageScale(.small)
-
-                Text(node.title ?? node.name)
-                    .lineLimit(1)
-            }
-            .font(.caption.weight(.medium))
-            .foregroundStyle(Color.accentColor)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(
-                Capsule()
-                    .fill(Color.accentColor.opacity(0.12))
-            )
+            NodeTag(node: node)
         }
         .buttonStyle(.plain)
     }

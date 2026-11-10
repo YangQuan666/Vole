@@ -89,6 +89,7 @@ struct TopicRow: View {
         }
     }
 
+    /// 元信息行：左侧作者 · 时间，右侧节点。
     /// 固定布局，避免行高随文字长度变化导致滚动时跳动。
     /// 默认单行：空间不足时先截断节点名，再截断作者名，时间始终完整显示；
     /// 仅在辅助功能字号下改为竖排（只取决于字号设置，滚动中不会切换）。
@@ -99,7 +100,7 @@ struct TopicRow: View {
                 authorAndTime
 
                 if let nodeTitle {
-                    nodeBadge(nodeTitle)
+                    nodeLabel(nodeTitle)
                 }
             }
         } else {
@@ -110,10 +111,16 @@ struct TopicRow: View {
                 Spacer(minLength: 8)
 
                 if let nodeTitle {
-                    nodeBadge(nodeTitle)
+                    nodeLabel(nodeTitle)
                 }
             }
         }
+    }
+
+    private var metaSeparator: some View {
+        Text("·")
+            .font(.caption)
+            .foregroundStyle(.tertiary)
     }
 
     @ViewBuilder
@@ -126,10 +133,7 @@ struct TopicRow: View {
                     .lineLimit(1)
 
                 if topic.created != nil {
-                    Text("·")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-
+                    metaSeparator
                     topicCreatedTime
                 }
             }
@@ -220,17 +224,9 @@ struct TopicRow: View {
         return summary
     }
 
-    private func nodeBadge(_ title: String) -> some View {
-        Text(title)
-            .font(.caption.weight(.medium))
-            .foregroundStyle(Color.accentColor)
-            .lineLimit(1)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(
-                Capsule()
-                    .fill(Color.accentColor.opacity(0.12))
-            )
+    /// 节点：与主题详情页共用 NodeTag 样式
+    private func nodeLabel(_ title: String) -> some View {
+        NodeTag(title: title)
     }
 
     private func topicMetric(
