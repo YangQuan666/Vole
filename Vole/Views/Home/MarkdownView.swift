@@ -112,6 +112,8 @@ struct VoleMarkdownView: View {
                 .link(VoleMarkdownLinkRenderer(), urlScheme: "https")
             )
             .markdownCodeBlockStyle(CompactMarkdownCodeBlockStyle())
+            // 引用使用中性灰色，主题色留给链接、附言等可交互或结构性元素。
+            .tint(Color.secondary, for: .blockQuote)
             .markdownTableStyle(HorizontalScrollableMarkdownTableStyle())
             .font(.headline.weight(.semibold), for: .h1)
             .font(.headline.weight(.semibold), for: .h2)

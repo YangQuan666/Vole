@@ -80,8 +80,6 @@ struct DetailView: View {
                                         topicTitleButton(title, urlString: topic.url)
                                     }
 
-                                    topicEngagementMetrics(for: topic)
-
                                     if let content = topic.content, !content.isEmpty {
                                         VStack(alignment: .leading, spacing: 12) {
                                             if content.isLikelyHTML {
@@ -100,6 +98,10 @@ struct DetailView: View {
                                             )
                                         }
                                     }
+
+                                    topicSupplements(for: topic)
+
+                                    topicEngagementMetrics(for: topic)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .listRowInsets(
@@ -112,32 +114,6 @@ struct DetailView: View {
                                 )
                             }
 
-                            if let supplements = topic.supplements,
-                                !supplements.isEmpty
-                            {
-                                ForEach(supplements.indices, id: \.self) {
-                                    idx in
-                                    let supplement = supplements[idx]
-                                    Section(
-                                        header: HStack {
-                                            Text("第 \(idx + 1)条附言")
-                                            if let created = supplement.created {
-                                                RelativeTimeText(timestamp: created)
-                                                    .font(.caption)
-                                                    .foregroundStyle(.secondary)
-                                            }
-                                        }
-                                    ) {
-                                        VStack(alignment: .leading, spacing: 8) {
-                                            VoleMarkdownView(
-                                                content: supplement.content ?? "",
-                                                onMentionsChanged: nil,
-                                                onLinkAction: handleMarkdownLinkAction
-                                            )
-                                        }
-                                    }
-                                }
-                            }
                             commentsSection(for: topic)
 
                         }
@@ -463,59 +439,97 @@ struct DetailView: View {
         .buttonStyle(.plain)
     }
 
+    /// 帖子末尾的互动数据。回复数已显示在评论区标题中，这里不再重复。
     @ViewBuilder
     private func topicEngagementMetrics(for topic: Topic) -> some View {
-        if (topic.stars ?? 0) > 0 || (topic.thanks ?? 0) > 0
-            || (topic.replies ?? 0) > 0
-        {
-            HStack(spacing: 14) {
-                if let stars = topic.stars, stars > 0 {
-                    topicMetric(
-                        value: stars,
-                        label: "收藏",
-                        systemImage: "star",
-                        tint: .secondary
-                    )
-                }
+        let stars = topic.stars ?? 0
+        let thanks = topic.thanks ?? 0
 
-                if let thanks = topic.thanks, thanks > 0 {
-                    topicMetric(
-                        value: thanks,
-                        label: "感谢",
-                        systemImage: "heart",
-                        tint: .secondary
-                    )
-                }
+        if stars > 0 || thanks > 0 {
+            VStack(spacing: 10) {
+                Divider()
 
-                if let replies = topic.replies, replies > 0 {
-                    topicMetric(
-                        value: replies,
-                        label: "回复",
-                        systemImage: "ellipsis.bubble.fill",
-                        tint: .blue
-                    )
+                // 两项各占一半宽度并居中，像工具栏一样左右平衡。
+                HStack(spacing: 0) {
+                    topicMetric(value: stars, label: "收藏", systemImage: "star")
+                        .frame(maxWidth: .infinity)
+
+                    topicMetric(value: thanks, label: "感谢", systemImage: "heart")
+                        .frame(maxWidth: .infinity)
                 }
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .accessibilityElement(children: .combine)
             }
+            .padding(.top, 2)
         }
     }
 
     private func topicMetric(
         value: Int,
         label: String,
-        systemImage: String,
-        tint: Color
+        systemImage: String
     ) -> some View {
-        HStack(spacing: 4) {
+        Label {
+            Text("\(value.formattedCount) \(label)")
+                .monospacedDigit()
+        } icon: {
             Image(systemName: systemImage)
-                .foregroundStyle(tint)
-
-            Text(value.formattedCount)
-                .fontWeight(.semibold)
-
-            Text(label)
         }
-        .font(.caption)
-        .foregroundStyle(.secondary)
+        .labelStyle(.titleAndIcon)
+    }
+
+    /// 附言并入帖子卡片，接在正文之后，左侧以主题色竖线标示。
+    /// Markdown 引用的竖线为灰色，两者以颜色区分。
+    @ViewBuilder
+    private func topicSupplements(for topic: Topic) -> some View {
+        let supplements = (topic.supplements ?? []).filter {
+            !($0.content ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+
+        if !supplements.isEmpty {
+            VStack(alignment: .leading, spacing: 16) {
+                ForEach(Array(supplements.enumerated()), id: \.element.id) { index, supplement in
+                    supplementBlock(
+                        supplement,
+                        title: supplements.count > 1 ? "附言 \(index + 1)" : "附言"
+                    )
+                }
+            }
+            .padding(.top, 4)
+        }
+    }
+
+    private func supplementBlock(_ supplement: Supplement, title: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Text(title)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color.accentColor)
+
+                if let created = supplement.created {
+                    Text("·")
+                        .foregroundStyle(.tertiary)
+                    RelativeTimeText(timestamp: created)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .font(.footnote)
+            .accessibilityElement(children: .combine)
+
+            VoleMarkdownView(
+                content: supplement.content ?? "",
+                onMentionsChanged: nil,
+                onLinkAction: handleMarkdownLinkAction
+            )
+        }
+        .padding(.leading, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(alignment: .leading) {
+            Capsule()
+                .fill(Color.accentColor.opacity(0.4))
+                .frame(width: 3)
+        }
     }
 
     private func topicTitleButton(_ title: String, urlString: String?) -> some View {
