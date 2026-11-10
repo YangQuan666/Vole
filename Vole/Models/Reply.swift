@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct Reply: Identifiable, Decodable, Hashable {
+public struct Reply: Identifiable, Decodable, Hashable, Sendable {
 
     public let id: Int
     public let content: String

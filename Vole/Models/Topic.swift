@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct Topic: Identifiable, Decodable, Hashable {
+public struct Topic: Identifiable, Decodable, Hashable, Sendable {
     public let id: Int
     public var node: Node?
     public let member: Member?
@@ -36,7 +36,7 @@ public struct Topic: Identifiable, Decodable, Hashable {
     }
 }
 
-public struct Supplement: Identifiable, Decodable, Hashable {
+public struct Supplement: Identifiable, Decodable, Hashable, Sendable {
     public let id: Int
     public let content: String?
     public let contentRendered: String?

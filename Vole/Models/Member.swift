@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct Member: Identifiable, Decodable, Encodable, Hashable {
+public struct Member: Identifiable, Decodable, Encodable, Hashable, Sendable {
     public var id: Int?
     public var username: String
     public var url: String?
