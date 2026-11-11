@@ -23,9 +23,9 @@ enum LinkAction {
 
 struct VoleMarkdownView: View {
     @State var content: String
-    @State private var quickLookURLs: [URL] = []
-    @State private var selectedQuickLookURL: URL?
-    @State private var isPreparingImagePreview = false
+    /// 引用类型，body 不读取其中的属性，打开和关闭预览时不会重新渲染整段内容。
+    @State private var imagePreview = MarkdownImagePreviewState()
+    @Environment(\.openURL) private var openURL
 
     var onMentionsChanged: (([String]) -> Void)?
     var onLinkAction: ((LinkAction) -> Void)?  // 统一处理链接事件
@@ -51,14 +51,9 @@ struct VoleMarkdownView: View {
                 }
             }
         }
-        .overlay {
-            if isPreparingImagePreview {
-                ProgressView()
-                    .padding(14)
-                    .background(.regularMaterial, in: Circle())
-            }
+        .background {
+            MarkdownImagePreviewHost(state: imagePreview)
         }
-        .quickLookPreview($selectedQuickLookURL, in: quickLookURLs)
         .task(id: content) { @MainActor in
             onMentionsChanged?(renderedBlocks.mentions)
         }
@@ -145,49 +140,31 @@ struct VoleMarkdownView: View {
         return .systemActionPreferringInApp(url)
     }
 
+    /// 系统预览只能打开本地文件。被点击的图片必要时会下载；
+    /// 同一内容中的其他图片只在本地已有缓存时加入，便于左右滑动查看，不额外下载。
     @MainActor
-    private func openImagePreview(
-        url: URL,
-        image: KFCrossPlatformImage?,
-        sourceData: Data?,
-        imageURLs: [URL]
-    ) {
+    private func openImagePreview(url: URL, imageURLs: [URL]) async {
         let urls = normalizedImageURLs(selected: url, imageURLs: imageURLs)
-        isPreparingImagePreview = MarkdownQuickLookImageExporter.cachedFileURL(for: url) == nil
-
-        Task(priority: .userInitiated) {
-            do {
-                let fileURL = try await MarkdownQuickLookImageExporter.fileURL(
-                    for: url,
-                    image: image,
-                    sourceData: sourceData
-                )
-
-                await MainActor.run {
-                    quickLookURLs = [fileURL]
-                    selectedQuickLookURL = fileURL
-                    isPreparingImagePreview = false
-                }
-
-                let allFileURLs = try await MarkdownQuickLookImageExporter.fileURLs(
-                    for: urls,
-                    preferredImage: image,
-                    preferredData: sourceData,
-                    preferredURL: url
-                )
-
-                await MainActor.run {
-                    quickLookURLs = allFileURLs
-                    selectedQuickLookURL = fileURL
-                }
-            } catch {
-                await MainActor.run {
-                    isPreparingImagePreview = false
-                    if UIApplication.shared.canOpenURL(url) {
-                        UIApplication.shared.open(url)
-                    }
+        do {
+            let fileURL = try await MarkdownImagePreviewFiles.fileURL(for: url, allowsDownload: true)
+            var fileURLs: [URL] = []
+            for imageURL in urls {
+                if imageURL == url {
+                    fileURLs.append(fileURL)
+                } else if let cached = try? await MarkdownImagePreviewFiles.fileURL(
+                    for: imageURL,
+                    allowsDownload: false
+                ) {
+                    fileURLs.append(cached)
                 }
             }
+            try Task.checkCancellation()
+            imagePreview.urls = fileURLs
+            imagePreview.selection = fileURL
+        } catch is CancellationError {
+            return
+        } catch {
+            openURL.openPreferringInApp(url)
         }
     }
 
@@ -199,6 +176,23 @@ struct VoleMarkdownView: View {
 
         var seenURLs = Set<URL>()
         return urls.filter { seenURLs.insert($0).inserted }
+    }
+}
+
+/// 查看大图的展示状态。
+@Observable
+private final class MarkdownImagePreviewState {
+    var urls: [URL] = []
+    var selection: URL?
+}
+
+/// 只有这个视图读取预览状态并负责弹出系统预览。
+private struct MarkdownImagePreviewHost: View {
+    @Bindable var state: MarkdownImagePreviewState
+
+    var body: some View {
+        Color.clear
+            .quickLookPreview($state.selection, in: state.urls)
     }
 }
 
@@ -810,7 +804,7 @@ private enum MarkdownLinkPreviewLoader {
 
 private struct TappableMarkdownImageRenderer: MarkdownImageRenderer {
     let imageURLs: [URL]
-    var openImagePreview: @MainActor (URL, KFCrossPlatformImage?, Data?, [URL]) -> Void
+    var openImagePreview: @MainActor (URL, [URL]) async -> Void
 
     func makeBody(configuration: Configuration) -> some View {
         TappableMarkdownImage(
@@ -824,21 +818,16 @@ private struct TappableMarkdownImageRenderer: MarkdownImageRenderer {
 private struct TappableMarkdownImage: View {
     let url: URL
     let imageURLs: [URL]
-    var openImagePreview: @MainActor (URL, KFCrossPlatformImage?, Data?, [URL]) -> Void
+    var openImagePreview: @MainActor (URL, [URL]) async -> Void
     @State private var imageSize: CGSize?
-    @State private var previewImage: KFCrossPlatformImage?
-    @State private var previewData: Data?
-    @State private var containerWidth: CGFloat = 0
+    /// 准备状态由每张图片自己保存，点击时只刷新这一张，不触发整段内容重新渲染。
+    @State private var previewTask: Task<Void, Never>?
+    @State private var showsPreparingIndicator = false
 
     init(
         url: URL,
         imageURLs: [URL],
-        openImagePreview: @escaping @MainActor (
-            URL,
-            KFCrossPlatformImage?,
-            Data?,
-            [URL]
-        ) -> Void
+        openImagePreview: @escaping @MainActor (URL, [URL]) async -> Void
     ) {
         self.url = url
         self.imageURLs = imageURLs
@@ -848,46 +837,58 @@ private struct TappableMarkdownImage: View {
         )
     }
 
-    private func displaySize(maxWidth: CGFloat) -> CGSize {
-        // 尚未拿到图片尺寸或容器宽度时，先占用一个小方块，
-        // 待 onGeometryChange 测得宽度后再按比例展开。
-        guard let imageSize, maxWidth > 0 else {
-            let fallbackSide = min(maxWidth > 0 ? maxWidth : 44, 44)
-            return CGSize(width: fallbackSide, height: fallbackSide)
-        }
-
-        let width = min(imageSize.width, maxWidth)
-        let height = imageSize.height * width / imageSize.width
-        return CGSize(width: width, height: height)
+    /// 宽高比；尺寸未知时为 nil。
+    private var aspectRatio: CGFloat? {
+        guard let imageSize, imageSize.width > 0, imageSize.height > 0 else { return nil }
+        return imageSize.width / imageSize.height
     }
 
+    /// 直接按宽高比布局，不依赖测量到的容器宽度：视图被重建时第一帧的高度也是正确的，
+    /// 不会先塌成占位大小再展开。
     var body: some View {
-        GeometryReader { proxy in
-            let size = displaySize(maxWidth: proxy.size.width)
-
-            renderedImage
-                .frame(
-                    width: size.width,
-                    height: size.height,
-                    alignment: .leading
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    openImagePreview(url, previewImage, previewData, imageURLs)
+        renderedImage
+            .aspectRatio(aspectRatio, contentMode: .fit)
+            // 尺寸未知时先占用一个小方块；已知时不超过原图宽度。
+            .frame(
+                width: aspectRatio == nil ? 44 : nil,
+                height: aspectRatio == nil ? 44 : nil
+            )
+            .frame(maxWidth: imageSize?.width)
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay {
+                if showsPreparingIndicator {
+                    ProgressView()
+                        .padding(12)
+                        .background(.regularMaterial, in: Circle())
+                        .transition(.opacity)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .frame(height: size.height, alignment: .leading)
-        }
-        .onGeometryChange(for: CGFloat.self) { geometry in
-            geometry.size.width
-        } action: { width in
-            guard width > 0, abs(containerWidth - width) > 0.5 else { return }
-            containerWidth = width
-        }
-        .frame(height: displaySize(maxWidth: containerWidth).height)
-        .task(id: url) {
-            await loadImageSizeIfNeeded()
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                preparePreview()
+            }
+            .accessibilityAddTraits(.isButton)
+            .accessibilityHint("查看大图")
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .onDisappear {
+                previewTask?.cancel()
+                previewTask = nil
+                showsPreparingIndicator = false
+            }
+    }
+
+    private func preparePreview() {
+        guard previewTask == nil else { return }
+        previewTask = Task {
+            // 文件很快准备好时不显示加载指示，避免闪烁。
+            let indicator = Task {
+                try await Task.sleep(for: .milliseconds(150))
+                withAnimation(.easeIn(duration: 0.15)) { showsPreparingIndicator = true }
+            }
+            await openImagePreview(url, imageURLs)
+            indicator.cancel()
+            showsPreparingIndicator = false
+            previewTask = nil
         }
     }
 
@@ -935,41 +936,11 @@ private struct TappableMarkdownImage: View {
     }
 
     private func handleImageLoaded(_ result: RetrieveImageResult, preserveExistingSize: Bool) {
-        let sourceData = url.isAnimatedPreviewCandidate ? result.data() : nil
-        handleImageLoaded(
-            result.image,
-            sourceData: sourceData,
-            preserveExistingSize: preserveExistingSize
-        )
-    }
-
-    private func handleImageLoaded(
-        _ image: KFCrossPlatformImage,
-        sourceData: Data?,
-        preserveExistingSize: Bool
-    ) {
-        MarkdownImageMetadata.store(image.size, for: url)
-        previewImage = image
-        if let sourceData {
-            previewData = sourceData
-        }
+        let size = result.image.size
+        MarkdownImageMetadata.store(size, for: url)
         if imageSize == nil || !preserveExistingSize {
-            imageSize = image.size
+            imageSize = size
         }
-        MarkdownQuickLookImageExporter.preheat(
-            url: url,
-            image: image,
-            sourceData: sourceData
-        )
-    }
-
-    @MainActor
-    private func loadImageSizeIfNeeded() async {
-        guard imageSize == nil else { return }
-        guard let size = try? await MarkdownImageMetadata.imageSize(for: url) else {
-            return
-        }
-        imageSize = size
     }
 }
 
@@ -1015,289 +986,127 @@ private enum MarkdownImageMetadata {
         guard size.width > 0, size.height > 0 else { return }
         sizeCache.setObject(NSValue(cgSize: size), forKey: url as NSURL)
     }
+}
 
-    static func imageSize(for url: URL) async throws -> CGSize {
-        if let size = cachedSize(for: url) {
-            return size
+/// 查看大图使用的本地预览文件。系统预览只能打开本地文件，这里直接使用图片的
+/// 原始数据（优先硬链接 Kingfisher 的磁盘缓存文件），不重新编码。
+enum MarkdownImagePreviewFiles {
+    private static let rootDirectory = FileManager.default.temporaryDirectory
+        .appendingPathComponent("VoleMarkdownQuickLookImages", isDirectory: true)
+
+    /// 每次启动使用独立的子目录，后台清理旧文件时不会影响本次生成的文件。
+    fileprivate static let directory = rootDirectory
+        .appendingPathComponent(UUID().uuidString, isDirectory: true)
+
+    /// 准备单张图片的预览文件；同一张图片同时只准备一次。
+    /// - Parameter allowsDownload: 为 false 时只使用本地缓存，没有缓存则抛出错误。
+    static func fileURL(for url: URL, allowsDownload: Bool) async throws -> URL {
+        try await MarkdownImagePreviewFileStore.shared.fileURL(for: url, allowsDownload: allowsDownload)
+    }
+
+    /// 在后台删除以往启动留下的预览文件。
+    static func removeStaleFiles() {
+        let root = rootDirectory
+        let current = directory.lastPathComponent
+        Task.detached(priority: .background) {
+            let fileManager = FileManager.default
+            let items = (try? fileManager.contentsOfDirectory(
+                at: root,
+                includingPropertiesForKeys: nil
+            )) ?? []
+            for item in items where item.lastPathComponent != current {
+                try? fileManager.removeItem(at: item)
+            }
         }
-
-        let data = try await MarkdownImageDataLoader.data(for: url)
-
-        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
-              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
-              let width = properties[kCGImagePropertyPixelWidth] as? CGFloat,
-              let height = properties[kCGImagePropertyPixelHeight] as? CGFloat,
-              width > 0,
-              height > 0 else {
-            throw CocoaError(.fileReadCorruptFile)
-        }
-
-        let size = CGSize(width: width, height: height)
-        store(size, for: url)
-        return size
     }
 }
 
-private enum MarkdownQuickLookImageExporter {
-    static func cachedFileURL(for url: URL) -> URL? {
-        for format in ImageExportFormat.allCases {
-            let fileURL = previewFileURL(for: url, format: format)
-            if FileManager.default.fileExists(atPath: fileURL.path) {
-                return fileURL
-            }
+private enum MarkdownImagePreviewError: Error {
+    case notCached
+    case invalidImage
+}
+
+private actor MarkdownImagePreviewFileStore {
+    static let shared = MarkdownImagePreviewFileStore()
+
+    private var preparedFiles: [URL: URL] = [:]
+    private var tasks: [URL: Task<URL, Error>] = [:]
+
+    func fileURL(for url: URL, allowsDownload: Bool) async throws -> URL {
+        if let fileURL = preparedFiles[url], FileManager.default.fileExists(atPath: fileURL.path) {
+            return fileURL
         }
-        return nil
+        if let task = tasks[url] {
+            return try await task.value
+        }
+        guard allowsDownload || ImageCache.default.isCached(forKey: url.cacheKey) else {
+            throw MarkdownImagePreviewError.notCached
+        }
+
+        let task = Task.detached(priority: .userInitiated) {
+            try await Self.makeFile(for: url, allowsDownload: allowsDownload)
+        }
+        tasks[url] = task
+        defer { tasks[url] = nil }
+        let fileURL = try await task.value
+        preparedFiles[url] = fileURL
+        return fileURL
     }
 
-    static func preheat(
-        url: URL,
-        image: KFCrossPlatformImage?,
-        sourceData: Data?
-    ) {
-        Task(priority: .utility) {
-            await MarkdownQuickLookImagePreheater.shared.preheat(
-                url: url,
-                image: image,
-                sourceData: sourceData
-            )
-        }
-    }
-
-    static func fileURLs(
-        for urls: [URL],
-        preferredImage: KFCrossPlatformImage?,
-        preferredData: Data?,
-        preferredURL: URL
-    ) async throws -> [URL] {
-        var exportedURLs: [URL] = []
-        var exportedSourceURLs = Set<URL>()
-
-        for url in urls {
-            guard exportedSourceURLs.insert(url).inserted else { continue }
-
-            if let fileURL = try? await fileURL(
-                for: url,
-                image: url == preferredURL ? preferredImage : nil,
-                sourceData: url == preferredURL ? preferredData : nil
-            ) {
-                exportedURLs.append(fileURL)
-            }
-        }
-
-        return exportedURLs
-    }
-
-    static func fileURL(
-        for url: URL,
-        image: KFCrossPlatformImage?,
-        sourceData: Data?
-    ) async throws -> URL {
-        if let cachedFileURL = cachedFileURL(for: url) {
-            return cachedFileURL
-        }
-
-        let resolvedSourceData = try await retrieveOriginalData(
-            for: url,
-            sourceData: sourceData
+    /// 依次使用 Kingfisher 磁盘缓存中的原始文件、重新下载。
+    private static func makeFile(for url: URL, allowsDownload: Bool) async throws -> URL {
+        let fileManager = FileManager.default
+        try fileManager.createDirectory(
+            at: MarkdownImagePreviewFiles.directory,
+            withIntermediateDirectories: true
         )
-        let exportFormat = ImageExportFormat.infer(from: resolvedSourceData, url: url)
-        let fileURL = previewFileURL(for: url, format: exportFormat)
+        let baseURL = MarkdownImagePreviewFiles.directory
+            .appendingPathComponent(url.absoluteString.stableFileName)
 
-        if FileManager.default.fileExists(atPath: fileURL.path) {
+        if let cacheFileURL = ImageCache.default.cacheFileURLIfOnDisk(forKey: url.cacheKey),
+            let fileExtension = imageFileExtension(
+                of: CGImageSourceCreateWithURL(cacheFileURL as CFURL, nil)
+            )
+        {
+            let fileURL = baseURL.appendingPathExtension(fileExtension)
+            try? fileManager.removeItem(at: fileURL)
+            do {
+                // 同一磁盘内硬链接不复制数据；Kingfisher 之后清理缓存也不影响这份文件。
+                try fileManager.linkItem(at: cacheFileURL, to: fileURL)
+            } catch {
+                try fileManager.copyItem(at: cacheFileURL, to: fileURL)
+            }
             return fileURL
         }
 
-        if exportFormat.preservesAnimation {
-            try resolvedSourceData.write(to: fileURL, options: .atomic)
-            return fileURL
+        guard allowsDownload else { throw MarkdownImagePreviewError.notCached }
+        try Task.checkCancellation()
+        let request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad)
+        let (data, _) = try await URLSession.shared.data(for: request)
+        // 图床可能返回错误页等非图片内容，这时视为失败，改为打开网页。
+        guard let fileExtension = imageFileExtension(
+            of: CGImageSourceCreateWithData(data as CFData, nil)
+        ) else {
+            throw MarkdownImagePreviewError.invalidImage
         }
-
-        let exportImage: KFCrossPlatformImage
-        if let image {
-            exportImage = image
-        } else {
-            exportImage = try await retrieveImage(for: url)
-        }
-
-        guard let data = exportFormat.data(from: exportImage) else {
-            throw CocoaError(.fileWriteUnknown)
-        }
-
+        let fileURL = baseURL.appendingPathExtension(fileExtension)
         try data.write(to: fileURL, options: .atomic)
         return fileURL
     }
 
-    private static func retrieveImage(for url: URL) async throws -> KFCrossPlatformImage {
-        let resource = KF.ImageResource(downloadURL: url)
-        return try await KingfisherManager.shared
-            .retrieveImage(with: resource)
-            .image
-    }
-
-    private static func retrieveOriginalData(
-        for url: URL,
-        sourceData: Data?
-    ) async throws -> Data {
-        if let sourceData {
-            return sourceData
-        }
-
-        if let cachedData = try kingfisherCachedData(for: url) {
-            return cachedData
-        }
-
-        let request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad)
-        let (data, _) = try await URLSession.shared.data(for: request)
-        return data
-    }
-
-    private static func kingfisherCachedData(for url: URL) throws -> Data? {
-        guard let fileURL = ImageCache.default.cacheFileURLIfOnDisk(forKey: url.cacheKey) else {
-            return nil
-        }
-        return try Data(contentsOf: fileURL)
-    }
-
-    private static func previewFileURL(for url: URL, format: ImageExportFormat) -> URL {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("VoleMarkdownQuickLookImages", isDirectory: true)
-
-        try? FileManager.default.createDirectory(
-            at: directory,
-            withIntermediateDirectories: true
-        )
-
-        return directory
-            .appendingPathComponent(url.absoluteString.stableFileName)
-            .appendingPathExtension(format.fileExtension)
-    }
-}
-
-private actor MarkdownQuickLookImagePreheater {
-    static let shared = MarkdownQuickLookImagePreheater()
-
-    private var activeURLs = Set<URL>()
-
-    func preheat(
-        url: URL,
-        image: KFCrossPlatformImage?,
-        sourceData: Data?
-    ) async {
-        guard activeURLs.insert(url).inserted else { return }
-        defer { activeURLs.remove(url) }
-
-        guard MarkdownQuickLookImageExporter.cachedFileURL(for: url) == nil else {
-            return
-        }
-
-        _ = try? await MarkdownQuickLookImageExporter.fileURL(
-            for: url,
-            image: image,
-            sourceData: sourceData
-        )
-    }
-}
-
-private enum ImageExportFormat: CaseIterable {
-    case gif
-    case png
-    case jpeg
-    case webp
-    case bmp
-    case tiff
-
-    var fileExtension: String {
-        switch self {
-        case .gif: return "gif"
-        case .png: return "png"
-        case .jpeg: return "jpg"
-        case .webp: return "webp"
-        case .bmp: return "bmp"
-        case .tiff: return "tiff"
-        }
-    }
-
-    var preservesAnimation: Bool {
-        switch self {
-        case .gif, .webp:
-            return true
-        default:
-            return false
-        }
-    }
-
-    func data(from image: KFCrossPlatformImage) -> Data? {
-        switch self {
-        case .gif:
-            return image.kf.gifRepresentation()
-        case .png:
-            return image.kf.pngRepresentation()
-        case .jpeg:
-            return image.kf.jpegRepresentation(compressionQuality: 1.0)
-        case .webp, .bmp, .tiff:
-            return image.kf.pngRepresentation()
-        }
-    }
-
-    static func infer(from data: Data, url: URL) -> ImageExportFormat {
-        if let source = CGImageSourceCreateWithData(data as CFData, nil),
-           let type = CGImageSourceGetType(source),
-           let utType = UTType(type as String) {
-            switch utType {
-            case .gif:
-                return .gif
-            case .png:
-                return .png
-            case .jpeg:
-                return .jpeg
-            case .webP:
-                return .webp
-            case .bmp:
-                return .bmp
-            case .tiff:
-                return .tiff
-            default:
-                break
-            }
-        }
-
-        switch url.pathExtension.lowercased() {
-        case "gif":
-            return .gif
-        case "jpg", "jpeg":
-            return .jpeg
-        case "webp":
-            return .webp
-        case "bmp":
-            return .bmp
-        case "tif", "tiff":
-            return .tiff
-        default:
-            return .png
-        }
-    }
-}
-
-private enum MarkdownImageDataLoader {
-    static func data(for url: URL) async throws -> Data {
-        let request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad)
-        let (data, _) = try await URLSession.shared.data(for: request)
-        return data
+    /// 内容是有效图片时返回对应的文件扩展名。
+    private static func imageFileExtension(of source: CGImageSource?) -> String? {
+        guard let source,
+            CGImageSourceGetCount(source) > 0,
+            let type = CGImageSourceGetType(source),
+            let utType = UTType(type as String),
+            utType.conforms(to: .image)
+        else { return nil }
+        return utType.preferredFilenameExtension ?? "img"
     }
 }
 
 private extension URL {
-    var isAnimatedPreviewCandidate: Bool {
-        let normalized = absoluteString.lowercased()
-        let ext = pathExtension.lowercased()
-        return ext == "gif"
-            || ext == "webp"
-            || normalized.contains(".gif?")
-            || normalized.contains(".webp?")
-            || normalized.hasSuffix(".gif")
-            || normalized.hasSuffix(".webp")
-    }
-
     var isGIF: Bool {
         let normalized = absoluteString.lowercased()
         return pathExtension.lowercased() == "gif"

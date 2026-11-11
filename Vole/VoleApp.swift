@@ -18,6 +18,10 @@ struct VoleApp: App {
     @State private var showWelcome = false
     @State private var showEULA = false
 
+    init() {
+        ImageCacheConfiguration.configure()
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
