@@ -14,6 +14,28 @@ struct SearchPagingState {
     var totalResults: Int? = nil     // 从 API 的 total 字段获取
     var currentOffset: Int = 0       // 当前已加载的条数 (from)
 }
+
+enum SearchPagination {
+    static func appendingUnique(
+        _ page: [SoV2exHit],
+        to hits: [SoV2exHit]
+    ) -> [SoV2exHit] {
+        var knownTopicIDs = Set<Int>()
+        return (hits + page).filter {
+            knownTopicIDs.insert($0.source.id).inserted
+        }
+    }
+
+    static func nextOffset(
+        currentOffset: Int,
+        fetchedCount: Int,
+        totalCount: Int
+    ) -> Int {
+        guard fetchedCount > 0 else { return totalCount }
+        return min(currentOffset + fetchedCount, totalCount)
+    }
+}
+
 /// 顶层响应结构
 struct SoV2exResponse: Codable {
     let took: Int
@@ -138,11 +160,39 @@ struct SoV2exSearchRequest {
 
         return items
     }
+
+    func makeURL(baseURL: URL) throws -> URL {
+        guard var components = URLComponents(
+            url: baseURL,
+            resolvingAgainstBaseURL: false
+        ) else {
+            throw URLError(.badURL)
+        }
+
+        let allowedCharacters = CharacterSet.urlQueryAllowed.subtracting(
+            CharacterSet(charactersIn: "+&=#%")
+        )
+        func percentEncode(_ value: String) -> String {
+            value.addingPercentEncoding(withAllowedCharacters: allowedCharacters) ?? value
+        }
+
+        components.percentEncodedQueryItems = toQueryItems().map { item in
+            URLQueryItem(
+                name: percentEncode(item.name),
+                value: item.value.map(percentEncode)
+            )
+        }
+
+        guard let url = components.url else {
+            throw URLError(.badURL)
+        }
+        return url
+    }
 }
 
 // MARK: - API Client (API 调用客户端)
 
-class SoV2exService {
+final class SoV2exService: Sendable {
     private let baseURL = URL(string: "https://www.sov2ex.com/api/search")!
 
     public static let shared = SoV2exService()
@@ -152,15 +202,7 @@ class SoV2exService {
     /// - Returns: 搜索响应结果
     func search(_ request: SoV2exSearchRequest) async throws -> SoV2exResponse {
         // 1. 构建 URL
-        var components = URLComponents(
-            url: baseURL,
-            resolvingAgainstBaseURL: true
-        )!
-        components.queryItems = request.toQueryItems()
-
-        guard let url = components.url else {
-            throw URLError(.badURL)
-        }
+        let url = try request.makeURL(baseURL: baseURL)
 
         // 2. 创建请求
         var urlRequest = URLRequest(url: url)

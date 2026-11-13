@@ -185,8 +185,7 @@ struct NotifyRowView: View {
                 topicId = id
             }
 
-            let fullText = try doc.text()
-            let kind = NotificationKind(text: fullText)
+            let kind = try NotificationKind(document: doc)
             var parsedPayload: String? = item.payload
 
             if kind == .tip {
@@ -221,13 +220,18 @@ private struct ParsedNotification {
     let payload: String?
 }
 
-private enum NotificationKind {
+enum NotificationKind: Equatable {
     case mention
     case reply
     case favorite
     case thanks
     case tip
     case notice
+
+    init(document: SwiftSoup.Document) throws {
+        try document.select("a").remove()
+        self.init(text: try document.text())
+    }
 
     init(text: String) {
         if text.contains("提到了你") {

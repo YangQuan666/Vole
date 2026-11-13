@@ -31,7 +31,31 @@ enum V2exAPIError: LocalizedError {
     }
 }
 
-public struct V2exAPI {
+struct MemberShowResponse: Decodable {
+    let status: String?
+    let message: String?
+    let member: Member?
+
+    var memberIfFound: Member? {
+        guard status != "error", message != "Object Not Found" else {
+            return nil
+        }
+        return member
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        status = try container.decodeIfPresent(String.self, forKey: .status)
+        message = try container.decodeIfPresent(String.self, forKey: .message)
+        member = try? Member(from: decoder)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case status, message
+    }
+}
+
+public struct V2exAPI: Sendable {
 
     private var endpointV1: String { SiteConfiguration.endpointV1 }
     private var endpointV2: String { SiteConfiguration.endpointV2 }
@@ -221,11 +245,18 @@ public struct V2exAPI {
             return nil
         }
 
-        return try await request(
-            url: endpointV1 + "members/show.json",
-            args: args,
-            decodeClass: Member.self
-        )
+        do {
+            let response = try await request(
+                url: endpointV1 + "members/show.json",
+                args: args,
+                decodeClass: MemberShowResponse.self
+            )
+            return response?.memberIfFound
+        } catch let V2exAPIError.httpFailure(_, _, _, _, message)
+            where message == "Object Not Found"
+        {
+            return nil
+        }
     }
 
     /**

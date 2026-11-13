@@ -31,7 +31,7 @@ struct VoleTests {
         #expect(store.load(for: "id-account-b") == NotificationReadState())
     }
 
-    @Test func migratesLegacyNotificationReadStateToFirstAccountOnly() {
+    @Test func discardsLegacyNotificationReadStateWithoutAssigningItToAnAccount() {
         let (defaults, suiteName) = makeTestDefaults()
         defer { defaults.removePersistentDomain(forName: suiteName) }
         defaults.set([4, 9], forKey: "read_notification_ids")
@@ -41,15 +41,31 @@ struct VoleTests {
 
         let migrated = store.load(for: "id-account-a")
 
-        #expect(
-            migrated == NotificationReadState(
-                readIds: [4, 9],
-                lastReadAllId: 10,
-                allReadTotalCount: 25
-            )
-        )
+        #expect(migrated == NotificationReadState())
+        #expect(store.load(for: "id-account-a") == NotificationReadState())
         #expect(store.load(for: "id-account-b") == NotificationReadState())
         #expect(defaults.object(forKey: "read_notification_ids") == nil)
+        #expect(defaults.object(forKey: "last_read_all_id") == nil)
+        #expect(defaults.object(forKey: "all_read_total_count") == nil)
+    }
+
+    @Test func discardsLegacyStateButPreservesExistingAccountState() {
+        let (defaults, suiteName) = makeTestDefaults()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set([4, 9], forKey: "read_notification_ids")
+        defaults.set(10, forKey: "last_read_all_id")
+        defaults.set(25, forKey: "all_read_total_count")
+        let store = NotificationReadStateStore(defaults: defaults)
+        let accountState = NotificationReadState(
+            readIds: [12],
+            lastReadAllId: 20,
+            allReadTotalCount: 35
+        )
+        store.save(accountState, for: "id-account-a")
+
+        #expect(store.load(for: "id-account-a") == accountState)
+        #expect(defaults.object(forKey: "read_notification_ids") == nil)
+        #expect(store.load(for: "id-account-b") == NotificationReadState())
     }
 
     @Test func decodesCreatedTopicFromWrappedOrDirectResponse() throws {

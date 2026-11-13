@@ -5,7 +5,6 @@
 //  Created by 杨权 on 5/26/25.
 //
 
-import SwiftData
 import SwiftUI
 
 @main
@@ -28,6 +27,7 @@ struct VoleApp: App {
                 .tint(appTheme.color)
                 .onAppear { handleStartupFlow() }
                 .task {
+                    StoreManager.shared.startTransactionUpdates()
                     await UserManager.shared.refreshStoredTokenDetails()
                 }
                 .sheet(isPresented: $showWelcome, onDismiss: {

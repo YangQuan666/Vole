@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct Token: Decodable, Encodable, Equatable, Hashable {
+public struct Token: Decodable, Encodable, Equatable, Hashable, Sendable {
     public let token, scope: String?
     public let expiration, goodForDays, totalUsed, lastUsed: Int?
     public let created: Int?

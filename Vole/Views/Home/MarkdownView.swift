@@ -733,12 +733,13 @@ private enum MarkdownLinkPreviewLoader {
         let provider = LPMetadataProvider()
         let metadata = try await provider.startFetchingMetadata(for: url)
 
-        async let image = loadImage(from: metadata.imageProvider)
-        async let icon = loadImage(from: metadata.iconProvider)
-
-        let primaryImage = await image
-        let fallbackIcon = await icon
-        let resolvedImage = primaryImage ?? fallbackIcon
+        let primaryImage = await loadImage(from: metadata.imageProvider)
+        let resolvedImage: UIImage?
+        if let primaryImage {
+            resolvedImage = primaryImage
+        } else {
+            resolvedImage = await loadImage(from: metadata.iconProvider)
+        }
         let resolvedURL = metadata.originalURL ?? metadata.url ?? url
 
         return MarkdownLinkPreviewData(
@@ -965,7 +966,8 @@ private struct HorizontalScrollableMarkdownTableStyle: MarkdownTableStyle {
 }
 
 private enum MarkdownImageMetadata {
-    private static let sizeCache = NSCache<NSURL, NSValue>()
+    // NSCache synchronizes its own reads and writes.
+    nonisolated(unsafe) private static let sizeCache = NSCache<NSURL, NSValue>()
 
     static func cachedSize(for url: URL) -> CGSize? {
         if let size = sizeCache.object(forKey: url as NSURL)?.cgSizeValue {
@@ -1190,8 +1192,6 @@ private struct MarkdownContentFormatter {
         #"(?s)(```.*?```|`[^`\n]*`|!?\[(?:[^\[\]]|\[[^\]]*\])*\]\([^)]+\))"#
     private let spacedLinkDestinationPattern =
         #"(!?\[(?:[^\[\]]|\[[^\]]*\])*\])\(\s*(https?://[^)\s]+)\s*\)"#
-    private let mentionPattern =
-        #"(?<![\p{L}0-9_])@([\p{L}0-9_]+)(?![\p{L}0-9_])"#
     private let urlPattern =
         #"https?://[^\s<>()\[\]{}]+"#
     private let imageURLPattern =
@@ -1310,7 +1310,7 @@ private struct MarkdownContentFormatter {
     ) -> String {
         replaceMatches(
             in: text,
-            pattern: mentionPattern
+            pattern: MentionParser.pattern
         ) { _, match in
             guard let nameRange = Range(match.range(at: 1), in: text)
             else {

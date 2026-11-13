@@ -15,7 +15,20 @@ class StoreManager: ObservableObject {
 
     @Published var products: [Product] = []
 
+    private var transactionUpdatesTask: Task<Void, Never>?
+
     private init() {}
+
+    func startTransactionUpdates() {
+        guard transactionUpdatesTask == nil else { return }
+
+        transactionUpdatesTask = Task { [weak self] in
+            for await result in StoreKit.Transaction.updates {
+                guard !Task.isCancelled else { break }
+                await self?.processTransactionUpdate(result)
+            }
+        }
+    }
 
     /// 加载商品列表
     func loadProducts() async {
@@ -55,6 +68,18 @@ class StoreManager: ObservableObject {
         } catch {
             print("❌ 购买失败:", error)
             return false
+        }
+    }
+
+    private func processTransactionUpdate(
+        _ result: VerificationResult<StoreKit.Transaction>
+    ) async {
+        switch result {
+        case .verified(let transaction):
+            print("✅ StoreKit 更新交易: \(transaction.productID)")
+            await transaction.finish()
+        case .unverified(_, let error):
+            print("❌ StoreKit 更新交易未验证:", error)
         }
     }
 }

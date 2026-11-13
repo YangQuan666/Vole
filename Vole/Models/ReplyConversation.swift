@@ -7,6 +7,39 @@
 
 import Foundation
 
+enum MentionParser {
+    static let pattern = #"(?<![A-Za-z0-9_])@([A-Za-z0-9_]+)(?![A-Za-z0-9_])"#
+
+    private static let regex = try! NSRegularExpression(pattern: pattern)
+
+    static func usernames(in content: String) -> [String] {
+        let nsContent = content as NSString
+        let matches = regex.matches(
+            in: content,
+            range: NSRange(location: 0, length: nsContent.length)
+        )
+        var result: [String] = []
+        var seen: Set<String> = []
+
+        for match in matches {
+            guard let range = Range(match.range(at: 1), in: content) else {
+                continue
+            }
+
+            let username = String(content[range])
+            let normalizedUsername = username.lowercased()
+            guard seen.insert(normalizedUsername).inserted else { continue }
+            result.append(username)
+        }
+
+        return result
+    }
+
+    static func normalized(_ username: String) -> String {
+        username.lowercased()
+    }
+}
+
 struct ReplyConversationItem: Identifiable, Hashable {
     let reply: Reply
     let floor: Int
@@ -77,27 +110,7 @@ struct ReplyConversationIndex {
     }
 
     static func mentionedUsernames(in content: String) -> [String] {
-        let nsContent = content as NSString
-        let matches = mentionRegex.matches(
-            in: content,
-            range: NSRange(location: 0, length: nsContent.length)
-        )
-        var result: [String] = []
-        var seen: Set<String> = []
-
-        for match in matches {
-            guard let range = Range(match.range(at: 1), in: content) else {
-                continue
-            }
-
-            let username = String(content[range])
-            guard !seen.contains(username) else { continue }
-
-            seen.insert(username)
-            result.append(username)
-        }
-
-        return result
+        MentionParser.usernames(in: content)
     }
 
     private static func build(
@@ -118,25 +131,30 @@ struct ReplyConversationIndex {
         }
 
         for (index, item) in items.enumerated() {
+            let normalizedAuthor = MentionParser.normalized(item.author)
             if let pendingMentionIndexes = pendingMentionIndexesByUsername[
-                item.author
+                normalizedAuthor
             ] {
                 for pendingMentionIndex in pendingMentionIndexes {
                     link(source: pendingMentionIndex, target: index)
                 }
-                pendingMentionIndexesByUsername[item.author] = nil
+                pendingMentionIndexesByUsername[normalizedAuthor] = nil
             }
 
             for username in item.mentions {
-                if let mentionedIndex = latestReplyIndexByAuthor[username] {
+                let normalizedUsername = MentionParser.normalized(username)
+                if let mentionedIndex = latestReplyIndexByAuthor[
+                    normalizedUsername
+                ] {
                     link(source: index, target: mentionedIndex)
                 } else {
-                    pendingMentionIndexesByUsername[username, default: []]
-                        .append(index)
+                    pendingMentionIndexesByUsername[
+                        normalizedUsername, default: []
+                    ].append(index)
                 }
             }
 
-            latestReplyIndexByAuthor[item.author] = index
+            latestReplyIndexByAuthor[normalizedAuthor] = index
         }
 
         var conversationByReplyId: [Int: ReplyConversation] = [:]
@@ -174,9 +192,9 @@ struct ReplyConversationIndex {
         var seen: Set<String> = []
 
         func append(_ username: String) {
-            guard !seen.contains(username) else { return }
-
-            seen.insert(username)
+            guard seen.insert(MentionParser.normalized(username)).inserted else {
+                return
+            }
             participants.append(username)
         }
 
@@ -227,8 +245,4 @@ struct ReplyConversationIndex {
             )
         }
     }
-
-    private static let mentionRegex = try! NSRegularExpression(
-        pattern: #"(?<![\p{L}0-9_])@([\p{L}0-9_]+)(?![\p{L}0-9_])"#
-    )
 }

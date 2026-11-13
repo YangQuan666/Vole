@@ -240,7 +240,8 @@ struct SearchResultView: View {
                         let totalText = total.formattedCount
                         let displayedText = results.count.formattedCount
                         Text(
-                            total == results.count
+                            pagingState.currentOffset >= total
+                                && total == results.count
                                 ? "共 \(totalText) 条结果"
                                 : "共 \(totalText) 条结果，已展示 \(displayedText) 条"
                         )
@@ -374,7 +375,7 @@ struct SearchResultView: View {
                     .font(.footnote)
                 }
             } else if let total = pagingState.totalResults, !results.isEmpty {
-                if results.count >= total {
+                if pagingState.currentOffset >= total {
                     footerText("已加载全部 \(results.count.formattedCount) 条结果")
                 } else {
                     footerText(
@@ -519,7 +520,7 @@ struct SearchResultView: View {
                 guard generation == self.topicSearchGeneration else { return }
                 self.pagingErrorMessage = nil
                 self.pagingState.totalResults = res.total
-                self.results = res.hits
+                self.results = SearchPagination.appendingUnique(res.hits, to: [])
                 self.pagingState.currentOffset = res.hits.count
                 self.topicLoadState = .loaded
             }
@@ -578,8 +579,16 @@ struct SearchResultView: View {
             await MainActor.run {
                 guard generation == self.topicSearchGeneration else { return }
                 self.pagingErrorMessage = nil
-                self.results.append(contentsOf: res.hits)
-                self.pagingState.currentOffset = self.results.count
+                self.results = SearchPagination.appendingUnique(
+                    res.hits,
+                    to: self.results
+                )
+                self.pagingState.totalResults = res.total
+                self.pagingState.currentOffset = SearchPagination.nextOffset(
+                    currentOffset: self.pagingState.currentOffset,
+                    fetchedCount: res.hits.count,
+                    totalCount: res.total
+                )
                 self.isPagingLoading = false
             }
         } catch {

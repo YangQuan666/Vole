@@ -600,7 +600,7 @@ struct NodeDetailView: View {
             )
             if let t = response {
                 await MainActor.run {
-                    self.topics = t
+                    self.topics = NodeTopicPagination.unique(t)
                     self.pagination = nil
                     self.currentPage = 1
                 }
@@ -625,9 +625,12 @@ struct NodeDetailView: View {
             if let r = response, r.success, let t = r.result {
                 await MainActor.run {
                     if page == 1 {
-                        self.topics = t
+                        self.topics = NodeTopicPagination.unique(t)
                     } else {
-                        self.topics.append(contentsOf: t)
+                        self.topics = NodeTopicPagination.appendingUnique(
+                            t,
+                            to: self.topics
+                        )
                     }
                     self.pagination = r.pagination
                     self.currentPage = page
@@ -661,6 +664,17 @@ struct NodeDetailView: View {
             print("HTML 解析失败: \(error)")
             return ""
         }
+    }
+}
+
+enum NodeTopicPagination {
+    static func unique(_ topics: [Topic]) -> [Topic] {
+        appendingUnique(topics, to: [])
+    }
+
+    static func appendingUnique(_ page: [Topic], to topics: [Topic]) -> [Topic] {
+        var knownIDs = Set<Int>()
+        return (topics + page).filter { knownIDs.insert($0.id).inserted }
     }
 }
 

@@ -371,18 +371,22 @@ struct LatestTopicsRequestTests {
 }
 
 private final class LatestTopicsURLProtocol: URLProtocol {
-    private static let lock = NSLock()
-    private static var body = ""
-    private static var status = 200
-    private static var requests: [URLRequest] = []
+    private final class State: @unchecked Sendable {
+        let lock = NSLock()
+        var body = ""
+        var status = 200
+        var requests: [URLRequest] = []
+    }
 
-    static var lastRequest: URLRequest? { lock.withLock { requests.last } }
-    static var requestCount: Int { lock.withLock { requests.count } }
+    private static let state = State()
+
+    static var lastRequest: URLRequest? { state.lock.withLock { state.requests.last } }
+    static var requestCount: Int { state.lock.withLock { state.requests.count } }
 
     static func respond(with body: String, status: Int = 200) {
-        lock.withLock {
-            Self.body = body
-            Self.status = status
+        state.lock.withLock {
+            state.body = body
+            state.status = status
         }
     }
 
@@ -390,9 +394,9 @@ private final class LatestTopicsURLProtocol: URLProtocol {
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
-        let (body, status) = Self.lock.withLock {
-            Self.requests.append(request)
-            return (Self.body, Self.status)
+        let (body, status) = Self.state.lock.withLock {
+            Self.state.requests.append(request)
+            return (Self.state.body, Self.state.status)
         }
         let response = HTTPURLResponse(
             url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil

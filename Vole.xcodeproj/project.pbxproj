@@ -12,6 +12,7 @@
 		14B600512ED74AE600C9415D /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 14B600502ED74AE600C9415D /* LICENSE */; };
 		14F7DDE42ECB790400065422 /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 14F7DDE32ECB790400065422 /* SwiftSoup */; };
 		14F82C652E56106700B2321A /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 14F82C642E56106700B2321A /* Kingfisher */; };
+		14F82C6B2E58A5EF00B2321A /* Highlightr in Frameworks */ = {isa = PBXBuildFile; productRef = 14F82C6C2E58A5EF00B2321A /* Highlightr */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -63,6 +64,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				14F82C652E56106700B2321A /* Kingfisher in Frameworks */,
+				14F82C6B2E58A5EF00B2321A /* Highlightr in Frameworks */,
 				144905932E58A8F60009F393 /* MarkdownView in Frameworks */,
 				14F7DDE42ECB790400065422 /* SwiftSoup in Frameworks */,
 			);
@@ -136,6 +138,7 @@
 			name = Vole;
 			packageProductDependencies = (
 				14F82C642E56106700B2321A /* Kingfisher */,
+				14F82C6C2E58A5EF00B2321A /* Highlightr */,
 				144905922E58A8F60009F393 /* MarkdownView */,
 				14F7DDE32ECB790400065422 /* SwiftSoup */,
 			);
@@ -224,6 +227,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				14F82C632E560F5600B2321A /* XCRemoteSwiftPackageReference "Kingfisher" */,
+				14F82C6D2E58A5EF00B2321A /* XCRemoteSwiftPackageReference "Highlightr" */,
 				14F82C6A2E58A5EF00B2321A /* XCRemoteSwiftPackageReference "MarkdownView" */,
 				14F7DDE22ECB788500065422 /* XCRemoteSwiftPackageReference "SwiftSoup" */,
 			);
@@ -339,7 +343,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = B8S34DHZ62;
+				DEVELOPMENT_TEAM = RCF86TL27M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -357,7 +361,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -405,7 +409,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = B8S34DHZ62;
+				DEVELOPMENT_TEAM = RCF86TL27M;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -417,7 +421,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -456,7 +460,8 @@
 				PRODUCT_BUNDLE_IDENTIFIER = yang.quan.vole;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -489,7 +494,8 @@
 				PRODUCT_BUNDLE_IDENTIFIER = yang.quan.vole;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -507,7 +513,8 @@
 				PRODUCT_BUNDLE_IDENTIFIER = yang.quan.VoleTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Vole.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Vole";
 			};
@@ -526,7 +533,8 @@
 				PRODUCT_BUNDLE_IDENTIFIER = yang.quan.VoleTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Vole.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Vole";
 			};
@@ -543,7 +551,8 @@
 				PRODUCT_BUNDLE_IDENTIFIER = yang.quan.VoleUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = Vole;
 			};
@@ -560,7 +569,8 @@
 				PRODUCT_BUNDLE_IDENTIFIER = yang.quan.VoleUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = Vole;
 			};
@@ -632,6 +642,14 @@
 				minimumVersion = 3.0.0;
 			};
 		};
+		14F82C6D2E58A5EF00B2321A /* XCRemoteSwiftPackageReference "Highlightr" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/raspu/Highlightr.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.3.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -649,6 +667,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 14F82C632E560F5600B2321A /* XCRemoteSwiftPackageReference "Kingfisher" */;
 			productName = Kingfisher;
+		};
+		14F82C6C2E58A5EF00B2321A /* Highlightr */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 14F82C6D2E58A5EF00B2321A /* XCRemoteSwiftPackageReference "Highlightr" */;
+			productName = Highlightr;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

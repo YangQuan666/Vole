@@ -38,6 +38,7 @@ struct DetailView: View {
     @State private var replyTarget: Member?
     @State private var topicLoadErrorMessage: String?
     @State private var repliesLoadErrorMessage: String?
+    @State private var mentionLookupErrorMessage: String?
     @State private var isSubmittingReport = false
     @State private var reportResultMessage: String?
 
@@ -273,6 +274,17 @@ struct DetailView: View {
             Button("好", role: .cancel) {}
         } message: {
             Text(reportResultMessage ?? "")
+        }
+        .alert(
+            "用户查询失败",
+            isPresented: Binding(
+                get: { mentionLookupErrorMessage != nil },
+                set: { if !$0 { mentionLookupErrorMessage = nil } }
+            )
+        ) {
+            Button("好", role: .cancel) { mentionLookupErrorMessage = nil }
+        } message: {
+            Text(mentionLookupErrorMessage ?? "")
         }
         .onChange(of: isCommentOverlayPresented) { _, isPresented in
             // 浮层被直接移除（如屏蔽用户后对话消失）时，恢复列表中隐藏的回复。
@@ -557,25 +569,20 @@ struct DetailView: View {
         }
     }
 
-    /// 优先使用本帖中已有的用户资料展示资料卡；
-    /// 官方 API 2.0 不提供按用户名查询他人资料的接口，找不到时打开网页主页。
     private func showMember(named username: String) {
-        if let member = knownMember(named: username) {
-            selectedUser = member
-        } else if let url = Member.profileURL(username: username) {
-            openURL.openPreferringInApp(url)
+        Task { @MainActor in
+            do {
+                guard let member = try await V2exAPI.shared.memberShow(
+                    username: username.lowercased()
+                ) else {
+                    mentionLookupErrorMessage = "没有找到用户 @\(username)"
+                    return
+                }
+                selectedUser = member
+            } catch {
+                mentionLookupErrorMessage = error.localizedDescription
+            }
         }
-    }
-
-    private func knownMember(named username: String) -> Member? {
-        func matches(_ member: Member) -> Bool {
-            member.username.caseInsensitiveCompare(username) == .orderedSame
-        }
-
-        if let author = topic?.member, matches(author) {
-            return author
-        }
-        return replies?.last { matches($0.member) }?.member
     }
 
     @ViewBuilder

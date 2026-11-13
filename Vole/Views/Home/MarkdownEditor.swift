@@ -31,6 +31,11 @@ struct MarkdownEditor: View {
     @State private var isLinkPromptPresented = false
     @State private var linkTitle = ""
     @State private var linkURL = ""
+    @State private var selectedMention: Member?
+    @State private var mentionLookupErrorMessage: String?
+    @State private var mentionValidationTask: Task<Void, Never>?
+    @State private var validatedMentionUsernames: Set<String> = []
+    @State private var resolvedMentionMembers: [String: Member] = [:]
 
     private var remainingAttachmentCount: Int {
         max(0, Self.maxAttachmentCount - attachments.count)
@@ -75,6 +80,7 @@ struct MarkdownEditor: View {
         }
         .onChange(of: text) { oldText, newText in
             continueListIfNeeded(from: oldText, to: newText)
+            scheduleMentionValidation(for: newText)
         }
         .alert("插入链接", isPresented: $isLinkPromptPresented) {
             TextField("链接文字（可选）", text: $linkTitle)
@@ -91,6 +97,28 @@ struct MarkdownEditor: View {
             .disabled(normalizedLinkURL == nil)
         } message: {
             Text("选中的文字会作为链接文字。")
+        }
+        .sheet(item: $selectedMention) { member in
+            NavigationStack {
+                List {
+                    MemberDetailView(member: member)
+                }
+                .navigationTitle(member.username)
+                .navigationBarTitleDisplayMode(.inline)
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
+        .alert(
+            "用户查询失败",
+            isPresented: Binding(
+                get: { mentionLookupErrorMessage != nil },
+                set: { if !$0 { mentionLookupErrorMessage = nil } }
+            )
+        ) {
+            Button("好", role: .cancel) { mentionLookupErrorMessage = nil }
+        } message: {
+            Text(mentionLookupErrorMessage ?? "")
         }
     }
 
@@ -122,11 +150,72 @@ struct MarkdownEditor: View {
             )
         } else {
             ScrollView {
-                VoleMarkdownView(content: content)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 8)
+                VoleMarkdownView(
+                    content: content,
+                    onLinkAction: handlePreviewLinkAction
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 8)
             }
         }
+    }
+
+    private func handlePreviewLinkAction(_ action: LinkAction) {
+        guard case let .mention(username) = action else { return }
+        Task { @MainActor in
+            do {
+                guard let member = try await lookupMention(username) else {
+                    mentionLookupErrorMessage = "没有找到用户 @\(username)"
+                    return
+                }
+                selectedMention = member
+            } catch {
+                mentionLookupErrorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func scheduleMentionValidation(for content: String) {
+        mentionValidationTask?.cancel()
+
+        let mentions = MentionParser.usernames(in: content).filter {
+            !validatedMentionUsernames.contains(MentionParser.normalized($0))
+        }
+        guard !mentions.isEmpty else { return }
+
+        mentionValidationTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(700))
+            guard !Task.isCancelled else { return }
+
+            for username in mentions {
+                do {
+                    guard let member = try await lookupMention(username) else {
+                        mentionLookupErrorMessage = "没有找到用户 @\(username)"
+                        continue
+                    }
+                    resolvedMentionMembers[MentionParser.normalized(username)] = member
+                } catch {
+                    guard !Task.isCancelled else { return }
+                    mentionLookupErrorMessage = error.localizedDescription
+                    return
+                }
+                guard !Task.isCancelled else { return }
+            }
+        }
+    }
+
+    private func lookupMention(_ username: String) async throws -> Member? {
+        let key = MentionParser.normalized(username)
+        if validatedMentionUsernames.contains(key) {
+            return resolvedMentionMembers[key]
+        }
+
+        let member = try await V2exAPI.shared.memberShow(username: key)
+        validatedMentionUsernames.insert(key)
+        if let member {
+            resolvedMentionMembers[key] = member
+        }
+        return member
     }
 
     private var previewContent: String {

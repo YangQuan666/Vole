@@ -36,7 +36,7 @@ enum AppIcon: String, CaseIterable, Identifiable {
     var subtitle: String {
         switch self {
         case .v2ex: return "默认图标"
-        case .vole: return "Vole 小熊"
+        case .vole: return "小鼠"
         }
     }
 

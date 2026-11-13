@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct Pagination: Decodable {
+public struct Pagination: Decodable, Sendable {
     public let perPage: Int
     public let total: Int
     public let pages: Int

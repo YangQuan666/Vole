@@ -294,7 +294,10 @@ final class NotifyManager: ObservableObject {
                         totalCount: response.totalCount
                     )
                 } else {
-                    self.notifications.append(contentsOf: response.notifications)
+                    self.notifications = NotificationPagination.appendingUnique(
+                        response.notifications,
+                        to: self.notifications
+                    )
                     self.totalCount = response.totalCount
                     self.endIndex = min(self.notifications.count, response.totalCount)
                     self.currentPage = page
@@ -466,20 +469,29 @@ final class NotifyManager: ObservableObject {
     ) {
         clearPendingRefresh()
 
-        let incomingIds = Set(newNotifications.map(\.id))
+        let uniqueIncoming = NotificationPagination.appendingUnique(
+            newNotifications,
+            to: []
+        )
+        let incomingIds = Set(uniqueIncoming.map(\.id))
         let preservedOlderNotifications = notifications.filter {
             !incomingIds.contains($0.id)
         }
 
-        notifications = newNotifications + preservedOlderNotifications
+        notifications = NotificationPagination.appendingUnique(
+            preservedOlderNotifications,
+            to: uniqueIncoming
+        )
         self.totalCount = totalCount
         latestTotalCount = totalCount
 
         let loadedCount = min(notifications.count, totalCount)
         endIndex = loadedCount
 
-        let pageSize = max(newNotifications.count, 1)
-        currentPage = max(1, Int(ceil(Double(max(loadedCount, 1)) / Double(pageSize))))
+        currentPage = NotificationPagination.lastFullyLoadedPage(
+            loadedCount: loadedCount,
+            pageSize: newNotifications.count
+        )
         saveNotificationCache()
     }
 
@@ -558,6 +570,20 @@ final class NotifyManager: ObservableObject {
     }
 }
 
+enum NotificationPagination {
+    static func lastFullyLoadedPage(loadedCount: Int, pageSize: Int) -> Int {
+        max(1, loadedCount / max(pageSize, 1))
+    }
+
+    static func appendingUnique(
+        _ page: [Notification],
+        to notifications: [Notification]
+    ) -> [Notification] {
+        var knownIDs = Set<Int>()
+        return (notifications + page).filter { knownIDs.insert($0.id).inserted }
+    }
+}
+
 struct NotificationReadState: Codable, Equatable {
     var readIds: Set<Int> = []
     var lastReadAllId = 0
@@ -576,6 +602,17 @@ struct NotificationReadStateStore {
     }
 
     func load(for accountID: String) -> NotificationReadState {
+        let legacyKeys = [
+            legacyReadIdsKey,
+            legacyLastReadAllIdKey,
+            legacyAllReadTotalCountKey,
+        ]
+        if legacyKeys.contains(where: { defaults.object(forKey: $0) != nil }) {
+            for legacyKey in legacyKeys {
+                defaults.removeObject(forKey: legacyKey)
+            }
+        }
+
         let key = storageKey(for: accountID)
         if let data = defaults.data(forKey: key),
             let state = try? JSONDecoder().decode(
@@ -586,26 +623,7 @@ struct NotificationReadStateStore {
             return state
         }
 
-        let legacyKeys = [
-            legacyReadIdsKey,
-            legacyLastReadAllIdKey,
-            legacyAllReadTotalCountKey,
-        ]
-        guard legacyKeys.contains(where: { defaults.object(forKey: $0) != nil })
-        else {
-            return NotificationReadState()
-        }
-
-        let state = NotificationReadState(
-            readIds: Set(defaults.array(forKey: legacyReadIdsKey) as? [Int] ?? []),
-            lastReadAllId: defaults.integer(forKey: legacyLastReadAllIdKey),
-            allReadTotalCount: defaults.integer(forKey: legacyAllReadTotalCountKey)
-        )
-        save(state, for: accountID)
-        for legacyKey in legacyKeys {
-            defaults.removeObject(forKey: legacyKey)
-        }
-        return state
+        return NotificationReadState()
     }
 
     func save(_ state: NotificationReadState, for accountID: String) {

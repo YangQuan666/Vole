@@ -5,7 +5,6 @@
 //  Created by 杨权 on 5/26/25.
 //
 
-import SwiftData
 import SwiftUI
 
 struct ContentView: View {
@@ -158,5 +157,4 @@ private extension View {
 
 #Preview {
     ContentView()
-    //        .modelContainer(for: Item.self, inMemory: true)
 }

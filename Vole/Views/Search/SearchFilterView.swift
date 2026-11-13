@@ -84,6 +84,9 @@ struct SearchNodeFilterSheet: View {
         case .loading:
             loadingView
             Spacer(minLength: 0)
+        case .loadFailed:
+            loadFailedView
+            Spacer(minLength: 0)
         case .suggestions:
             suggestionsList
         }
@@ -169,6 +172,23 @@ struct SearchNodeFilterSheet: View {
             Text("节点列表加载中…")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var loadFailedView: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "wifi.exclamationmark")
+                .font(.title2)
+                .foregroundStyle(.secondary)
+            Text(nodeManager.loadErrorMessage ?? "节点列表加载失败")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            Button("重试") {
+                Task { await nodeManager.refreshNodes(force: true) }
+            }
+            .buttonStyle(.bordered)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -381,7 +401,9 @@ struct SearchNodeFilterSheet: View {
             return hasActiveNodeFilter ? .activeFilterHint : .empty
         }
 
-        return nodeManager.nodes.isEmpty ? .loading : .suggestions
+        if !nodeManager.nodes.isEmpty { return .suggestions }
+        if nodeManager.isLoading || !nodeManager.didAttemptLoad { return .loading }
+        return .loadFailed
     }
 
     private var hasActiveNodeFilter: Bool {
@@ -533,6 +555,7 @@ private enum NodeFilterContentState {
     case empty
     case activeFilterHint
     case loading
+    case loadFailed
     case suggestions
 }
 

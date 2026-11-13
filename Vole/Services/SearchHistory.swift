@@ -7,7 +7,8 @@
 
 import Foundation
 
-class SearchHistory: ObservableObject {
+@MainActor
+final class SearchHistory: ObservableObject {
     static let shared = SearchHistory()
 
     @Published var keywords: [String] = []

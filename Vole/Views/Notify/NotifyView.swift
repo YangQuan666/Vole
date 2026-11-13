@@ -56,7 +56,7 @@ struct NotifyView: View {
                     }
                     if isLoggedIn {
                         ToolbarItem {
-                            notificationFilterMenu
+                            notificationFilterButton
                         }
                     }
                 }
@@ -69,13 +69,10 @@ struct NotifyView: View {
         }
     }
 
-    private var notificationFilterMenu: some View {
-        Menu {
-            Picker("通知筛选", selection: $notificationFilter) {
-                ForEach(NotificationFilter.allCases) { filter in
-                    Label(filter.title, systemImage: filter.symbol)
-                        .tag(filter)
-                }
+    private var notificationFilterButton: some View {
+        Button {
+            withAnimation(.snappy) {
+                notificationFilter = notificationFilter == .all ? .unread : .all
             }
         } label: {
             Image(
@@ -84,7 +81,9 @@ struct NotifyView: View {
                     : "line.3.horizontal.decrease.circle.fill"
             )
         }
-        .accessibilityLabel("筛选通知")
+        .accessibilityLabel(
+            notificationFilter == .all ? "筛选未读通知" : "显示全部通知"
+        )
         .accessibilityValue(notificationFilter.title)
     }
 
@@ -94,8 +93,6 @@ struct NotifyView: View {
             notifyManager.notifications
         case .unread:
             notifyManager.notifications.filter { !notifyManager.isRead($0.id) }
-        case .read:
-            notifyManager.notifications.filter { notifyManager.isRead($0.id) }
         }
     }
 
@@ -284,18 +281,14 @@ struct NotifyView: View {
     }
 }
 
-private enum NotificationFilter: String, CaseIterable, Identifiable {
+private enum NotificationFilter: String {
     case all
     case unread
-    case read
-
-    var id: Self { self }
 
     var title: String {
         switch self {
         case .all: "全部"
         case .unread: "未读"
-        case .read: "已读"
         }
     }
 
@@ -303,7 +296,6 @@ private enum NotificationFilter: String, CaseIterable, Identifiable {
         switch self {
         case .all: "还没有通知"
         case .unread: "没有未读通知"
-        case .read: "没有已读通知"
         }
     }
 
@@ -311,7 +303,6 @@ private enum NotificationFilter: String, CaseIterable, Identifiable {
         switch self {
         case .all: "tray.full"
         case .unread: "envelope.badge"
-        case .read: "envelope.open"
         }
     }
 }

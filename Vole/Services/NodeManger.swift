@@ -14,11 +14,13 @@ class NodeManager: ObservableObject {
 
     @Published private(set) var groups: [NodeGroup] = []
     @Published private(set) var nodes: [Node] = []
+    @Published private(set) var isLoading = false
+    @Published private(set) var didAttemptLoad = false
+    @Published private(set) var loadErrorMessage: String?
 
     private var idMap: [Int: Node] = [:]
     private var nameMap: [String: Node] = [:]
 
-    private var isLoading = false
     private var siteConfigurationObserver: NSObjectProtocol?
     private var cacheKey: String {
         "cachedGroups.\(SiteConfiguration.cacheKeySuffix)"
@@ -37,7 +39,7 @@ class NodeManager: ObservableObject {
         restoreCachedState()
     }
 
-    deinit {
+    isolated deinit {
         if let siteConfigurationObserver {
             NotificationCenter.default.removeObserver(siteConfigurationObserver)
         }
@@ -47,17 +49,36 @@ class NodeManager: ObservableObject {
     func refreshNodes(force: Bool) async {
         if !force, let cached = loadCachedGroups(), !cached.isEmpty {
             applyCachedGroups(cached)
+            didAttemptLoad = true
+            loadErrorMessage = nil
             return
         }
 
-        let fetched = await loadNodes()
+        guard !isLoading else { return }
+        isLoading = true
+        defer {
+            isLoading = false
+            didAttemptLoad = true
+        }
+
+        guard let fetched = await loadNodes(), !fetched.isEmpty else {
+            loadErrorMessage = "节点列表加载失败，请检查网络后重试。"
+            return
+        }
+
         let builtGroups = await Self.buildGroupsInBackground(from: fetched)
         let indexedNodes = builtGroups.flatMap { $0.nodes }
+        guard !indexedNodes.isEmpty else {
+            loadErrorMessage = "节点列表为空，请稍后重试。"
+            return
+        }
+
         saveGroupsToCache(builtGroups)
 
         self.nodes = indexedNodes
         self.groups = builtGroups
         rebuildIndex(from: indexedNodes)
+        loadErrorMessage = nil
     }
 
     private func restoreCachedState() {
@@ -65,10 +86,14 @@ class NodeManager: ObservableObject {
             groups = []
             nodes = []
             rebuildIndex(from: [])
+            didAttemptLoad = false
+            loadErrorMessage = nil
             return
         }
 
         applyCachedGroups(cached)
+        didAttemptLoad = true
+        loadErrorMessage = nil
         print("⭕️ NodeManager 已从缓存构建索引 (\(nodes.count) nodes)")
     }
 
@@ -122,18 +147,16 @@ class NodeManager: ObservableObject {
     }
 
     // 加载节点（网络 + 本地缓存）
-    private func loadNodes() async -> [Node] {
-        guard !isLoading else { return nodes }
-        isLoading = true
-        defer { isLoading = false }
-
+    private func loadNodes() async -> [Node]? {
         do {
-            let list = try await V2exAPI.shared.nodesList() ?? []
+            guard let list = try await V2exAPI.shared.nodesList(), !list.isEmpty else {
+                return nil
+            }
             print("成功加载\(list.count)个节点")
             return list
         } catch {
             print("❌ 加载节点失败:", error)
-            return []
+            return nil
         }
     }
 
